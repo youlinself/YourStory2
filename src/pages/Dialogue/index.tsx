@@ -15,7 +15,7 @@ const Dialogue: React.FC = () => {
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const { apiKey, model } = useAIStore();
+  const { apiKey, model, baseUrl, temperature, maxInputTokens, maxOutputTokens, loadSettings } = useAIStore();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -24,6 +24,10 @@ const Dialogue: React.FC = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  useEffect(() => {
+    loadSettings();
+  }, [loadSettings]);
 
   useEffect(() => {
     // 初始化欢迎消息
@@ -59,9 +63,9 @@ const Dialogue: React.FC = () => {
     setIsLoading(true);
 
     try {
-      const aiService = new AIService(apiKey, model);
+      const aiService = new AIService({ apiKey, model, baseUrl, temperature, maxInputTokens, maxOutputTokens });
       const response = await aiService.generateResponse(inputValue, messages);
-      
+
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
         content: response,

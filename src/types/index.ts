@@ -24,4 +24,9 @@ export interface Autobiography {
 export interface AISettings {
   apiKey: string;
   model: string;
+  baseUrl: string;
+  vendor: string;
+  temperature: number;
+  maxInputTokens: number;
+  maxOutputTokens: number;
 }
