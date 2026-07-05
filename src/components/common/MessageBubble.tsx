@@ -15,23 +15,17 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
 }) => {
   return (
     <div
-      className={`flex ${isUser ? 'justify-end' : 'justify-start'} ${className}`}
+      className={`flex ${isUser ? 'justify-end' : 'justify-start'} animate-fade-in ${className}`}
     >
-      <div
-        className={`max-w-[70%] rounded-[18px] px-5 py-3 ${
-          isUser
-            ? 'bg-apple-primary text-white'
-            : 'bg-apple-canvas border border-apple-hairline text-apple-ink'
-        }`}
-      >
-        <p className="text-apple-body">{message}</p>
+      <div className={isUser ? 'chat-bubble-user' : 'chat-bubble-ai'}>
+        <p className={isUser ? 'text-body' : 'text-body-serif'}>{message}</p>
         {timestamp && (
           <p
-            className={`text-apple-fine-print mt-[6px] ${
-              isUser ? 'text-white/60' : 'text-apple-ink-muted-48'
+            className={`text-fine-print mt-2 ${
+              isUser ? 'text-ink-muted' : 'text-ink-faint'
             }`}
           >
-            {timestamp.toLocaleTimeString()}
+            {timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </p>
         )}
       </div>

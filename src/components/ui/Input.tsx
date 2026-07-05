@@ -24,9 +24,9 @@ const Input: React.FC<InputProps> = ({
   onKeyPress,
 }) => {
   return (
-    <div className={`flex flex-col gap-[6px] ${className}`}>
+    <div className={`flex flex-col gap-1.5 ${className}`}>
       {label && (
-        <label className="text-apple-caption-strong text-apple-ink-muted-80">
+        <label className="text-caption font-medium text-ink-secondary">
           {label}
         </label>
       )}
@@ -37,13 +37,10 @@ const Input: React.FC<InputProps> = ({
         onKeyPress={onKeyPress}
         placeholder={placeholder}
         disabled={disabled}
-        className={`px-5 py-3 border rounded-full text-apple-body text-apple-ink placeholder:text-apple-ink-muted-48
-          focus:outline-none focus:ring-2 focus:ring-apple-primary-focus focus:border-transparent
-          ${error ? 'border-red-400' : 'border-apple-hairline'}
-          ${disabled ? 'bg-apple-parchment cursor-not-allowed text-apple-ink-muted-48' : 'bg-white'}`}
+        className={`input-base ${error ? 'border-error' : ''} ${disabled ? 'opacity-60 cursor-not-allowed' : ''}`}
       />
       {error && (
-        <span className="text-apple-caption text-red-500">{error}</span>
+        <span className="text-caption text-error">{error}</span>
       )}
     </div>
   );

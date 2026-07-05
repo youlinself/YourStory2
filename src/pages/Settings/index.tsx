@@ -84,22 +84,22 @@ const Settings: React.FC = () => {
   };
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <h2 className="text-apple-display-md text-apple-ink mb-6">
+    <div className="max-w-2xl mx-auto animate-fade-in">
+      <h1 className="text-display-md mb-6">
         设置
-      </h2>
+      </h1>
 
       <Card title="AI 配置" className="mb-6">
         <div className="space-y-5">
           {/* Vendor Select */}
-          <div className="flex flex-col gap-[6px]">
-            <label className="text-apple-caption-strong text-apple-ink-muted-80">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-caption font-medium text-ink-secondary">
               AI 供应商
             </label>
             <select
               value={localVendor}
               onChange={(e) => handleVendorChange(e.target.value)}
-              className="px-5 py-3 border border-apple-hairline rounded-full text-apple-body text-apple-ink bg-white focus:outline-none focus:ring-2 focus:ring-apple-primary-focus focus:border-transparent appearance-none"
+              className="input-base appearance-none"
             >
               {AI_VENDORS.map((v) => (
                 <option key={v.id} value={v.id}>
@@ -110,8 +110,8 @@ const Settings: React.FC = () => {
           </div>
 
           {/* API Key + Test Button */}
-          <div className="flex flex-col gap-[6px]">
-            <label className="text-apple-caption-strong text-apple-ink-muted-80">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-caption font-medium text-ink-secondary">
               API Key
             </label>
             <div className="flex gap-3">
@@ -120,7 +120,7 @@ const Settings: React.FC = () => {
                 value={localApiKey}
                 onChange={(e) => setLocalApiKey(e.target.value)}
                 placeholder="请输入您的 AI API Key"
-                className="flex-1 px-5 py-3 border border-apple-hairline rounded-full text-apple-body text-apple-ink placeholder:text-apple-ink-muted-48 bg-white focus:outline-none focus:ring-2 focus:ring-apple-primary-focus focus:border-transparent"
+                className="flex-1 input-base"
               />
               <Button
                 onClick={handleTestConnection}
@@ -131,10 +131,10 @@ const Settings: React.FC = () => {
               </Button>
             </div>
             {testStatus !== 'idle' && testMessage && (
-              <p className={`text-apple-caption ${
-                testStatus === 'success' ? 'text-green-600' :
-                testStatus === 'error' ? 'text-red-500' :
-                'text-apple-ink-muted-48'
+              <p className={`text-caption ${
+                testStatus === 'success' ? 'text-success' :
+                testStatus === 'error' ? 'text-error' :
+                'text-ink-muted'
               }`}>
                 {testMessage}
               </p>
@@ -150,11 +150,11 @@ const Settings: React.FC = () => {
           />
 
           {/* Model Select */}
-          <div className="flex flex-col gap-[6px]">
-            <label className="text-apple-caption-strong text-apple-ink-muted-80">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-caption font-medium text-ink-secondary">
               模型
               {fetchedModels.length > 0 && (
-                <span className="ml-2 text-apple-caption text-green-600 font-normal">
+                <span className="ml-2 text-caption text-success font-normal">
                   (已从供应商获取)
                 </span>
               )}
@@ -163,7 +163,7 @@ const Settings: React.FC = () => {
               <select
                 value={localModel}
                 onChange={(e) => setLocalModel(e.target.value)}
-                className="px-5 py-3 border border-apple-hairline rounded-full text-apple-body text-apple-ink bg-white focus:outline-none focus:ring-2 focus:ring-apple-primary-focus focus:border-transparent appearance-none"
+                className="input-base appearance-none"
               >
                 {modelList.map((m) => (
                   <option key={m} value={m}>
@@ -181,8 +181,8 @@ const Settings: React.FC = () => {
           </div>
 
           {/* Temperature Slider */}
-          <div className="flex flex-col gap-[6px]">
-            <label className="text-apple-caption-strong text-apple-ink-muted-80">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-caption font-medium text-ink-secondary">
               温度 (Temperature): {localTemperature.toFixed(1)}
             </label>
             <input
@@ -192,9 +192,9 @@ const Settings: React.FC = () => {
               step="0.1"
               value={localTemperature}
               onChange={(e) => setLocalTemperature(parseFloat(e.target.value))}
-              className="w-full h-1 bg-apple-hairline rounded-full appearance-none [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-apple-primary [&::-webkit-slider-thumb]:cursor-pointer"
+              className="w-full h-1 bg-border-default rounded-full appearance-none [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-brand-primary [&::-webkit-slider-thumb]:cursor-pointer"
             />
-            <div className="flex justify-between text-apple-fine-print text-apple-ink-muted-48">
+            <div className="flex justify-between text-fine-print text-ink-muted">
               <span>精确 (0)</span>
               <span>创意 (2)</span>
             </div>
@@ -218,7 +218,7 @@ const Settings: React.FC = () => {
             placeholder="2000"
           />
 
-          <p className="text-apple-caption text-apple-ink-muted-48">
+          <p className="text-caption text-ink-muted">
             支持 OpenAI、DeepSeek、Claude 等主流 AI 服务提供商。请确保您的 API Key 具有足够的权限和额度。
           </p>
 
@@ -229,13 +229,13 @@ const Settings: React.FC = () => {
       </Card>
 
       <Card title="使用说明">
-        <div className="space-y-3 text-apple-body text-apple-ink-muted-80">
+        <div className="space-y-3 text-body text-ink-secondary">
           <p>1. 选择您的 AI 供应商并填写对应的 API Key</p>
           <p>2. 点击「测试并获取模型」验证连通性并拉取最新模型列表</p>
           <p>3. 选择您想使用的 AI 模型</p>
           <p>4. 调整温度参数：越低越精确，越高越有创意</p>
           <p>5. 返回首页，开始对话式创作</p>
-          <p>6. 在对话中输入 <code className="bg-apple-parchment px-2 py-[2px] rounded-md text-apple-caption">/compact</code> 可压缩上下文</p>
+          <p>6. 在对话中输入 <code className="bg-bg-secondary px-2 py-0.5 rounded text-caption font-mono">/compact</code> 可压缩上下文</p>
         </div>
       </Card>
     </div>
