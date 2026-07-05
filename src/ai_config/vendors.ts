@@ -11,6 +11,8 @@ export interface AIVendor {
   authPrefix: string;
   models: string[];
   defaultModel: string;
+  /** 该供应商支持的最大输出 token 数（API 硬限制） */
+  maxOutputTokens: number;
 }
 
 export const AI_VENDORS: AIVendor[] = [
@@ -23,6 +25,7 @@ export const AI_VENDORS: AIVendor[] = [
     authPrefix: 'Bearer ',
     models: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-3.5-turbo'],
     defaultModel: 'gpt-4o-mini',
+    maxOutputTokens: 16384,
   },
   {
     id: 'anthropic',
@@ -33,6 +36,7 @@ export const AI_VENDORS: AIVendor[] = [
     authPrefix: '',
     models: ['claude-sonnet-4-20250514', 'claude-3-5-haiku-20241022'],
     defaultModel: 'claude-sonnet-4-20250514',
+    maxOutputTokens: 8192,
   },
   {
     id: 'deepseek',
@@ -43,6 +47,7 @@ export const AI_VENDORS: AIVendor[] = [
     authPrefix: 'Bearer ',
     models: ['deepseek-chat', 'deepseek-reasoner'],
     defaultModel: 'deepseek-chat',
+    maxOutputTokens: 8192,
   },
   {
     id: 'minimax',
@@ -53,6 +58,7 @@ export const AI_VENDORS: AIVendor[] = [
     authPrefix: 'Bearer ',
     models: ['MiniMax-Text-01', 'abab6.5s-chat'],
     defaultModel: 'MiniMax-Text-01',
+    maxOutputTokens: 40000,
   },
   {
     id: 'mimo',
@@ -63,6 +69,7 @@ export const AI_VENDORS: AIVendor[] = [
     authPrefix: 'Bearer ',
     models: ['MiMo-VL-7B-RL', 'MiMo-7B-RL'],
     defaultModel: 'MiMo-VL-7B-RL',
+    maxOutputTokens: 8192,
   },
   {
     id: 'qwen',
@@ -73,6 +80,7 @@ export const AI_VENDORS: AIVendor[] = [
     authPrefix: 'Bearer ',
     models: ['qwen-max', 'qwen-plus', 'qwen-turbo', 'qwen-long'],
     defaultModel: 'qwen-max',
+    maxOutputTokens: 8192,
   },
   {
     id: 'zhipu',
@@ -83,6 +91,7 @@ export const AI_VENDORS: AIVendor[] = [
     authPrefix: 'Bearer ',
     models: ['glm-4-plus', 'glm-4-flash', 'glm-4-long', 'glm-4-air'],
     defaultModel: 'glm-4-plus',
+    maxOutputTokens: 4096,
   },
   {
     id: 'kimi',
@@ -93,6 +102,7 @@ export const AI_VENDORS: AIVendor[] = [
     authPrefix: 'Bearer ',
     models: ['moonshot-v1-128k', 'moonshot-v1-32k', 'moonshot-v1-8k'],
     defaultModel: 'moonshot-v1-32k',
+    maxOutputTokens: 8192,
   },
   {
     id: 'doubao',
@@ -103,6 +113,7 @@ export const AI_VENDORS: AIVendor[] = [
     authPrefix: 'Bearer ',
     models: ['doubao-pro-32k', 'doubao-lite-32k', 'doubao-pro-128k'],
     defaultModel: 'doubao-pro-32k',
+    maxOutputTokens: 4096,
   },
   {
     id: 'siliconflow',
@@ -113,6 +124,7 @@ export const AI_VENDORS: AIVendor[] = [
     authPrefix: 'Bearer ',
     models: ['Qwen/Qwen2.5-72B-Instruct', 'deepseek-ai/DeepSeek-V3', 'meta-llama/Meta-Llama-3.1-70B-Instruct'],
     defaultModel: 'Qwen/Qwen2.5-72B-Instruct',
+    maxOutputTokens: 8192,
   },
   {
     id: 'custom',
@@ -123,6 +135,7 @@ export const AI_VENDORS: AIVendor[] = [
     authPrefix: 'Bearer ',
     models: [],
     defaultModel: '',
+    maxOutputTokens: 4096,
   },
 ];
 
@@ -143,6 +156,11 @@ export function getDefaultBaseUrl(vendorId: string): string {
 export function getDefaultModel(vendorId: string): string {
   const vendor = getVendorById(vendorId);
   return vendor?.defaultModel ?? '';
+}
+
+export function getMaxOutputTokens(vendorId: string): number {
+  const vendor = getVendorById(vendorId);
+  return vendor?.maxOutputTokens ?? 4096;
 }
 
 /**

@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { Card, Input, Button } from '../../components';
 import { useAIStore } from '../../stores';
-import { AI_VENDORS, getVendorModels, fetchVendorModels } from '../../ai_config';
+import { AI_VENDORS, getVendorModels, getMaxOutputTokens, fetchVendorModels } from '../../ai_config';
 
 type TestStatus = 'idle' | 'testing' | 'success' | 'error';
 
@@ -71,15 +71,22 @@ const Settings: React.FC = () => {
   }, [localVendor, localApiKey, localBaseUrl, isCustomVendor]);
 
   const handleSave = () => {
+    // 根据供应商限制 clamp maxOutputTokens，防止 API 报错
+    const vendorLimit = getMaxOutputTokens(localVendor);
+    const clampedMaxOutput = Math.min(localMaxOutputTokens, vendorLimit);
+
     setApiKey(localApiKey);
     setModel(localModel);
     setBaseUrl(localBaseUrl);
     setVendor(localVendor);
     setTemperature(localTemperature);
     setMaxInputTokens(localMaxInputTokens);
-    setMaxOutputTokens(localMaxOutputTokens);
+    setMaxOutputTokens(clampedMaxOutput);
     saveSettings();
     setSaved(true);
+    if (clampedMaxOutput !== localMaxOutputTokens) {
+      setLocalMaxOutputTokens(clampedMaxOutput);
+    }
     setTimeout(() => setSaved(false), 2000);
   };
 
@@ -211,7 +218,7 @@ const Settings: React.FC = () => {
 
           {/* Max Output Tokens */}
           <Input
-            label="最大输出 Token 数"
+            label={`最大输出 Token 数（当前供应商上限：${getMaxOutputTokens(localVendor)}）`}
             value={String(localMaxOutputTokens)}
             onChange={(v) => setLocalMaxOutputTokens(parseInt(v, 10) || 2000)}
             type="number"

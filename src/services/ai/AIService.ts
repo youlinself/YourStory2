@@ -1,10 +1,11 @@
-import { PromptComposer } from '../../ai_config';
+import { PromptComposer, getMaxOutputTokens } from '../../ai_config';
 import type { Message, ChapterContext, ExtractedContent, Suggestion, Autobiography } from '../../types';
 
 export interface AIServiceConfig {
   apiKey: string;
   model: string;
   baseUrl: string;
+  vendor?: string;
   temperature?: number;
   maxInputTokens?: number;
   maxOutputTokens?: number;
@@ -26,6 +27,7 @@ class AIService {
   private apiKey: string;
   private model: string;
   private baseUrl: string;
+  private vendor: string;
   private temperature: number;
   private maxInputTokens: number;
   private maxOutputTokens: number;
@@ -34,6 +36,7 @@ class AIService {
     this.apiKey = config.apiKey;
     this.model = config.model || DEFAULT_CONFIG.model!;
     this.baseUrl = (config.baseUrl || DEFAULT_CONFIG.baseUrl!).replace(/\/+$/, '');
+    this.vendor = config.vendor || 'openai';
     this.temperature = config.temperature ?? DEFAULT_CONFIG.temperature!;
     this.maxInputTokens = config.maxInputTokens ?? DEFAULT_CONFIG.maxInputTokens!;
     this.maxOutputTokens = config.maxOutputTokens ?? DEFAULT_CONFIG.maxOutputTokens!;
@@ -248,6 +251,10 @@ class AIService {
   private async sendRequest(
     messages: Array<{ role: string; content: string }>,
   ): Promise<string> {
+    // 根据供应商限制 clamp max_tokens，防止 API 返回 400
+    const vendorLimit = getMaxOutputTokens(this.vendor);
+    const maxTokens = Math.min(this.maxOutputTokens, vendorLimit);
+
     try {
       const response = await fetch(`${this.baseUrl}/chat/completions`, {
         method: 'POST',
@@ -258,7 +265,7 @@ class AIService {
         body: JSON.stringify({
           model: this.model,
           messages,
-          max_tokens: this.maxOutputTokens,
+          max_tokens: maxTokens,
           temperature: this.temperature,
         }),
       });

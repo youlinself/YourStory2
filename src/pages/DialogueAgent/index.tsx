@@ -15,7 +15,7 @@ const DialogueAgent: React.FC = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const { apiKey, model, baseUrl, temperature, maxInputTokens, maxOutputTokens, loadSettings } = useAIStore();
+  const { apiKey, model, baseUrl, vendor, temperature, maxInputTokens, maxOutputTokens, loadSettings } = useAIStore();
 
   const {
     activeSession,
@@ -70,7 +70,7 @@ const DialogueAgent: React.FC = () => {
 
     setIsGenerating(true);
     try {
-      const aiService = new AIService({ apiKey, model, baseUrl, temperature, maxInputTokens, maxOutputTokens });
+      const aiService = new AIService({ apiKey, model, baseUrl, vendor, temperature, maxInputTokens, maxOutputTokens });
       const guide = await aiService.generateWelcomeGuide(autobiography, chapterId || null);
 
       if (guide) {
@@ -111,7 +111,7 @@ const DialogueAgent: React.FC = () => {
     } finally {
       setIsGenerating(false);
     }
-  }, [apiKey, model, baseUrl, temperature, maxInputTokens, maxOutputTokens, autobiography, chapterId, setIsGenerating, addMessage, setSuggestions]);
+  }, [apiKey, model, baseUrl, vendor, temperature, maxInputTokens, maxOutputTokens, autobiography, chapterId, setIsGenerating, addMessage, setSuggestions]);
 
   const fallbackWelcome = () => {
     const welcomeText = chapterId && currentChapter
@@ -155,7 +155,7 @@ const DialogueAgent: React.FC = () => {
     }
 
     try {
-      const aiService = new AIService({ apiKey, model, baseUrl, temperature, maxInputTokens, maxOutputTokens });
+      const aiService = new AIService({ apiKey, model, baseUrl, vendor, temperature, maxInputTokens, maxOutputTokens });
 
       // 构建章节上下文
       let chapterContext: ChapterContext | undefined;
@@ -268,7 +268,7 @@ const DialogueAgent: React.FC = () => {
     if (!apiKey || !chapterId || !currentChapter) return;
     setIsGenerating(true);
     try {
-      const aiService = new AIService({ apiKey, model, baseUrl, temperature, maxInputTokens, maxOutputTokens });
+      const aiService = new AIService({ apiKey, model, baseUrl, vendor, temperature, maxInputTokens, maxOutputTokens });
       const dialogueContent = messages
         .map((m) => `${m.isUser ? '用户' : 'AI'}: ${m.content}`)
         .join('\n');

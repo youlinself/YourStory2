@@ -5,6 +5,7 @@ export {
   getVendorModels,
   getDefaultBaseUrl,
   getDefaultModel,
+  getMaxOutputTokens,
   fetchVendorModels,
 } from './vendors';
 export type { AIVendor } from './vendors';

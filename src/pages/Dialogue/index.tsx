@@ -23,7 +23,7 @@ const Dialogue: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const { apiKey, model, baseUrl, temperature, maxInputTokens, maxOutputTokens, loadSettings } = useAIStore();
+  const { apiKey, model, baseUrl, vendor, temperature, maxInputTokens, maxOutputTokens, loadSettings } = useAIStore();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -75,7 +75,7 @@ const Dialogue: React.FC = () => {
     }
 
     try {
-      const aiService = new AIService({ apiKey, model, baseUrl, temperature, maxInputTokens, maxOutputTokens });
+      const aiService = new AIService({ apiKey, model, baseUrl, vendor, temperature, maxInputTokens, maxOutputTokens });
       const response = await aiService.generateResponse(content, messages);
 
       const aiMessage: Message = {
