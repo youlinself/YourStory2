@@ -21,14 +21,11 @@ const Settings: React.FC = () => {
   const [localMaxOutputTokens, setLocalMaxOutputTokens] = useState(maxOutputTokens);
   const [saved, setSaved] = useState(false);
 
-  // 测试连通性状态
   const [testStatus, setTestStatus] = useState<TestStatus>('idle');
   const [testMessage, setTestMessage] = useState('');
-  // 从 API 拉取到的模型列表（为空时使用预设列表）
   const [fetchedModels, setFetchedModels] = useState<string[]>([]);
 
   const isCustomVendor = localVendor === 'custom';
-  // 优先使用拉取的模型，否则用预设
   const modelList = fetchedModels.length > 0 ? fetchedModels : getVendorModels(localVendor);
 
   const handleVendorChange = (newVendor: string) => {
@@ -64,7 +61,6 @@ const Settings: React.FC = () => {
       setFetchedModels(models);
       setTestStatus('success');
       setTestMessage(`连接成功，获取到 ${models.length} 个模型`);
-      // 自动选中第一个模型
       if (models.length > 0) {
         setLocalModel(models[0]);
       }
@@ -89,21 +85,21 @@ const Settings: React.FC = () => {
 
   return (
     <div className="max-w-2xl mx-auto">
-      <h2 className="text-2xl font-bold text-gray-800 mb-6">
+      <h2 className="text-apple-display-md text-apple-ink mb-6">
         设置
       </h2>
 
       <Card title="AI 配置" className="mb-6">
-        <div className="space-y-4">
-          {/* 供应商选择 */}
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-700">
+        <div className="space-y-5">
+          {/* Vendor Select */}
+          <div className="flex flex-col gap-[6px]">
+            <label className="text-apple-caption-strong text-apple-ink-muted-80">
               AI 供应商
             </label>
             <select
               value={localVendor}
               onChange={(e) => handleVendorChange(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="px-5 py-3 border border-apple-hairline rounded-full text-apple-body text-apple-ink bg-white focus:outline-none focus:ring-2 focus:ring-apple-primary-focus focus:border-transparent appearance-none"
             >
               {AI_VENDORS.map((v) => (
                 <option key={v.id} value={v.id}>
@@ -113,18 +109,18 @@ const Settings: React.FC = () => {
             </select>
           </div>
 
-          {/* API Key + 测试按钮 */}
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-700">
+          {/* API Key + Test Button */}
+          <div className="flex flex-col gap-[6px]">
+            <label className="text-apple-caption-strong text-apple-ink-muted-80">
               API Key
             </label>
-            <div className="flex gap-2">
+            <div className="flex gap-3">
               <input
                 type="password"
                 value={localApiKey}
                 onChange={(e) => setLocalApiKey(e.target.value)}
                 placeholder="请输入您的 AI API Key"
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="flex-1 px-5 py-3 border border-apple-hairline rounded-full text-apple-body text-apple-ink placeholder:text-apple-ink-muted-48 bg-white focus:outline-none focus:ring-2 focus:ring-apple-primary-focus focus:border-transparent"
               />
               <Button
                 onClick={handleTestConnection}
@@ -134,12 +130,11 @@ const Settings: React.FC = () => {
                 {testStatus === 'testing' ? '测试中...' : '测试并获取模型'}
               </Button>
             </div>
-            {/* 测试结果提示 */}
             {testStatus !== 'idle' && testMessage && (
-              <p className={`text-sm ${
+              <p className={`text-apple-caption ${
                 testStatus === 'success' ? 'text-green-600' :
                 testStatus === 'error' ? 'text-red-500' :
-                'text-gray-500'
+                'text-apple-ink-muted-48'
               }`}>
                 {testMessage}
               </p>
@@ -154,12 +149,12 @@ const Settings: React.FC = () => {
             placeholder={isCustomVendor ? '请输入自定义 API 地址' : '默认自动填充'}
           />
 
-          {/* 模型选择 */}
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-700">
+          {/* Model Select */}
+          <div className="flex flex-col gap-[6px]">
+            <label className="text-apple-caption-strong text-apple-ink-muted-80">
               模型
               {fetchedModels.length > 0 && (
-                <span className="ml-2 text-xs text-green-600 font-normal">
+                <span className="ml-2 text-apple-caption text-green-600 font-normal">
                   (已从供应商获取)
                 </span>
               )}
@@ -168,7 +163,7 @@ const Settings: React.FC = () => {
               <select
                 value={localModel}
                 onChange={(e) => setLocalModel(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="px-5 py-3 border border-apple-hairline rounded-full text-apple-body text-apple-ink bg-white focus:outline-none focus:ring-2 focus:ring-apple-primary-focus focus:border-transparent appearance-none"
               >
                 {modelList.map((m) => (
                   <option key={m} value={m}>
@@ -185,9 +180,9 @@ const Settings: React.FC = () => {
             )}
           </div>
 
-          {/* Temperature */}
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-700">
+          {/* Temperature Slider */}
+          <div className="flex flex-col gap-[6px]">
+            <label className="text-apple-caption-strong text-apple-ink-muted-80">
               温度 (Temperature): {localTemperature.toFixed(1)}
             </label>
             <input
@@ -197,9 +192,9 @@ const Settings: React.FC = () => {
               step="0.1"
               value={localTemperature}
               onChange={(e) => setLocalTemperature(parseFloat(e.target.value))}
-              className="w-full"
+              className="w-full h-1 bg-apple-hairline rounded-full appearance-none [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-apple-primary [&::-webkit-slider-thumb]:cursor-pointer"
             />
-            <div className="flex justify-between text-xs text-gray-400">
+            <div className="flex justify-between text-apple-fine-print text-apple-ink-muted-48">
               <span>精确 (0)</span>
               <span>创意 (2)</span>
             </div>
@@ -223,25 +218,24 @@ const Settings: React.FC = () => {
             placeholder="2000"
           />
 
-          <div className="text-sm text-gray-500">
-            <p>支持 OpenAI、DeepSeek、Claude 等主流 AI 服务提供商。</p>
-            <p>请确保您的 API Key 具有足够的权限和额度。</p>
-          </div>
+          <p className="text-apple-caption text-apple-ink-muted-48">
+            支持 OpenAI、DeepSeek、Claude 等主流 AI 服务提供商。请确保您的 API Key 具有足够的权限和额度。
+          </p>
 
-          <Button onClick={handleSave}>
+          <Button onClick={handleSave} className="w-full">
             {saved ? '已保存' : '保存设置'}
           </Button>
         </div>
       </Card>
 
       <Card title="使用说明">
-        <div className="space-y-3 text-gray-600">
+        <div className="space-y-3 text-apple-body text-apple-ink-muted-80">
           <p>1. 选择您的 AI 供应商并填写对应的 API Key</p>
           <p>2. 点击「测试并获取模型」验证连通性并拉取最新模型列表</p>
           <p>3. 选择您想使用的 AI 模型</p>
           <p>4. 调整温度参数：越低越精确，越高越有创意</p>
           <p>5. 返回首页，开始对话式创作</p>
-          <p>6. 在对话中输入 <code className="bg-gray-100 px-1 rounded">/compact</code> 可压缩上下文</p>
+          <p>6. 在对话中输入 <code className="bg-apple-parchment px-2 py-[2px] rounded-md text-apple-caption">/compact</code> 可压缩上下文</p>
         </div>
       </Card>
     </div>

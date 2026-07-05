@@ -18,17 +18,17 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
       className={`flex ${isUser ? 'justify-end' : 'justify-start'} ${className}`}
     >
       <div
-        className={`max-w-[70%] rounded-lg px-4 py-2 ${
+        className={`max-w-[70%] rounded-[18px] px-5 py-3 ${
           isUser
-            ? 'bg-blue-600 text-white'
-            : 'bg-gray-200 text-gray-800'
+            ? 'bg-apple-primary text-white'
+            : 'bg-apple-canvas border border-apple-hairline text-apple-ink'
         }`}
       >
-        <p className="text-sm">{message}</p>
+        <p className="text-apple-body">{message}</p>
         {timestamp && (
           <p
-            className={`text-xs mt-1 ${
-              isUser ? 'text-blue-100' : 'text-gray-500'
+            className={`text-apple-fine-print mt-[6px] ${
+              isUser ? 'text-white/60' : 'text-apple-ink-muted-48'
             }`}
           >
             {timestamp.toLocaleTimeString()}

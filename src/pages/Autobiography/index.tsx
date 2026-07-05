@@ -99,12 +99,17 @@ const AutobiographyPage: React.FC = () => {
   if (!autobiography) {
     return (
       <div className="max-w-4xl mx-auto">
-        <h2 className="text-2xl font-bold text-gray-800 mb-6">
+        <h2 className="text-apple-display-md text-apple-ink mb-6">
           我的自传
         </h2>
         <Card>
-          <div className="text-center py-8">
-            <p className="text-gray-600 mb-4">
+          <div className="text-center py-12">
+            <div className="w-16 h-16 rounded-full bg-apple-parchment flex items-center justify-center mx-auto mb-5">
+              <svg className="w-8 h-8 text-apple-ink-muted-48" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+              </svg>
+            </div>
+            <p className="text-apple-body text-apple-ink-muted-80 mb-6">
               您还没有开始创建自传
             </p>
             <Button onClick={createNewAutobiography}>
@@ -119,7 +124,7 @@ const AutobiographyPage: React.FC = () => {
   return (
     <div className="max-w-4xl mx-auto">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-800">
+        <h2 className="text-apple-display-md text-apple-ink">
           {autobiography.title}
         </h2>
         <Button onClick={() => setIsModalOpen(true)}>
@@ -129,8 +134,8 @@ const AutobiographyPage: React.FC = () => {
 
       {autobiography.chapters.length === 0 ? (
         <Card>
-          <div className="text-center py-8">
-            <p className="text-gray-600 mb-4">
+          <div className="text-center py-12">
+            <p className="text-apple-body text-apple-ink-muted-80 mb-6">
               还没有章节，点击上方按钮添加第一章
             </p>
             <Button onClick={() => navigate('/dialogue')}>
@@ -144,10 +149,10 @@ const AutobiographyPage: React.FC = () => {
             <Card key={chapter.id}>
               <div className="flex justify-between items-start">
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-800">
+                  <h3 className="text-apple-body-strong text-apple-ink">
                     第{index + 1}章: {chapter.title}
                   </h3>
-                  <p className="text-sm text-gray-500 mt-1">
+                  <p className="text-apple-caption text-apple-ink-muted-48 mt-1">
                     创建于: {new Date(chapter.createdAt).toLocaleDateString()}
                   </p>
                 </div>
@@ -163,15 +168,15 @@ const AutobiographyPage: React.FC = () => {
                     variant="ghost"
                     size="sm"
                     onClick={() => deleteChapter(chapter.id)}
-                    className="text-red-600 hover:text-red-700"
+                    className="text-red-500 hover:text-red-600 hover:bg-red-50"
                   >
                     删除
                   </Button>
                 </div>
               </div>
               {chapter.content && (
-                <div className="mt-4 p-4 bg-gray-50 rounded-md">
-                  <p className="text-gray-700 line-clamp-3">
+                <div className="mt-4 p-4 bg-apple-parchment rounded-[11px]">
+                  <p className="text-apple-body text-apple-ink-muted-80 line-clamp-3">
                     {chapter.content}
                   </p>
                 </div>
@@ -186,16 +191,16 @@ const AutobiographyPage: React.FC = () => {
         onClose={() => setIsModalOpen(false)}
         title="添加新章节"
       >
-        <div className="space-y-4">
+        <div className="space-y-5">
           <Input
             label="章节标题"
             value={newChapterTitle}
             onChange={setNewChapterTitle}
             placeholder="请输入章节标题"
           />
-          <div className="flex justify-end gap-2">
+          <div className="flex justify-end gap-3">
             <Button
-              variant="outline"
+              variant="ghost"
               onClick={() => setIsModalOpen(false)}
             >
               取消

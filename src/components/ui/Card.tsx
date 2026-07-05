@@ -16,12 +16,12 @@ const Card: React.FC<CardProps> = ({
   return (
     <div
       onClick={onClick}
-      className={`bg-white rounded-lg shadow-md p-6 ${
-        onClick ? 'cursor-pointer hover:shadow-lg transition-shadow' : ''
+      className={`bg-white rounded-[18px] border border-apple-hairline p-6 ${
+        onClick ? 'cursor-pointer hover:bg-apple-parchment/50 transition-colors duration-200' : ''
       } ${className}`}
     >
       {title && (
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">
+        <h3 className="text-apple-tagline text-apple-ink mb-4">
           {title}
         </h3>
       )}

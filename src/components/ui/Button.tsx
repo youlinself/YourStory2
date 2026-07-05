@@ -17,23 +17,23 @@ const Button: React.FC<ButtonProps> = ({
   disabled = false,
   className = '',
 }) => {
-  const baseClasses = 'inline-flex items-center justify-center rounded-md font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2';
-  
+  const baseClasses = 'inline-flex items-center justify-center font-apple-text transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 select-none';
+
   const variantClasses = {
-    primary: 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500',
-    secondary: 'bg-gray-600 text-white hover:bg-gray-700 focus:ring-gray-500',
-    outline: 'border border-gray-300 bg-transparent text-gray-700 hover:bg-gray-50 focus:ring-blue-500',
-    ghost: 'bg-transparent text-gray-700 hover:bg-gray-100 focus:ring-blue-500',
+    primary: 'bg-apple-primary text-white rounded-full focus:ring-apple-primary-focus hover:brightness-110',
+    secondary: 'bg-transparent text-apple-primary border border-apple-primary rounded-full hover:bg-apple-primary/5 focus:ring-apple-primary-focus',
+    outline: 'bg-apple-pearl text-apple-ink-muted-80 border-[3px] border-apple-divider-soft rounded-[11px] hover:bg-apple-divider-soft/50 focus:ring-apple-hairline',
+    ghost: 'bg-transparent text-apple-ink-muted-48 rounded-md hover:bg-apple-parchment focus:ring-apple-hairline',
   };
-  
+
   const sizeClasses = {
-    sm: 'px-3 py-1.5 text-sm',
-    md: 'px-4 py-2 text-base',
-    lg: 'px-6 py-3 text-lg',
+    sm: 'px-4 py-1.5 text-[14px] leading-[1.29] tracking-[-0.224px]',
+    md: 'px-[22px] py-[11px] text-[17px] leading-[1.47] tracking-[-0.374px]',
+    lg: 'px-7 py-[14px] text-[18px] leading-[1.0] font-light',
   };
-  
-  const disabledClasses = disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer';
-  
+
+  const disabledClasses = disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer';
+
   return (
     <button
       onClick={onClick}
