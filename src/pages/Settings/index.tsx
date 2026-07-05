@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Card, Input, Button } from '../../components';
 import { useAIStore } from '../../stores';
-import { AI_VENDORS, getVendorModels } from '../../ai_config';
+import { AI_VENDORS, getVendorModels, fetchVendorModels } from '../../ai_config';
+
+type TestStatus = 'idle' | 'testing' | 'success' | 'error';
 
 const Settings: React.FC = () => {
   const {
@@ -19,18 +21,58 @@ const Settings: React.FC = () => {
   const [localMaxOutputTokens, setLocalMaxOutputTokens] = useState(maxOutputTokens);
   const [saved, setSaved] = useState(false);
 
-  const vendorModels = getVendorModels(localVendor);
+  // 测试连通性状态
+  const [testStatus, setTestStatus] = useState<TestStatus>('idle');
+  const [testMessage, setTestMessage] = useState('');
+  // 从 API 拉取到的模型列表（为空时使用预设列表）
+  const [fetchedModels, setFetchedModels] = useState<string[]>([]);
+
   const isCustomVendor = localVendor === 'custom';
+  // 优先使用拉取的模型，否则用预设
+  const modelList = fetchedModels.length > 0 ? fetchedModels : getVendorModels(localVendor);
 
   const handleVendorChange = (newVendor: string) => {
     setLocalVendor(newVendor);
-    // 切换供应商时自动填充默认值
+    setFetchedModels([]);
+    setTestStatus('idle');
+    setTestMessage('');
     const v = AI_VENDORS.find((item) => item.id === newVendor);
     if (v) {
       if (v.baseUrl) setLocalBaseUrl(v.baseUrl);
       if (v.defaultModel) setLocalModel(v.defaultModel);
     }
   };
+
+  const handleTestConnection = useCallback(async () => {
+    if (!localApiKey.trim()) {
+      setTestStatus('error');
+      setTestMessage('请先输入 API Key');
+      return;
+    }
+    if (isCustomVendor && !localBaseUrl.trim()) {
+      setTestStatus('error');
+      setTestMessage('自定义供应商请先填写 Base URL');
+      return;
+    }
+
+    setTestStatus('testing');
+    setTestMessage('');
+    setFetchedModels([]);
+
+    try {
+      const models = await fetchVendorModels(localVendor, localApiKey.trim());
+      setFetchedModels(models);
+      setTestStatus('success');
+      setTestMessage(`连接成功，获取到 ${models.length} 个模型`);
+      // 自动选中第一个模型
+      if (models.length > 0) {
+        setLocalModel(models[0]);
+      }
+    } catch (err) {
+      setTestStatus('error');
+      setTestMessage(err instanceof Error ? err.message : '连接失败');
+    }
+  }, [localVendor, localApiKey, localBaseUrl, isCustomVendor]);
 
   const handleSave = () => {
     setApiKey(localApiKey);
@@ -71,14 +113,38 @@ const Settings: React.FC = () => {
             </select>
           </div>
 
-          {/* API Key */}
-          <Input
-            label="API Key"
-            value={localApiKey}
-            onChange={setLocalApiKey}
-            placeholder="请输入您的 AI API Key"
-            type="password"
-          />
+          {/* API Key + 测试按钮 */}
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium text-gray-700">
+              API Key
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="password"
+                value={localApiKey}
+                onChange={(e) => setLocalApiKey(e.target.value)}
+                placeholder="请输入您的 AI API Key"
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+              <Button
+                onClick={handleTestConnection}
+                disabled={testStatus === 'testing'}
+                className="whitespace-nowrap"
+              >
+                {testStatus === 'testing' ? '测试中...' : '测试并获取模型'}
+              </Button>
+            </div>
+            {/* 测试结果提示 */}
+            {testStatus !== 'idle' && testMessage && (
+              <p className={`text-sm ${
+                testStatus === 'success' ? 'text-green-600' :
+                testStatus === 'error' ? 'text-red-500' :
+                'text-gray-500'
+              }`}>
+                {testMessage}
+              </p>
+            )}
+          </div>
 
           {/* Base URL */}
           <Input
@@ -92,14 +158,19 @@ const Settings: React.FC = () => {
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-gray-700">
               模型
+              {fetchedModels.length > 0 && (
+                <span className="ml-2 text-xs text-green-600 font-normal">
+                  (已从供应商获取)
+                </span>
+              )}
             </label>
-            {vendorModels.length > 0 && !isCustomVendor ? (
+            {modelList.length > 0 ? (
               <select
                 value={localModel}
                 onChange={(e) => setLocalModel(e.target.value)}
                 className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
-                {vendorModels.map((m) => (
+                {modelList.map((m) => (
                   <option key={m} value={m}>
                     {m}
                   </option>
@@ -109,7 +180,7 @@ const Settings: React.FC = () => {
               <Input
                 value={localModel}
                 onChange={setLocalModel}
-                placeholder="请输入模型名称"
+                placeholder="请输入模型名称，或点击上方「测试并获取模型」"
               />
             )}
           </div>
@@ -166,10 +237,10 @@ const Settings: React.FC = () => {
       <Card title="使用说明">
         <div className="space-y-3 text-gray-600">
           <p>1. 选择您的 AI 供应商并填写对应的 API Key</p>
-          <p>2. 选择您想使用的 AI 模型</p>
-          <p>3. 调整温度参数：越低越精确，越高越有创意</p>
-          <p>4. 返回首页，开始对话式创作</p>
-          <p>5. AI 会引导您回忆和记录人生故事</p>
+          <p>2. 点击「测试并获取模型」验证连通性并拉取最新模型列表</p>
+          <p>3. 选择您想使用的 AI 模型</p>
+          <p>4. 调整温度参数：越低越精确，越高越有创意</p>
+          <p>5. 返回首页，开始对话式创作</p>
           <p>6. 在对话中输入 <code className="bg-gray-100 px-1 rounded">/compact</code> 可压缩上下文</p>
         </div>
       </Card>
