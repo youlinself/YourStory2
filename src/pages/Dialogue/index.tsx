@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Button, MessageBubble } from '../../components';
+import { MessageBubble } from '../../components';
 import { useAIStore } from '../../stores';
 import { AIService } from '../../services';
 
@@ -9,6 +9,13 @@ interface Message {
   isUser: boolean;
   timestamp: Date;
 }
+
+const SUGGESTIONS = [
+  '我想从童年开始记录',
+  '请帮我回忆学生时代',
+  '聊聊我的职业生涯',
+  '记录一段难忘的旅行',
+];
 
 const Dialogue: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -43,8 +50,9 @@ const Dialogue: React.FC = () => {
     }
   }, []);
 
-  const handleSendMessage = async () => {
-    if (!inputValue.trim() || isLoading) return;
+  const handleSendMessage = async (text?: string) => {
+    const content = text || inputValue.trim();
+    if (!content || isLoading) return;
 
     if (!apiKey) {
       alert('请先在设置页面配置AI API Key');
@@ -53,7 +61,7 @@ const Dialogue: React.FC = () => {
 
     const userMessage: Message = {
       id: Date.now().toString(),
-      content: inputValue,
+      content,
       isUser: true,
       timestamp: new Date(),
     };
@@ -62,14 +70,13 @@ const Dialogue: React.FC = () => {
     setInputValue('');
     setIsLoading(true);
 
-    // Reset textarea height
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
     }
 
     try {
       const aiService = new AIService({ apiKey, model, baseUrl, temperature, maxInputTokens, maxOutputTokens });
-      const response = await aiService.generateResponse(inputValue, messages);
+      const response = await aiService.generateResponse(content, messages);
 
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -102,28 +109,27 @@ const Dialogue: React.FC = () => {
 
   const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInputValue(e.target.value);
-    // Auto-resize
     const textarea = e.target;
     textarea.style.height = 'auto';
-    textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+    textarea.style.height = Math.min(textarea.scrollHeight, 160) + 'px';
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-8rem)] max-w-4xl mx-auto animate-fade-in">
+    <div className="flex flex-col h-[calc(100vh-7.5rem)] max-w-4xl mx-auto animate-fade-in">
       {/* Page Header */}
       <div className="mb-6">
         <h1 className="text-display-md">
           对话式创作
         </h1>
-        <p className="text-body text-ink-secondary mt-1">
+        <p className="text-body text-ink-secondary mt-1.5">
           与AI对话，逐步构建您的个人自传
         </p>
       </div>
 
       {/* Chat Container */}
-      <div className="flex-1 bg-bg-elevated rounded-2xl border border-border-subtle overflow-hidden flex flex-col">
+      <div className="flex-1 bg-bg-elevated rounded-2xl border border-border-subtle overflow-hidden flex flex-col shadow-sm">
         {/* Messages Area */}
-        <div className="flex-1 overflow-y-auto p-5 space-y-4">
+        <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
           {messages.map((message) => (
             <MessageBubble
               key={message.id}
@@ -133,12 +139,19 @@ const Dialogue: React.FC = () => {
             />
           ))}
           {isLoading && (
-            <div className="flex justify-start">
-              <div className="chat-bubble-ai">
-                <div className="flex gap-1.5 py-1">
-                  <div className="loading-dot"></div>
-                  <div className="loading-dot"></div>
-                  <div className="loading-dot"></div>
+            <div className="flex justify-start animate-fade-in">
+              <div className="flex gap-3">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-primary to-brand-primary-hover flex items-center justify-center shrink-0 shadow-sm">
+                  <svg className="w-4.5 h-4.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+                  </svg>
+                </div>
+                <div className="chat-bubble-ai">
+                  <div className="flex items-center gap-1.5 py-0.5">
+                    <div className="loading-dot"></div>
+                    <div className="loading-dot"></div>
+                    <div className="loading-dot"></div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -146,29 +159,54 @@ const Dialogue: React.FC = () => {
           <div ref={messagesEndRef} />
         </div>
 
+        {/* Suggestions - only show when few messages */}
+        {messages.length <= 1 && !isLoading && (
+          <div className="px-6 pb-3 flex flex-wrap gap-2">
+            {SUGGESTIONS.map((suggestion) => (
+              <button
+                key={suggestion}
+                onClick={() => handleSendMessage(suggestion)}
+                className="suggestion-chip"
+              >
+                {suggestion}
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* Input Area */}
-        <div className="border-t border-border-subtle p-4">
+        <div className="chat-input-area">
           <div className="flex gap-3 items-end">
-            <div className="flex-1">
-              <textarea
-                ref={textareaRef}
-                value={inputValue}
-                onChange={handleTextareaChange}
-                onKeyPress={handleKeyPress}
-                placeholder="输入您的回答... (Shift+Enter 换行)"
-                disabled={isLoading}
-                rows={1}
-                className="w-full px-4 py-[0.75rem] font-sans text-[0.9375rem] leading-normal text-ink-primary bg-bg-elevated border border-border-default rounded-xl outline-none transition-all duration-200 placeholder:text-ink-faint focus:border-brand-primary focus:shadow-[0_0_0_3px_var(--color-brand-primary-light)] resize-none min-h-[44px] max-h-[120px]"
-              />
-            </div>
-            <Button
-              onClick={handleSendMessage}
+            <textarea
+              ref={textareaRef}
+              value={inputValue}
+              onChange={handleTextareaChange}
+              onKeyPress={handleKeyPress}
+              placeholder="输入您的回答... (Shift+Enter 换行)"
+              disabled={isLoading}
+              rows={1}
+              className="chat-textarea flex-1"
+            />
+            <button
+              onClick={() => handleSendMessage()}
               disabled={!inputValue.trim() || isLoading}
-              size="md"
-              className="shrink-0"
+              className="w-10 h-10 flex items-center justify-center rounded-xl bg-brand-primary text-white hover:bg-brand-primary-hover hover:shadow-md transition-all duration-200 active:scale-[0.97] disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+              aria-label="发送消息"
             >
-              发送
-            </Button>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+              </svg>
+            </button>
+          </div>
+          <div className="flex items-center justify-between mt-2 px-1">
+            <p className="text-fine-print text-ink-faint">
+              输入 <kbd className="px-1 py-0.5 bg-bg-secondary rounded text-[0.6875rem] font-mono">Enter</kbd> 发送，<kbd className="px-1 py-0.5 bg-bg-secondary rounded text-[0.6875rem] font-mono">Shift+Enter</kbd> 换行
+            </p>
+            {inputValue.length > 0 && (
+              <span className="text-fine-print text-ink-faint">
+                {inputValue.length} 字
+              </span>
+            )}
           </div>
         </div>
       </div>

@@ -17,8 +17,8 @@ const Header: React.FC = () => {
 
   return (
     <header className="bg-bg-elevated/80 backdrop-blur-xl border-b border-border-subtle sticky top-0 z-40">
-      <div className="flex items-center justify-between px-6 h-14">
-        <div className="flex items-center gap-4">
+      <div className="flex items-center justify-between px-8 h-15">
+        <div className="flex items-center gap-5">
           <button
             onClick={() => navigate('/')}
             className="text-body font-semibold text-ink-primary hover:text-brand-primary transition-colors"
@@ -34,7 +34,7 @@ const Header: React.FC = () => {
             </>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <button
             onClick={() => navigate('/settings')}
             className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-bg-secondary transition-colors"

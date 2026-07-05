@@ -19,7 +19,7 @@ const Card: React.FC<CardProps> = ({
       className={`card ${onClick ? 'cursor-pointer' : ''} ${className}`}
     >
       {title && (
-        <h3 className="text-heading mb-4">
+        <h3 className="text-heading mb-5">
           {title}
         </h3>
       )}

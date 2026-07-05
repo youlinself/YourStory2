@@ -99,7 +99,7 @@ const AutobiographyPage: React.FC = () => {
   if (!autobiography) {
     return (
       <div className="max-w-4xl mx-auto animate-fade-in">
-        <h1 className="text-display-md mb-6">
+        <h1 className="text-display-md mb-8">
           我的自传
         </h1>
         <Card>
@@ -123,7 +123,7 @@ const AutobiographyPage: React.FC = () => {
 
   return (
     <div className="max-w-4xl mx-auto animate-fade-in">
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex justify-between items-center mb-8">
         <h1 className="text-display-md">
           {autobiography.title}
         </h1>
@@ -144,7 +144,7 @@ const AutobiographyPage: React.FC = () => {
           </div>
         </Card>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-5">
           {autobiography.chapters.map((chapter, index) => (
             <Card key={chapter.id}>
               <div className="flex justify-between items-start">
@@ -152,11 +152,11 @@ const AutobiographyPage: React.FC = () => {
                   <h3 className="text-body font-semibold text-ink-primary">
                     第{index + 1}章: {chapter.title}
                   </h3>
-                  <p className="text-caption text-ink-muted mt-1">
+                  <p className="text-caption text-ink-muted mt-1.5">
                     创建于: {new Date(chapter.createdAt).toLocaleDateString()}
                   </p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2.5">
                   <Button
                     variant="secondary"
                     size="sm"
@@ -175,7 +175,7 @@ const AutobiographyPage: React.FC = () => {
                 </div>
               </div>
               {chapter.content && (
-                <div className="mt-4 p-4 bg-bg-secondary rounded-lg">
+                <div className="mt-5 p-5 bg-bg-secondary rounded-xl">
                   <p className="text-body text-ink-secondary line-clamp-3">
                     {chapter.content}
                   </p>

@@ -8,7 +8,7 @@ const Home: React.FC = () => {
   return (
     <div className="max-w-4xl mx-auto animate-fade-in">
       {/* Hero Section */}
-      <div className="mb-10">
+      <div className="mb-8">
         <h1 className="text-display-lg mb-3">
           记录你的人生故事
         </h1>
@@ -18,7 +18,7 @@ const Home: React.FC = () => {
       </div>
 
       {/* Feature Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-12">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
         <Card
           title="对话式创作"
           onClick={() => navigate('/dialogue')}
@@ -46,11 +46,11 @@ const Home: React.FC = () => {
 
       {/* Quick Start Section */}
       <div>
-        <h2 className="text-heading mb-5">
+        <h2 className="text-heading mb-6">
           快速开始
         </h2>
         <Card>
-          <ol className="space-y-4 text-body text-ink-secondary list-none">
+          <ol className="space-y-5 text-body text-ink-secondary list-none">
             {[
               '在设置页面配置您的AI API Key',
               '选择对话式创作模式',

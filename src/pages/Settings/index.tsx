@@ -85,14 +85,14 @@ const Settings: React.FC = () => {
 
   return (
     <div className="max-w-2xl mx-auto animate-fade-in">
-      <h1 className="text-display-md mb-6">
+      <h1 className="text-display-md mb-8">
         设置
       </h1>
 
-      <Card title="AI 配置" className="mb-6">
-        <div className="space-y-5">
+      <Card title="AI 配置" className="mb-8">
+        <div className="space-y-6">
           {/* Vendor Select */}
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-2">
             <label className="text-caption font-medium text-ink-secondary">
               AI 供应商
             </label>
@@ -110,7 +110,7 @@ const Settings: React.FC = () => {
           </div>
 
           {/* API Key + Test Button */}
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-2">
             <label className="text-caption font-medium text-ink-secondary">
               API Key
             </label>
@@ -150,7 +150,7 @@ const Settings: React.FC = () => {
           />
 
           {/* Model Select */}
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-2">
             <label className="text-caption font-medium text-ink-secondary">
               模型
               {fetchedModels.length > 0 && (
@@ -181,7 +181,7 @@ const Settings: React.FC = () => {
           </div>
 
           {/* Temperature Slider */}
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-2">
             <label className="text-caption font-medium text-ink-secondary">
               温度 (Temperature): {localTemperature.toFixed(1)}
             </label>
@@ -218,18 +218,20 @@ const Settings: React.FC = () => {
             placeholder="2000"
           />
 
-          <p className="text-caption text-ink-muted">
+          <p className="text-caption text-ink-muted pt-1">
             支持 OpenAI、DeepSeek、Claude 等主流 AI 服务提供商。请确保您的 API Key 具有足够的权限和额度。
           </p>
 
-          <Button onClick={handleSave} className="w-full">
-            {saved ? '已保存' : '保存设置'}
-          </Button>
+          <div className="pt-2">
+            <Button onClick={handleSave} className="w-full">
+              {saved ? '已保存' : '保存设置'}
+            </Button>
+          </div>
         </div>
       </Card>
 
       <Card title="使用说明">
-        <div className="space-y-3 text-body text-ink-secondary">
+        <div className="space-y-4 text-body text-ink-secondary">
           <p>1. 选择您的 AI 供应商并填写对应的 API Key</p>
           <p>2. 点击「测试并获取模型」验证连通性并拉取最新模型列表</p>
           <p>3. 选择您想使用的 AI 模型</p>
