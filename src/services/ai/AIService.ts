@@ -144,6 +144,59 @@ class AIService {
     return this.sendRequest(messages);
   }
 
+  /** 生成欢迎引导内容 */
+  async generateWelcomeGuide(
+    autobiography: Autobiography | null,
+    chapterId: string | null,
+  ): Promise<{ welcome: string; guide: string; starters: string[]; tips: string } | null> {
+    try {
+      // 构建自传状态描述
+      let autobiographyStatus = '空白自传，用户还没有开始创建任何内容';
+      if (autobiography && autobiography.chapters.length > 0) {
+        const total = autobiography.chapters.length;
+        const completed = autobiography.chapters.filter(ch => ch.status === 'completed').length;
+        const draft = autobiography.chapters.filter(ch => ch.status === 'draft').length;
+        autobiographyStatus = `已有${total}个章节，其中${completed}个已完成，${draft}个有草稿`;
+      }
+
+      // 构建章节信息
+      let chapterInfo: string | undefined;
+      if (chapterId && autobiography) {
+        const chapter = autobiography.chapters.find(ch => ch.id === chapterId);
+        if (chapter) {
+          chapterInfo = `章节标题：${chapter.title}`;
+          if (chapter.timeRange) {
+            chapterInfo += `，时间范围：${chapter.timeRange}`;
+          }
+          if (chapter.content) {
+            chapterInfo += `，已有内容：${chapter.content.slice(0, 200)}...`;
+          } else if (chapter.draftContent) {
+            chapterInfo += `，有草稿内容`;
+          } else {
+            chapterInfo += `，尚无内容`;
+          }
+        }
+      }
+
+      const messages = PromptComposer.buildWelcomeGuideMessages(autobiographyStatus, chapterInfo);
+      const response = await this.sendRequest(messages);
+
+      // 解析JSON响应
+      const cleaned = response.replace(/```json\s*|\s*```/g, '').trim();
+      const parsed = JSON.parse(cleaned);
+
+      return {
+        welcome: parsed.welcome || '您好！',
+        guide: parsed.guide || '',
+        starters: Array.isArray(parsed.starters) ? parsed.starters.slice(0, 3) : [],
+        tips: parsed.tips || '',
+      };
+    } catch (error) {
+      console.error('生成欢迎引导失败:', error);
+      return null;
+    }
+  }
+
   private buildChapterInfo(
     chapters: Array<{ id: string; title: string; status?: string }>,
     currentChapterId: string | null,

@@ -3,6 +3,7 @@ import JSON_OUTPUT_RULES from './prompts/json_output_rules.md?raw';
 import CONTEXT_COMPACT from './prompts/context_compact.md?raw';
 import CONTENT_EXTRACT from './prompts/content_extract.md?raw';
 import SUGGESTION_GEN from './prompts/suggestion_gen.md?raw';
+import WELCOME_GUIDE from './prompts/welcome_guide.md?raw';
 import type { ChapterContext } from '../types';
 
 /**
@@ -33,6 +34,11 @@ export const PromptComposer = {
   /** 获取建议词生成提示词 */
   getSuggestionGenPrompt(): string {
     return SUGGESTION_GEN.trim();
+  },
+
+  /** 获取欢迎引导提示词 */
+  getWelcomeGuidePrompt(): string {
+    return WELCOME_GUIDE.trim();
   },
 
   /** 将 JSON 输出规范拼接到 system 消息前面 */
@@ -143,6 +149,26 @@ export const PromptComposer = {
         role: 'user',
         content: `${chapterInfo}\n\n最近对话内容：\n${recentSummary}`,
       },
+    ];
+  },
+
+  /**
+   * 构建欢迎引导的消息数组
+   * @param autobiographyStatus 自传状态描述
+   * @param chapterInfo 当前章节信息（如果有）
+   */
+  buildWelcomeGuideMessages(
+    autobiographyStatus: string,
+    chapterInfo?: string,
+  ): Array<{ role: string; content: string }> {
+    const systemContent = this.prependJsonRulesToSystem(this.getWelcomeGuidePrompt());
+    let userContent = `用户的自传状态：${autobiographyStatus}`;
+    if (chapterInfo) {
+      userContent += `\n\n当前章节信息：${chapterInfo}`;
+    }
+    return [
+      { role: 'system', content: systemContent },
+      { role: 'user', content: userContent },
     ];
   },
 

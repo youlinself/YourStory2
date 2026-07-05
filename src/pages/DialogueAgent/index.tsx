@@ -58,43 +58,75 @@ const DialogueAgent: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // 首次欢迎消息
+  // 首次欢迎消息 - 调用AI生成个性化引导
   useEffect(() => {
-    if (activeSession && messages.length === 0) {
-      const welcomeText = chapterId && currentChapter
-        ? `您好！我们来继续创作「${currentChapter.title}」这一章吧。${currentChapter.content ? '之前已经有一些内容了，我们可以在此基础上继续补充。' : '这是全新的一章，让我们从头开始。'}请告诉我您想从哪里开始回忆？`
-        : '您好！我是您的自传创作助手。让我们一起记录您的人生故事吧。首先，请告诉我您的名字，以及您想从人生的哪个阶段开始记录？';
-
-      const welcomeMessage: Message = {
-        id: generateId(),
-        content: welcomeText,
-        isUser: false,
-        timestamp: new Date(),
-        type: 'text',
-      };
-      addMessage(welcomeMessage);
+    if (activeSession && messages.length === 0 && apiKey) {
+      generateWelcomeGuide();
     }
-  }, [activeSession?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [activeSession?.id, apiKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // 生成初始建议
-  useEffect(() => {
-    if (messages.length <= 1 && suggestions.length === 0) {
-      generateInitialSuggestions();
-    }
-  }, [messages.length]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const generateInitialSuggestions = useCallback(async () => {
+  const generateWelcomeGuide = useCallback(async () => {
     if (!apiKey) return;
+
+    setIsGenerating(true);
     try {
       const aiService = new AIService({ apiKey, model, baseUrl, temperature, maxInputTokens, maxOutputTokens });
-      const newSuggestions = await aiService.generateSuggestions(autobiography, chapterId || null, messages);
-      if (newSuggestions.length > 0) {
-        setSuggestions(newSuggestions);
+      const guide = await aiService.generateWelcomeGuide(autobiography, chapterId || null);
+
+      if (guide) {
+        // 组装欢迎消息
+        let welcomeContent = guide.welcome;
+        if (guide.guide) {
+          welcomeContent += '\n\n' + guide.guide;
+        }
+        if (guide.tips) {
+          welcomeContent += '\n\n💡 ' + guide.tips;
+        }
+
+        const welcomeMessage: Message = {
+          id: generateId(),
+          content: welcomeContent,
+          isUser: false,
+          timestamp: new Date(),
+          type: 'text',
+        };
+        addMessage(welcomeMessage);
+
+        // 将starters转换为建议词
+        if (guide.starters && guide.starters.length > 0) {
+          const starterSuggestions = guide.starters.map((text, index) => ({
+            id: `starter-${Date.now()}-${index}`,
+            text,
+            type: 'guide_question' as const,
+          }));
+          setSuggestions(starterSuggestions);
+        }
+      } else {
+        // AI生成失败，使用默认欢迎消息
+        fallbackWelcome();
       }
-    } catch {
-      // 静默失败，不影响主流程
+    } catch (error) {
+      console.error('生成欢迎引导失败:', error);
+      fallbackWelcome();
+    } finally {
+      setIsGenerating(false);
     }
-  }, [apiKey, model, baseUrl, temperature, maxInputTokens, maxOutputTokens, autobiography, chapterId, messages, setSuggestions]);
+  }, [apiKey, model, baseUrl, temperature, maxInputTokens, maxOutputTokens, autobiography, chapterId, setIsGenerating, addMessage, setSuggestions]);
+
+  const fallbackWelcome = () => {
+    const welcomeText = chapterId && currentChapter
+      ? `您好！我们来继续创作「${currentChapter.title}」这一章吧。${currentChapter.content ? '之前已经有一些内容了，我们可以在此基础上继续补充。' : '这是全新的一章，让我们从头开始。'}请告诉我您想从哪里开始回忆？`
+      : '您好！我是您的自传创作助手。让我们一起记录您的人生故事吧。首先，请告诉我您的名字，以及您想从人生的哪个阶段开始记录？';
+
+    const welcomeMessage: Message = {
+      id: generateId(),
+      content: welcomeText,
+      isUser: false,
+      timestamp: new Date(),
+      type: 'text',
+    };
+    addMessage(welcomeMessage);
+  };
 
   const handleSendMessage = async (text?: string) => {
     const content = text || inputValue.trim();
