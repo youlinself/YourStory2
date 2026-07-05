@@ -15,6 +15,7 @@ const Dialogue: React.FC = () => {
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { apiKey, model, baseUrl, temperature, maxInputTokens, maxOutputTokens, loadSettings } = useAIStore();
 
   const scrollToBottom = () => {
@@ -61,6 +62,11 @@ const Dialogue: React.FC = () => {
     setInputValue('');
     setIsLoading(true);
 
+    // Reset textarea height
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+    }
+
     try {
       const aiService = new AIService({ apiKey, model, baseUrl, temperature, maxInputTokens, maxOutputTokens });
       const response = await aiService.generateResponse(inputValue, messages);
@@ -92,6 +98,14 @@ const Dialogue: React.FC = () => {
       e.preventDefault();
       handleSendMessage();
     }
+  };
+
+  const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInputValue(e.target.value);
+    // Auto-resize
+    const textarea = e.target;
+    textarea.style.height = 'auto';
+    textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
   };
 
   return (
@@ -137,19 +151,21 @@ const Dialogue: React.FC = () => {
           <div className="flex gap-3 items-end">
             <div className="flex-1">
               <textarea
+                ref={textareaRef}
                 value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
+                onChange={handleTextareaChange}
                 onKeyPress={handleKeyPress}
-                placeholder="输入您的回答..."
+                placeholder="输入您的回答... (Shift+Enter 换行)"
                 disabled={isLoading}
                 rows={1}
-                className="input-base resize-none min-h-[44px] max-h-[120px]"
+                className="w-full px-4 py-[0.75rem] font-sans text-[0.9375rem] leading-normal text-ink-primary bg-bg-elevated border border-border-default rounded-xl outline-none transition-all duration-200 placeholder:text-ink-faint focus:border-brand-primary focus:shadow-[0_0_0_3px_var(--color-brand-primary-light)] resize-none min-h-[44px] max-h-[120px]"
               />
             </div>
             <Button
               onClick={handleSendMessage}
               disabled={!inputValue.trim() || isLoading}
               size="md"
+              className="shrink-0"
             >
               发送
             </Button>

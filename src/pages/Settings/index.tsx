@@ -120,7 +120,7 @@ const Settings: React.FC = () => {
                 value={localApiKey}
                 onChange={(e) => setLocalApiKey(e.target.value)}
                 placeholder="请输入您的 AI API Key"
-                className="flex-1 input-base"
+                className="flex-1 w-full px-4 py-[0.75rem] font-sans text-[0.9375rem] leading-normal text-ink-primary bg-bg-elevated border border-border-default rounded-xl outline-none transition-all duration-200 placeholder:text-ink-faint focus:border-brand-primary focus:shadow-[0_0_0_3px_var(--color-brand-primary-light)]"
               />
               <Button
                 onClick={handleTestConnection}
@@ -192,7 +192,7 @@ const Settings: React.FC = () => {
               step="0.1"
               value={localTemperature}
               onChange={(e) => setLocalTemperature(parseFloat(e.target.value))}
-              className="w-full h-1 bg-border-default rounded-full appearance-none [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-brand-primary [&::-webkit-slider-thumb]:cursor-pointer"
+              className="w-full"
             />
             <div className="flex justify-between text-fine-print text-ink-muted">
               <span>精确 (0)</span>

@@ -10,6 +10,7 @@ interface InputProps {
   error?: string;
   className?: string;
   onKeyPress?: (e: React.KeyboardEvent) => void;
+  inputRef?: React.Ref<HTMLInputElement>;
 }
 
 const Input: React.FC<InputProps> = ({
@@ -22,6 +23,7 @@ const Input: React.FC<InputProps> = ({
   error,
   className = '',
   onKeyPress,
+  inputRef,
 }) => {
   return (
     <div className={`flex flex-col gap-1.5 ${className}`}>
@@ -31,13 +33,14 @@ const Input: React.FC<InputProps> = ({
         </label>
       )}
       <input
+        ref={inputRef}
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onKeyPress={onKeyPress}
         placeholder={placeholder}
         disabled={disabled}
-        className={`input-base ${error ? 'border-error' : ''} ${disabled ? 'opacity-60 cursor-not-allowed' : ''}`}
+        className={`w-full px-4 py-[0.75rem] font-sans text-[0.9375rem] leading-normal text-ink-primary bg-bg-elevated border rounded-xl outline-none transition-all duration-200 placeholder:text-ink-faint border-border-default focus:border-brand-primary focus:shadow-[0_0_0_3px_var(--color-brand-primary-light)] ${error ? 'border-error focus:border-error focus:shadow-[0_0_0_3px_rgba(209,36,47,0.1)]' : ''} ${disabled ? 'opacity-60 cursor-not-allowed' : ''}`}
       />
       {error && (
         <span className="text-caption text-error">{error}</span>

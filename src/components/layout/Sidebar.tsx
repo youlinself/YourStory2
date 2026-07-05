@@ -49,13 +49,13 @@ const Sidebar: React.FC = () => {
                 <li key={item.path}>
                   <Link
                     to={item.path}
-                    className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-150 ${
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-150 ${
                       isActive
-                        ? 'sidebar-item-active'
-                        : 'text-ink-secondary hover:text-ink-primary hover:bg-bg-secondary/60'
+                        ? 'sidebar-item-active shadow-sm'
+                        : 'text-ink-secondary hover:text-ink-primary hover:bg-bg-secondary/80 active:bg-bg-secondary'
                     }`}
                   >
-                    <span>{item.icon}</span>
+                    <span className={isActive ? 'text-brand-primary' : 'group-hover:text-ink-primary'}>{item.icon}</span>
                     <span className="text-sm font-medium">{item.label}</span>
                   </Link>
                 </li>
