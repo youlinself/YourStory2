@@ -1,5 +1,5 @@
 import { PromptComposer } from '../../ai_config';
-import type { Message } from '../../types';
+import type { Message, ChapterContext, ExtractedContent, Suggestion, Autobiography } from '../../types';
 
 export interface AIServiceConfig {
   apiKey: string;
@@ -39,7 +39,11 @@ class AIService {
     this.maxOutputTokens = config.maxOutputTokens ?? DEFAULT_CONFIG.maxOutputTokens!;
   }
 
-  async generateResponse(userInput: string, conversationHistory: Message[]): Promise<string> {
+  async generateResponse(
+    userInput: string,
+    conversationHistory: Message[],
+    chapterContext?: ChapterContext,
+  ): Promise<string> {
     // 检测是否为压缩指令
     const compactDirective = PromptComposer.parseCompactCommand(userInput);
     if (compactDirective !== null) {
@@ -51,8 +55,116 @@ class AIService {
       content: msg.content,
     }));
 
-    const messages = PromptComposer.buildMessages(userInput, historyForPrompt);
+    const messages = PromptComposer.buildMessages(userInput, historyForPrompt, chapterContext);
     return this.sendRequest(messages);
+  }
+
+  /** 从最近对话中提取结构化内容 */
+  async extractContent(
+    recentMessages: Message[],
+    chapterTitle: string,
+  ): Promise<ExtractedContent | null> {
+    try {
+      const historyForPrompt = recentMessages.slice(-6).map((msg) => ({
+        role: (msg.isUser ? 'user' : 'assistant') as 'user' | 'assistant',
+        content: msg.content,
+      }));
+
+      const messages = PromptComposer.buildExtractMessages(historyForPrompt, chapterTitle);
+      const response = await this.sendRequest(messages);
+
+      // 解析 JSON 响应
+      const cleaned = response.replace(/```json\s*|\s*```/g, '').trim();
+      const parsed = JSON.parse(cleaned);
+
+      if (!Array.isArray(parsed.paragraphs) || parsed.paragraphs.length === 0) {
+        return null;
+      }
+
+      return {
+        paragraphs: parsed.paragraphs,
+        timeTag: parsed.timeTag,
+        emotionTags: parsed.emotionTags,
+        people: parsed.people,
+        status: 'pending',
+      };
+    } catch (error) {
+      console.error('内容提取失败:', error);
+      return null;
+    }
+  }
+
+  /** 生成智能建议 */
+  async generateSuggestions(
+    autobiography: Autobiography | null,
+    currentChapterId: string | null,
+    recentMessages: Message[],
+  ): Promise<Suggestion[]> {
+    try {
+      const chapters = autobiography?.chapters || [];
+      const chapterInfo = this.buildChapterInfo(chapters, currentChapterId);
+      const recentSummary = recentMessages
+        .slice(-8)
+        .map((m) => `${m.isUser ? '用户' : 'AI'}: ${m.content.slice(0, 100)}`)
+        .join('\n');
+
+      const messages = PromptComposer.buildSuggestionMessages(chapterInfo, recentSummary);
+      const response = await this.sendRequest(messages);
+
+      const cleaned = response.replace(/```json\s*|\s*```/g, '').trim();
+      const parsed = JSON.parse(cleaned) as Array<{ type: string; text: string }>;
+
+      return parsed.map((item, index) => ({
+        id: `suggestion-${Date.now()}-${index}`,
+        text: item.text,
+        type: (item.type as Suggestion['type']) || 'guide_question',
+        chapterId: currentChapterId || undefined,
+      }));
+    } catch (error) {
+      console.error('建议生成失败:', error);
+      return [];
+    }
+  }
+
+  /** 生成章节摘要 */
+  async generateChapterSummary(
+    chapterTitle: string,
+    dialogueContent: string,
+  ): Promise<string> {
+    const messages = [
+      {
+        role: 'system' as const,
+        content: '你是一位自传编辑。请将以下对话内容整理为流畅的自传章节摘要，保持第一人称视角。',
+      },
+      {
+        role: 'user' as const,
+        content: `章节：${chapterTitle}\n\n对话内容：\n${dialogueContent}\n\n请生成章节摘要：`,
+      },
+    ];
+    return this.sendRequest(messages);
+  }
+
+  private buildChapterInfo(
+    chapters: Array<{ id: string; title: string; status?: string }>,
+    currentChapterId: string | null,
+  ): string {
+    if (chapters.length === 0) {
+      return '用户还没有创建任何自传章节。';
+    }
+
+    const lines = chapters.map((ch) => {
+      const statusText =
+        ch.id === currentChapterId
+          ? '【当前创作中】'
+          : ch.status === 'completed'
+            ? '【已完成】'
+            : ch.status === 'draft'
+              ? '【有草稿】'
+              : '【未开始】';
+      return `- ${ch.title} ${statusText}`;
+    });
+
+    return `自传章节列表：\n${lines.join('\n')}`;
   }
 
   private async handleCompact(

@@ -1,100 +1,38 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Button, Input, Modal } from '../../components';
 import { useNavigate } from 'react-router-dom';
-import { StorageService } from '../../services';
-import { generateId } from '../../utils';
-
-interface Chapter {
-  id: string;
-  title: string;
-  content: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-interface Autobiography {
-  id: string;
-  title: string;
-  chapters: Chapter[];
-  createdAt: Date;
-  updatedAt: Date;
-}
+import { useAutobiographyStore } from '../../stores';
 
 const AutobiographyPage: React.FC = () => {
   const navigate = useNavigate();
-  const [autobiography, setAutobiography] = useState<Autobiography | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newChapterTitle, setNewChapterTitle] = useState('');
-  const storageService = StorageService.getInstance();
+
+  const {
+    autobiography,
+    load,
+    create,
+    createChapter,
+    deleteChapter,
+    getCompletionStats,
+  } = useAutobiographyStore();
 
   useEffect(() => {
-    loadAutobiography();
-  }, []);
+    load();
+  }, [load]);
 
-  const loadAutobiography = async () => {
-    try {
-      const data = await storageService.loadData<Autobiography>('autobiography');
-      if (data) {
-        setAutobiography(data);
-      }
-    } catch (error) {
-      console.error('加载自传失败:', error);
-    }
+  const handleCreateNew = async () => {
+    await create();
   };
 
-  const saveAutobiography = async (data: Autobiography) => {
-    try {
-      await storageService.saveData('autobiography', data);
-      setAutobiography(data);
-    } catch (error) {
-      console.error('保存自传失败:', error);
-    }
-  };
-
-  const createNewAutobiography = () => {
-    const newAutobiography: Autobiography = {
-      id: generateId(),
-      title: '我的自传',
-      chapters: [],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-    saveAutobiography(newAutobiography);
-  };
-
-  const addChapter = () => {
-    if (!newChapterTitle.trim() || !autobiography) return;
-
-    const newChapter: Chapter = {
-      id: generateId(),
-      title: newChapterTitle,
-      content: '',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    const updatedAutobiography = {
-      ...autobiography,
-      chapters: [...autobiography.chapters, newChapter],
-      updatedAt: new Date(),
-    };
-
-    saveAutobiography(updatedAutobiography);
+  const handleAddChapter = async () => {
+    if (!newChapterTitle.trim()) return;
+    await createChapter(newChapterTitle.trim());
     setNewChapterTitle('');
     setIsModalOpen(false);
   };
 
-  const deleteChapter = (chapterId: string) => {
-    if (!autobiography) return;
-
-    const updatedAutobiography = {
-      ...autobiography,
-      chapters: autobiography.chapters.filter((chapter) => chapter.id !== chapterId),
-      updatedAt: new Date(),
-    };
-
-    saveAutobiography(updatedAutobiography);
-  };
+  const stats = getCompletionStats();
 
   if (!autobiography) {
     return (
@@ -112,7 +50,7 @@ const AutobiographyPage: React.FC = () => {
             <p className="text-body text-ink-secondary mb-6">
               您还没有开始创建自传
             </p>
-            <Button onClick={createNewAutobiography}>
+            <Button onClick={handleCreateNew}>
               开始创建自传
             </Button>
           </div>
@@ -124,12 +62,24 @@ const AutobiographyPage: React.FC = () => {
   return (
     <div className="max-w-4xl mx-auto animate-fade-in">
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-display-md">
-          {autobiography.title}
-        </h1>
-        <Button onClick={() => setIsModalOpen(true)}>
-          添加章节
-        </Button>
+        <div>
+          <h1 className="text-display-md">
+            {autobiography.title}
+          </h1>
+          {stats.total > 0 && (
+            <p className="text-caption text-ink-muted mt-1.5">
+              共 {stats.total} 章 · 已完成 {stats.completed} 章 · 草稿 {stats.draft} 章
+            </p>
+          )}
+        </div>
+        <div className="flex gap-2.5">
+          <Button variant="secondary" onClick={() => navigate('/dialogue')}>
+            对话创作
+          </Button>
+          <Button onClick={() => setIsModalOpen(true)}>
+            添加章节
+          </Button>
+        </div>
       </div>
 
       {autobiography.chapters.length === 0 ? (
@@ -145,44 +95,69 @@ const AutobiographyPage: React.FC = () => {
         </Card>
       ) : (
         <div className="space-y-5">
-          {autobiography.chapters.map((chapter, index) => (
-            <Card key={chapter.id}>
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="text-body font-semibold text-ink-primary">
-                    第{index + 1}章: {chapter.title}
-                  </h3>
-                  <p className="text-caption text-ink-muted mt-1.5">
-                    创建于: {new Date(chapter.createdAt).toLocaleDateString()}
-                  </p>
+          {autobiography.chapters.map((chapter, index) => {
+            const statusLabel = chapter.status === 'completed' ? '已完成'
+              : chapter.status === 'draft' ? '草稿'
+              : chapter.status === 'in_progress' ? '进行中'
+              : '未开始';
+            const statusColor = chapter.status === 'completed' ? 'text-success'
+              : chapter.status === 'draft' ? 'text-warning'
+              : chapter.status === 'in_progress' ? 'text-brand-primary'
+              : 'text-ink-muted';
+
+            return (
+              <Card key={chapter.id}>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-body font-semibold text-ink-primary">
+                        第{index + 1}章: {chapter.title}
+                      </h3>
+                      <span className={`text-xs font-medium ${statusColor}`}>
+                        {statusLabel}
+                      </span>
+                    </div>
+                    <p className="text-caption text-ink-muted mt-1.5">
+                      创建于: {new Date(chapter.createdAt).toLocaleDateString()}
+                      {chapter.timeRange && ` · ${chapter.timeRange}`}
+                    </p>
+                  </div>
+                  <div className="flex gap-2.5">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => navigate(`/dialogue/${chapter.id}`)}
+                    >
+                      对话创作
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => deleteChapter(chapter.id)}
+                      className="text-error hover:text-error hover:bg-error/10"
+                    >
+                      删除
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex gap-2.5">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => navigate(`/dialogue?chapter=${chapter.id}`)}
-                  >
-                    编辑
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => deleteChapter(chapter.id)}
-                    className="text-error hover:text-error hover:bg-error/10"
-                  >
-                    删除
-                  </Button>
-                </div>
-              </div>
-              {chapter.content && (
-                <div className="mt-5 p-5 bg-bg-secondary rounded-xl">
-                  <p className="text-body text-ink-secondary line-clamp-3">
-                    {chapter.content}
-                  </p>
-                </div>
-              )}
-            </Card>
-          ))}
+                {chapter.content && (
+                  <div className="mt-5 p-5 bg-bg-secondary rounded-xl">
+                    <p className="text-body text-ink-secondary line-clamp-3">
+                      {chapter.content}
+                    </p>
+                  </div>
+                )}
+                {chapter.draftContent && !chapter.content && (
+                  <div className="mt-5 p-5 bg-brand-primary-subtle rounded-xl">
+                    <p className="text-caption text-brand-primary mb-1">草稿预览</p>
+                    <p className="text-body text-ink-secondary line-clamp-3">
+                      {chapter.draftContent}
+                    </p>
+                  </div>
+                )}
+              </Card>
+            );
+          })}
         </div>
       )}
 
@@ -205,7 +180,7 @@ const AutobiographyPage: React.FC = () => {
             >
               取消
             </Button>
-            <Button onClick={addChapter}>
+            <Button onClick={handleAddChapter}>
               添加
             </Button>
           </div>

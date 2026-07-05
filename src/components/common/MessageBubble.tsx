@@ -30,7 +30,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
           </div>
           {timestamp && (
             <span className="text-fine-print text-ink-muted px-1">
-              {timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              {new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </span>
           )}
         </div>
@@ -48,7 +48,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
           </div>
           {timestamp && (
             <span className="text-fine-print text-ink-faint px-1">
-              {timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              {new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </span>
           )}
         </div>

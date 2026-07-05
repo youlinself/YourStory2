@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { MainLayout } from "./components";
-import { Home, Dialogue, Settings, Autobiography } from "./pages";
+import { Home, DialogueAgent, Settings, Autobiography } from "./pages";
 import { useAIStore } from "./stores";
 import "./App.css";
 
@@ -17,7 +17,8 @@ function App() {
       <MainLayout>
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/dialogue" element={<Dialogue />} />
+          <Route path="/dialogue" element={<DialogueAgent />} />
+          <Route path="/dialogue/:chapterId" element={<DialogueAgent />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/autobiography" element={<Autobiography />} />
         </Routes>
