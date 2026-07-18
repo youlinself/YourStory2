@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageBubble } from '../../components';
-import { useAIStore } from '../../stores';
+import { MessageBubble, SuggestionBar } from '../../components';
+import { useAIStore, useDialogueStore } from '../../stores';
 import { AIService } from '../../services';
 
 interface Message {
@@ -21,9 +21,11 @@ const Dialogue: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isSuggestionsVisible, setIsSuggestionsVisible] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { apiKey, model, baseUrl, vendor, temperature, maxInputTokens, maxOutputTokens, loadSettings } = useAIStore();
+  const { suggestions, setSuggestions, isGenerating, setIsGenerating } = useDialogueStore();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -49,6 +51,31 @@ const Dialogue: React.FC = () => {
       ]);
     }
   }, []);
+
+  const handleGenerateSuggestions = async () => {
+    if (!apiKey) {
+      alert('请先在设置页面配置AI API Key');
+      return;
+    }
+
+    setIsGenerating(true);
+    setIsSuggestionsVisible(true);
+
+    try {
+      const aiService = new AIService({ apiKey, model, baseUrl, vendor, temperature, maxInputTokens, maxOutputTokens });
+      const newSuggestions = await aiService.generateSuggestions(null, null, messages);
+      setSuggestions(newSuggestions);
+    } catch (error) {
+      console.error('生成建议失败:', error);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleSuggestionClick = (text: string) => {
+    handleSendMessage(text);
+    setIsSuggestionsVisible(false);
+  };
 
   const handleSendMessage = async (text?: string) => {
     const content = text || inputValue.trim();
@@ -174,6 +201,15 @@ const Dialogue: React.FC = () => {
           </div>
         )}
 
+        {/* Dynamic Suggestions Bar */}
+        {isSuggestionsVisible && (
+          <SuggestionBar
+            suggestions={suggestions}
+            onSuggestionClick={handleSuggestionClick}
+            isLoading={isGenerating}
+          />
+        )}
+
         {/* Input Area */}
         <div className="chat-input-area">
           <div className="flex gap-3 items-end">
@@ -187,6 +223,17 @@ const Dialogue: React.FC = () => {
               rows={1}
               className="chat-textarea flex-1"
             />
+            <button
+              onClick={handleGenerateSuggestions}
+              disabled={isLoading || isGenerating}
+              className="w-10 h-10 flex items-center justify-center rounded-xl border border-border-subtle text-ink-secondary hover:bg-bg-secondary hover:text-ink-primary hover:shadow-sm transition-all duration-200 active:scale-[0.97] disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+              aria-label="获取提示"
+              title="获取创作提示"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
+              </svg>
+            </button>
             <button
               onClick={() => handleSendMessage()}
               disabled={!inputValue.trim() || isLoading}

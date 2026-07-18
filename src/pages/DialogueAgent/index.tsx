@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { MessageBubble } from '../../components';
+import { MessageBubble, Modal } from '../../components';
 import { ContentExtractCard, SuggestionBar, SidePanel } from '../../components/dialogue';
 import { useAIStore, useDialogueStore, useAutobiographyStore } from '../../stores';
 import { AIService } from '../../services';
@@ -14,6 +14,8 @@ const DialogueAgent: React.FC = () => {
   const [inputValue, setInputValue] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [isChapterSelectModalOpen, setIsChapterSelectModalOpen] = useState(false);
+  const [pendingExtract, setPendingExtract] = useState<{ messageId: string; content: string; isEdit: boolean } | null>(null);
 
   const { apiKey, model, baseUrl, vendor, temperature, maxInputTokens, maxOutputTokens, loadSettings } = useAIStore();
 
@@ -225,16 +227,59 @@ const DialogueAgent: React.FC = () => {
 
   // 内容提取操作
   const handleApproveExtract = (messageId: string, extract: ExtractedContent) => {
-    if (!chapterId) return;
-    updateExtractStatus(messageId, 'approved');
     const contentToWrite = extract.paragraphs.join('\n\n');
+    if (!chapterId) {
+      setPendingExtract({ messageId, content: contentToWrite, isEdit: false });
+      setIsChapterSelectModalOpen(true);
+      return;
+    }
+    updateExtractStatus(messageId, 'approved');
     updateChapterDraft(chapterId, contentToWrite);
   };
 
   const handleEditExtract = (messageId: string, editedContent: string) => {
-    if (!chapterId) return;
+    if (!chapterId) {
+      setPendingExtract({ messageId, content: editedContent, isEdit: true });
+      setIsChapterSelectModalOpen(true);
+      return;
+    }
     updateExtractStatus(messageId, 'edited', editedContent);
     updateChapterDraft(chapterId, editedContent);
+  };
+
+  const handleConfirmWriteToChapter = async (selectedChapterId: string) => {
+    if (!pendingExtract) return;
+    
+    // 找到选中的章节标题用于提示
+    const selectedChapter = autobiography?.chapters.find(ch => ch.id === selectedChapterId);
+    const chapterTitle = selectedChapter?.title || '未知章节';
+    
+    try {
+      // 更新提取状态
+      updateExtractStatus(
+        pendingExtract.messageId, 
+        pendingExtract.isEdit ? 'edited' : 'approved', 
+        pendingExtract.isEdit ? pendingExtract.content : undefined
+      );
+      
+      // 写入章节草稿
+      await updateChapterDraft(selectedChapterId, pendingExtract.content);
+      
+      // 关闭弹窗并清理状态
+      setIsChapterSelectModalOpen(false);
+      setPendingExtract(null);
+      
+      // 显示成功提示
+      alert(`✅ 内容已成功写入「${chapterTitle}」章节！\n\n正在跳转到该章节...`);
+      
+      // 延迟跳转，让用户看到提示
+      setTimeout(() => {
+        navigate(`/dialogue/${selectedChapterId}`);
+      }, 300);
+    } catch (error) {
+      console.error('写入章节失败:', error);
+      alert('❌ 写入章节失败，请重试');
+    }
   };
 
   const handleRejectExtract = (messageId: string) => {
@@ -441,6 +486,59 @@ const DialogueAgent: React.FC = () => {
           isGenerating={isGenerating}
         />
       </div>
+
+      {/* 章节选择弹窗 */}
+      <Modal
+        isOpen={isChapterSelectModalOpen}
+        onClose={() => {
+          setIsChapterSelectModalOpen(false);
+          setPendingExtract(null);
+        }}
+        title="选择要写入的章节"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-ink-secondary">
+            请选择要将内容写入的章节：
+          </p>
+          {autobiography?.chapters && autobiography.chapters.length > 0 ? (
+            <div className="space-y-2 max-h-60 overflow-y-auto">
+              {autobiography.chapters.map((chapter) => (
+                <button
+                  key={chapter.id}
+                  onClick={() => handleConfirmWriteToChapter(chapter.id)}
+                  className="w-full text-left px-4 py-3 rounded-xl border border-border-subtle hover:border-brand-primary hover:bg-brand-primary-subtle transition-all duration-200"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-ink-primary">{chapter.title}</span>
+                    {chapter.status === 'completed' && (
+                      <span className="text-xs text-success bg-success/10 px-2 py-0.5 rounded-full">已完成</span>
+                    )}
+                    {chapter.status === 'draft' && (
+                      <span className="text-xs text-warning bg-warning/10 px-2 py-0.5 rounded-full">草稿</span>
+                    )}
+                  </div>
+                  {chapter.timeRange && (
+                    <p className="text-xs text-ink-muted mt-1">{chapter.timeRange}</p>
+                  )}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-4">
+              <p className="text-ink-muted mb-4">还没有创建任何章节</p>
+              <button
+                onClick={() => {
+                  setIsChapterSelectModalOpen(false);
+                  handleCreateChapter();
+                }}
+                className="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-primary-hover transition-colors"
+              >
+                创建新章节
+              </button>
+            </div>
+          )}
+        </div>
+      </Modal>
     </div>
   );
 };
