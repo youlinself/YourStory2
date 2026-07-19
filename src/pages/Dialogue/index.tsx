@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageBubble, SuggestionBar } from '../../components';
+import { MessageBubble, SuggestionBar, LoadingDots, useToast } from '../../components';
 import { useAIStore, useDialogueStore } from '../../stores';
 import { AIService } from '../../services';
 
@@ -24,8 +24,9 @@ const Dialogue: React.FC = () => {
   const [isSuggestionsVisible, setIsSuggestionsVisible] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const { apiKey, model, baseUrl, vendor, temperature, maxInputTokens, maxOutputTokens, loadSettings } = useAIStore();
+  const { apiKey, model, baseUrl, vendor, temperature, maxOutputTokens, loadSettings } = useAIStore();
   const { suggestions, setSuggestions, isGenerating, setIsGenerating } = useDialogueStore();
+  const { addToast } = useToast();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -54,7 +55,11 @@ const Dialogue: React.FC = () => {
 
   const handleGenerateSuggestions = async () => {
     if (!apiKey) {
-      alert('请先在设置页面配置AI API Key');
+      addToast({
+        type: 'warning',
+        message: '请先在设置页面配置AI API Key',
+        duration: 4000,
+      });
       return;
     }
 
@@ -62,11 +67,16 @@ const Dialogue: React.FC = () => {
     setIsSuggestionsVisible(true);
 
     try {
-      const aiService = new AIService({ apiKey, model, baseUrl, vendor, temperature, maxInputTokens, maxOutputTokens });
+      const aiService = new AIService({ apiKey, model, baseUrl, vendor, temperature, maxOutputTokens });
       const newSuggestions = await aiService.generateSuggestions(null, null, messages);
       setSuggestions(newSuggestions);
     } catch (error) {
       console.error('生成建议失败:', error);
+      addToast({
+        type: 'error',
+        message: '生成提示失败，请检查网络连接后重试',
+      });
+      setIsSuggestionsVisible(false);
     } finally {
       setIsGenerating(false);
     }
@@ -82,7 +92,11 @@ const Dialogue: React.FC = () => {
     if (!content || isLoading) return;
 
     if (!apiKey) {
-      alert('请先在设置页面配置AI API Key');
+      addToast({
+        type: 'warning',
+        message: '请先在设置页面配置AI API Key',
+        duration: 4000,
+      });
       return;
     }
 
@@ -102,7 +116,7 @@ const Dialogue: React.FC = () => {
     }
 
     try {
-      const aiService = new AIService({ apiKey, model, baseUrl, vendor, temperature, maxInputTokens, maxOutputTokens });
+      const aiService = new AIService({ apiKey, model, baseUrl, vendor, temperature, maxOutputTokens });
       const response = await aiService.generateResponse(content, messages);
 
       const aiMessage: Message = {
@@ -122,6 +136,11 @@ const Dialogue: React.FC = () => {
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, errorMessage]);
+      addToast({
+        type: 'error',
+        message: '发送失败，请检查网络连接',
+        duration: 5000,
+      });
     } finally {
       setIsLoading(false);
     }
@@ -142,21 +161,18 @@ const Dialogue: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-7.5rem)] max-w-4xl mx-auto animate-fade-in">
-      {/* Page Header */}
+    <div className="flex flex-col h-[calc(100vh-10rem)] animate-fade-in">
       <div className="mb-6">
         <h1 className="text-display-md">
           对话式创作
         </h1>
-        <p className="text-body text-ink-secondary mt-1.5">
+        <p className="text-body text-ink-secondary mt-2">
           与AI对话，逐步构建您的个人自传
         </p>
       </div>
 
-      {/* Chat Container */}
       <div className="flex-1 bg-bg-elevated rounded-2xl border border-border-subtle overflow-hidden flex flex-col shadow-sm">
-        {/* Messages Area */}
-        <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
+        <div className="flex-1 overflow-y-auto px-6 lg:px-8 py-6 lg:py-8 space-y-6">
           {messages.map((message) => (
             <MessageBubble
               key={message.id}
@@ -168,16 +184,14 @@ const Dialogue: React.FC = () => {
           {isLoading && (
             <div className="flex justify-start animate-fade-in">
               <div className="flex gap-3">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-primary to-brand-primary-hover flex items-center justify-center shrink-0 shadow-sm">
-                  <svg className="w-4.5 h-4.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-brand-primary to-brand-primary-hover flex items-center justify-center shrink-0 shadow-sm">
+                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
                   </svg>
                 </div>
                 <div className="chat-bubble-ai">
-                  <div className="flex items-center gap-1.5 py-0.5">
-                    <div className="loading-dot"></div>
-                    <div className="loading-dot"></div>
-                    <div className="loading-dot"></div>
+                  <div className="flex items-center py-1">
+                    <LoadingDots size="md" />
                   </div>
                 </div>
               </div>
@@ -186,22 +200,27 @@ const Dialogue: React.FC = () => {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Suggestions - only show when few messages */}
-        {messages.length <= 1 && !isLoading && (
-          <div className="px-6 pb-3 flex flex-wrap gap-2">
-            {SUGGESTIONS.map((suggestion) => (
-              <button
-                key={suggestion}
-                onClick={() => handleSendMessage(suggestion)}
-                className="suggestion-chip"
-              >
-                {suggestion}
-              </button>
-            ))}
-          </div>
-        )}
+        <div className="px-6 lg:px-8 pb-4">
+          {messages.length <= 1 && !isLoading && (
+            <div className="flex flex-col items-center gap-3 mb-4">
+              <span className="text-caption text-ink-faint">
+                不知道从哪里开始？试试这些：
+              </span>
+              <div className="flex flex-wrap gap-2 justify-center">
+                {SUGGESTIONS.map((suggestion) => (
+                  <button
+                    key={suggestion}
+                    onClick={() => handleSendMessage(suggestion)}
+                    className="suggestion-chip"
+                  >
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
 
-        {/* Dynamic Suggestions Bar */}
         {isSuggestionsVisible && (
           <SuggestionBar
             suggestions={suggestions}
@@ -210,7 +229,6 @@ const Dialogue: React.FC = () => {
           />
         )}
 
-        {/* Input Area */}
         <div className="chat-input-area">
           <div className="flex gap-3 items-end">
             <textarea
@@ -226,18 +244,22 @@ const Dialogue: React.FC = () => {
             <button
               onClick={handleGenerateSuggestions}
               disabled={isLoading || isGenerating}
-              className="w-10 h-10 flex items-center justify-center rounded-xl border border-border-subtle text-ink-secondary hover:bg-bg-secondary hover:text-ink-primary hover:shadow-sm transition-all duration-200 active:scale-[0.97] disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+              className="w-11 h-11 flex items-center justify-center rounded-xl border border-border-default text-ink-secondary hover:bg-bg-secondary hover:text-ink-primary hover:shadow-sm transition-all duration-200 active:scale-[0.97] disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
               aria-label="获取提示"
               title="获取创作提示"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
-              </svg>
+              {isGenerating ? (
+                <LoadingDots size="sm" />
+              ) : (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
+                </svg>
+              )}
             </button>
             <button
               onClick={() => handleSendMessage()}
               disabled={!inputValue.trim() || isLoading}
-              className="w-10 h-10 flex items-center justify-center rounded-xl bg-brand-primary text-white hover:bg-brand-primary-hover hover:shadow-md transition-all duration-200 active:scale-[0.97] disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+              className="w-11 h-11 flex items-center justify-center rounded-xl bg-brand-primary text-white hover:bg-brand-primary-hover hover:shadow-md transition-all duration-200 active:scale-[0.97] disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
               aria-label="发送消息"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
@@ -245,9 +267,9 @@ const Dialogue: React.FC = () => {
               </svg>
             </button>
           </div>
-          <div className="flex items-center justify-between mt-2 px-1">
+          <div className="flex items-center justify-between mt-3 px-1">
             <p className="text-fine-print text-ink-faint">
-              输入 <kbd className="px-1 py-0.5 bg-bg-secondary rounded text-[0.6875rem] font-mono">Enter</kbd> 发送，<kbd className="px-1 py-0.5 bg-bg-secondary rounded text-[0.6875rem] font-mono">Shift+Enter</kbd> 换行
+              输入 <kbd className="px-1.5 py-0.5 bg-bg-secondary rounded text-[0.6875rem] font-mono border border-border-subtle">Enter</kbd> 发送，<kbd className="px-1.5 py-0.5 bg-bg-secondary rounded text-[0.6875rem] font-mono border border-border-subtle">Shift+Enter</kbd> 换行
             </p>
             {inputValue.length > 0 && (
               <span className="text-fine-print text-ink-faint">

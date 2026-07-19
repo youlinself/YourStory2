@@ -24,7 +24,7 @@ interface DialogueState {
   setIsGenerating: (val: boolean) => void;
   setSidePanel: (panel: 'outline' | 'draft') => void;
   toggleSidePanel: () => void;
-  updateExtractStatus: (messageId: string, status: 'approved' | 'rejected', editedContent?: string) => void;
+  updateExtractStatus: (messageId: string, status: 'approved' | 'edited' | 'rejected', editedContent?: string) => void;
   saveSession: () => Promise<void>;
 }
 
@@ -111,7 +111,7 @@ const useDialogueStore = create<DialogueState>((set, get) => ({
 
   toggleSidePanel: () => set((state) => ({ sidePanelOpen: !state.sidePanelOpen })),
 
-  updateExtractStatus: (messageId: string, status: 'approved' | 'rejected', editedContent?: string) => {
+  updateExtractStatus: (messageId: string, status: 'approved' | 'edited' | 'rejected', editedContent?: string) => {
     const { activeSession, sessions } = get();
     if (!activeSession) return;
 

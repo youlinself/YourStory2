@@ -6,10 +6,10 @@ const Home: React.FC = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="max-w-4xl mx-auto animate-fade-in">
+    <div className="animate-fade-in">
       {/* Hero Section */}
-      <div className="mb-8">
-        <h1 className="text-display-lg mb-3">
+      <div className="mb-10">
+        <h1 className="text-display-lg mb-4">
           记录你的人生故事
         </h1>
         <p className="text-body text-ink-secondary max-w-2xl leading-relaxed">
@@ -18,7 +18,7 @@ const Home: React.FC = () => {
       </div>
 
       {/* Feature Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
         <Card
           title="对话式创作"
           onClick={() => navigate('/dialogue')}
@@ -58,8 +58,8 @@ const Home: React.FC = () => {
               '编辑和完善生成的自传内容',
               '导出您的个人自传',
             ].map((step, index) => (
-              <li key={index} className="flex items-start gap-3">
-                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-brand-primary text-white text-xs font-medium shrink-0 mt-0.5">
+              <li key={index} className="flex items-start gap-4">
+                <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-brand-primary text-white text-sm font-medium shrink-0 mt-0.5">
                   {index + 1}
                 </span>
                 <span>{step}</span>

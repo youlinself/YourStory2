@@ -7,7 +7,6 @@ export interface AIServiceConfig {
   baseUrl: string;
   vendor?: string;
   temperature?: number;
-  maxInputTokens?: number;
   maxOutputTokens?: number;
 }
 
@@ -15,7 +14,6 @@ const DEFAULT_CONFIG: Partial<AIServiceConfig> = {
   model: 'gpt-4o-mini',
   baseUrl: 'https://api.openai.com/v1',
   temperature: 0.7,
-  maxInputTokens: 4000,
   maxOutputTokens: 2000,
 };
 
@@ -29,7 +27,6 @@ class AIService {
   private baseUrl: string;
   private vendor: string;
   private temperature: number;
-  private maxInputTokens: number;
   private maxOutputTokens: number;
 
   constructor(config: AIServiceConfig) {
@@ -38,7 +35,6 @@ class AIService {
     this.baseUrl = (config.baseUrl || DEFAULT_CONFIG.baseUrl!).replace(/\/+$/, '');
     this.vendor = config.vendor || 'openai';
     this.temperature = config.temperature ?? DEFAULT_CONFIG.temperature!;
-    this.maxInputTokens = config.maxInputTokens ?? DEFAULT_CONFIG.maxInputTokens!;
     this.maxOutputTokens = config.maxOutputTokens ?? DEFAULT_CONFIG.maxOutputTokens!;
   }
 

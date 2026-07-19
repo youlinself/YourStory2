@@ -7,9 +7,9 @@ type TestStatus = 'idle' | 'testing' | 'success' | 'error';
 
 const Settings: React.FC = () => {
   const {
-    apiKey, model, baseUrl, vendor, temperature, maxInputTokens, maxOutputTokens,
+    apiKey, model, baseUrl, vendor, temperature, maxOutputTokens,
     setApiKey, setModel, setBaseUrl, setVendor, setTemperature,
-    setMaxInputTokens, setMaxOutputTokens, saveSettings,
+    setMaxOutputTokens, saveSettings,
   } = useAIStore();
 
   const [localApiKey, setLocalApiKey] = useState(apiKey);
@@ -17,7 +17,6 @@ const Settings: React.FC = () => {
   const [localBaseUrl, setLocalBaseUrl] = useState(baseUrl);
   const [localVendor, setLocalVendor] = useState(vendor);
   const [localTemperature, setLocalTemperature] = useState(temperature);
-  const [localMaxInputTokens, setLocalMaxInputTokens] = useState(maxInputTokens);
   const [localMaxOutputTokens, setLocalMaxOutputTokens] = useState(maxOutputTokens);
   const [saved, setSaved] = useState(false);
 
@@ -71,7 +70,6 @@ const Settings: React.FC = () => {
   }, [localVendor, localApiKey, localBaseUrl, isCustomVendor]);
 
   const handleSave = () => {
-    // 根据供应商限制 clamp maxOutputTokens，防止 API 报错
     const vendorLimit = getMaxOutputTokens(localVendor);
     const clampedMaxOutput = Math.min(localMaxOutputTokens, vendorLimit);
 
@@ -80,7 +78,6 @@ const Settings: React.FC = () => {
     setBaseUrl(localBaseUrl);
     setVendor(localVendor);
     setTemperature(localTemperature);
-    setMaxInputTokens(localMaxInputTokens);
     setMaxOutputTokens(clampedMaxOutput);
     saveSettings();
     setSaved(true);
@@ -127,14 +124,15 @@ const Settings: React.FC = () => {
                 value={localApiKey}
                 onChange={(e) => setLocalApiKey(e.target.value)}
                 placeholder="请输入您的 AI API Key"
-                className="flex-1 w-full px-4 py-[0.75rem] font-sans text-[0.9375rem] leading-normal text-ink-primary bg-bg-elevated border border-border-default rounded-xl outline-none transition-all duration-200 placeholder:text-ink-faint focus:border-brand-primary focus:shadow-[0_0_0_3px_var(--color-brand-primary-light)]"
+                className="flex-1 w-full px-4 py-3 font-sans text-[0.9375rem] leading-normal text-ink-primary bg-bg-elevated border border-border-default rounded-xl outline-none transition-all duration-200 placeholder:text-ink-faint focus:border-brand-primary focus:shadow-[0_0_0_3px_var(--color-brand-primary-light)]"
               />
               <Button
                 onClick={handleTestConnection}
-                disabled={testStatus === 'testing'}
+                isLoading={testStatus === 'testing'}
+                loadingText="测试中..."
                 className="whitespace-nowrap"
               >
-                {testStatus === 'testing' ? '测试中...' : '测试并获取模型'}
+                测试并获取模型
               </Button>
             </div>
             {testStatus !== 'idle' && testMessage && (
@@ -188,7 +186,7 @@ const Settings: React.FC = () => {
           </div>
 
           {/* Temperature Slider */}
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-3">
             <label className="text-caption font-medium text-ink-secondary">
               温度 (Temperature): {localTemperature.toFixed(1)}
             </label>
@@ -207,15 +205,6 @@ const Settings: React.FC = () => {
             </div>
           </div>
 
-          {/* Max Input Tokens */}
-          <Input
-            label="最大输入 Token 数"
-            value={String(localMaxInputTokens)}
-            onChange={(v) => setLocalMaxInputTokens(parseInt(v, 10) || 4000)}
-            type="number"
-            placeholder="4000"
-          />
-
           {/* Max Output Tokens */}
           <Input
             label={`最大输出 Token 数（当前供应商上限：${getMaxOutputTokens(localVendor)}）`}
@@ -225,13 +214,13 @@ const Settings: React.FC = () => {
             placeholder="2000"
           />
 
-          <p className="text-caption text-ink-muted pt-1">
+          <p className="text-caption text-ink-muted pt-2">
             支持 OpenAI、DeepSeek、Claude 等主流 AI 服务提供商。请确保您的 API Key 具有足够的权限和额度。
           </p>
 
-          <div className="pt-2">
-            <Button onClick={handleSave} className="w-full">
-              {saved ? '已保存' : '保存设置'}
+          <div className="pt-4">
+            <Button onClick={handleSave} className="w-full" loadingText="保存中...">
+              {saved ? '已保存 ✓' : '保存设置'}
             </Button>
           </div>
         </div>
@@ -244,7 +233,7 @@ const Settings: React.FC = () => {
           <p>3. 选择您想使用的 AI 模型</p>
           <p>4. 调整温度参数：越低越精确，越高越有创意</p>
           <p>5. 返回首页，开始对话式创作</p>
-          <p>6. 在对话中输入 <code className="bg-bg-secondary px-2 py-0.5 rounded text-caption font-mono">/compact</code> 可压缩上下文</p>
+          <p>6. 在对话中输入 <code className="bg-bg-secondary px-2 py-0.5 rounded text-caption font-mono border border-border-subtle">/compact</code> 可压缩上下文</p>
         </div>
       </Card>
     </div>

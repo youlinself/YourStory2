@@ -17,7 +17,7 @@ const DialogueAgent: React.FC = () => {
   const [isChapterSelectModalOpen, setIsChapterSelectModalOpen] = useState(false);
   const [pendingExtract, setPendingExtract] = useState<{ messageId: string; content: string; isEdit: boolean } | null>(null);
 
-  const { apiKey, model, baseUrl, vendor, temperature, maxInputTokens, maxOutputTokens, loadSettings } = useAIStore();
+  const { apiKey, model, baseUrl, vendor, temperature, maxOutputTokens, loadSettings } = useAIStore();
 
   const {
     activeSession,
@@ -72,7 +72,7 @@ const DialogueAgent: React.FC = () => {
 
     setIsGenerating(true);
     try {
-      const aiService = new AIService({ apiKey, model, baseUrl, vendor, temperature, maxInputTokens, maxOutputTokens });
+      const aiService = new AIService({ apiKey, model, baseUrl, vendor, temperature, maxOutputTokens });
       const guide = await aiService.generateWelcomeGuide(autobiography, chapterId || null);
 
       if (guide) {
@@ -113,7 +113,7 @@ const DialogueAgent: React.FC = () => {
     } finally {
       setIsGenerating(false);
     }
-  }, [apiKey, model, baseUrl, vendor, temperature, maxInputTokens, maxOutputTokens, autobiography, chapterId, setIsGenerating, addMessage, setSuggestions]);
+  }, [apiKey, model, baseUrl, vendor, temperature, maxOutputTokens, autobiography, chapterId, setIsGenerating, addMessage, setSuggestions]);
 
   const fallbackWelcome = () => {
     const welcomeText = chapterId && currentChapter
@@ -157,7 +157,7 @@ const DialogueAgent: React.FC = () => {
     }
 
     try {
-      const aiService = new AIService({ apiKey, model, baseUrl, vendor, temperature, maxInputTokens, maxOutputTokens });
+      const aiService = new AIService({ apiKey, model, baseUrl, vendor, temperature, maxOutputTokens });
 
       // 构建章节上下文
       let chapterContext: ChapterContext | undefined;
@@ -313,7 +313,7 @@ const DialogueAgent: React.FC = () => {
     if (!apiKey || !chapterId || !currentChapter) return;
     setIsGenerating(true);
     try {
-      const aiService = new AIService({ apiKey, model, baseUrl, vendor, temperature, maxInputTokens, maxOutputTokens });
+      const aiService = new AIService({ apiKey, model, baseUrl, vendor, temperature, maxOutputTokens });
       const dialogueContent = messages
         .map((m) => `${m.isUser ? '用户' : 'AI'}: ${m.content}`)
         .join('\n');
@@ -341,18 +341,18 @@ const DialogueAgent: React.FC = () => {
     : '与AI对话，逐步构建您的个人自传';
 
   return (
-    <div className="flex h-[calc(100vh-7.5rem)] animate-fade-in">
+    <div className="flex h-[calc(100vh-9rem)] animate-fade-in">
       {/* 左侧聊天区域 */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Page Header */}
-        <div className="mb-4 flex items-center justify-between">
+        <div className="mb-5 flex items-center justify-between">
           <div>
             <h1 className="text-display-md">{pageTitle}</h1>
-            <p className="text-body text-ink-secondary mt-1">{pageSubtitle}</p>
+            <p className="text-body text-ink-secondary mt-2">{pageSubtitle}</p>
           </div>
           <button
             onClick={toggleSidePanel}
-            className="p-2 rounded-lg text-ink-muted hover:text-ink-secondary hover:bg-bg-secondary transition-colors"
+            className="p-2.5 rounded-xl text-ink-muted hover:text-ink-secondary hover:bg-bg-secondary transition-colors"
             title={sidePanelOpen ? '收起面板' : '展开面板'}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
@@ -365,21 +365,21 @@ const DialogueAgent: React.FC = () => {
         <div className="flex-1 bg-bg-elevated rounded-2xl border border-border-subtle overflow-hidden flex flex-col shadow-sm">
           {/* 章节上下文提示 */}
           {chapterId && currentChapter && (
-            <div className="px-6 py-2.5 bg-brand-primary-subtle border-b border-brand-primary/10 flex items-center gap-2">
-              <svg className="w-4 h-4 text-brand-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+            <div className="px-6 lg:px-8 py-3 bg-brand-primary-subtle border-b border-brand-primary/10 flex items-center gap-2">
+              <svg className="w-4 h-4 text-brand-primary shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
               </svg>
-              <span className="text-xs text-brand-primary font-medium">
+              <span className="text-sm text-brand-primary font-medium">
                 正在创作：{currentChapter.title}
               </span>
               {currentChapter.timeRange && (
-                <span className="text-xs text-ink-muted">({currentChapter.timeRange})</span>
+                <span className="text-sm text-ink-muted">({currentChapter.timeRange})</span>
               )}
             </div>
           )}
 
           {/* Messages Area */}
-          <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
+          <div className="flex-1 overflow-y-auto px-6 lg:px-8 py-6 lg:py-8 space-y-6">
             {messages.map((message) => (
               <div key={message.id}>
                 <MessageBubble
@@ -390,7 +390,7 @@ const DialogueAgent: React.FC = () => {
                 {/* 内容提取卡片 */}
                 {message.type === 'content_extract' && message.extractedContent && (
                   <div className="flex justify-start">
-                    <div className="ml-11 max-w-[70%]">
+                    <div className="ml-12 max-w-[70%]">
                       <ContentExtractCard
                         extract={message.extractedContent}
                         onApprove={() => handleApproveExtract(message.id, message.extractedContent!)}
@@ -405,13 +405,13 @@ const DialogueAgent: React.FC = () => {
             {isGenerating && (
               <div className="flex justify-start animate-fade-in">
                 <div className="flex gap-3">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-primary to-brand-primary-hover flex items-center justify-center shrink-0 shadow-sm">
-                    <svg className="w-4.5 h-4.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-brand-primary to-brand-primary-hover flex items-center justify-center shrink-0 shadow-sm">
+                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
                     </svg>
                   </div>
                   <div className="chat-bubble-ai">
-                    <div className="flex items-center gap-1.5 py-0.5">
+                    <div className="flex items-center gap-1.5 py-1">
                       <div className="loading-dot"></div>
                       <div className="loading-dot"></div>
                       <div className="loading-dot"></div>
@@ -446,7 +446,7 @@ const DialogueAgent: React.FC = () => {
               <button
                 onClick={() => handleSendMessage()}
                 disabled={!inputValue.trim() || isGenerating}
-                className="w-10 h-10 flex items-center justify-center rounded-xl bg-brand-primary text-white hover:bg-brand-primary-hover hover:shadow-md transition-all duration-200 active:scale-[0.97] disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+                className="w-11 h-11 flex items-center justify-center rounded-xl bg-brand-primary text-white hover:bg-brand-primary-hover hover:shadow-md transition-all duration-200 active:scale-[0.97] disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
                 aria-label="发送消息"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
@@ -454,9 +454,9 @@ const DialogueAgent: React.FC = () => {
                 </svg>
               </button>
             </div>
-            <div className="flex items-center justify-between mt-2 px-1">
+            <div className="flex items-center justify-between mt-3 px-1">
               <p className="text-fine-print text-ink-faint">
-                输入 <kbd className="px-1 py-0.5 bg-bg-secondary rounded text-[0.6875rem] font-mono">Enter</kbd> 发送，<kbd className="px-1 py-0.5 bg-bg-secondary rounded text-[0.6875rem] font-mono">Shift+Enter</kbd> 换行
+                输入 <kbd className="px-1.5 py-0.5 bg-bg-secondary rounded text-[0.6875rem] font-mono border border-border-subtle">Enter</kbd> 发送，<kbd className="px-1.5 py-0.5 bg-bg-secondary rounded text-[0.6875rem] font-mono border border-border-subtle">Shift+Enter</kbd> 换行
               </p>
               {inputValue.length > 0 && (
                 <span className="text-fine-print text-ink-faint">
@@ -469,23 +469,25 @@ const DialogueAgent: React.FC = () => {
       </div>
 
       {/* 右侧边面板 */}
-      <div className="ml-4">
-        <SidePanel
-          isOpen={sidePanelOpen}
-          mode={sidePanel}
-          onModeChange={setSidePanel}
-          onClose={toggleSidePanel}
-          autobiography={autobiography}
-          currentChapterId={chapterId || null}
-          onSwitchChapter={handleSwitchChapter}
-          onCreateChapter={handleCreateChapter}
-          currentChapter={currentChapter}
-          pendingExtracts={pendingExtracts}
-          onConfirmDraft={handleConfirmDraft}
-          onGenerateSummary={handleGenerateSummary}
-          isGenerating={isGenerating}
-        />
-      </div>
+      {sidePanelOpen && (
+        <div className="ml-6">
+          <SidePanel
+            isOpen={sidePanelOpen}
+            mode={sidePanel}
+            onModeChange={setSidePanel}
+            onClose={toggleSidePanel}
+            autobiography={autobiography}
+            currentChapterId={chapterId || null}
+            onSwitchChapter={handleSwitchChapter}
+            onCreateChapter={handleCreateChapter}
+            currentChapter={currentChapter}
+            pendingExtracts={pendingExtracts}
+            onConfirmDraft={handleConfirmDraft}
+            onGenerateSummary={handleGenerateSummary}
+            isGenerating={isGenerating}
+          />
+        </div>
+      )}
 
       {/* 章节选择弹窗 */}
       <Modal

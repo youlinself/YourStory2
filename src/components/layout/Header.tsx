@@ -17,8 +17,8 @@ const Header: React.FC = () => {
 
   return (
     <header className="bg-bg-elevated/80 backdrop-blur-xl border-b border-border-subtle sticky top-0 z-40">
-      <div className="flex items-center justify-between px-8 h-15">
-        <div className="flex items-center gap-5">
+      <div className="flex items-center justify-between px-10 h-16">
+        <div className="flex items-center gap-6">
           <button
             onClick={() => navigate('/')}
             className="text-body font-semibold text-ink-primary hover:text-brand-primary transition-colors"
@@ -37,7 +37,7 @@ const Header: React.FC = () => {
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigate('/settings')}
-            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-bg-secondary transition-colors"
+            className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-bg-secondary transition-colors"
             aria-label="设置"
           >
             <svg className="w-[18px] h-[18px] text-ink-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">

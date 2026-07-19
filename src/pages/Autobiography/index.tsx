@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Button, Input, Modal } from '../../components';
+import { Card, Button, Input, Modal, ConfirmDialog, EmptyState } from '../../components';
 import { useNavigate } from 'react-router-dom';
 import { useAutobiographyStore } from '../../stores';
 
@@ -7,6 +7,12 @@ const AutobiographyPage: React.FC = () => {
   const navigate = useNavigate();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newChapterTitle, setNewChapterTitle] = useState('');
+  const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; chapterId: string; chapterTitle: string }>({
+    isOpen: false,
+    chapterId: '',
+    chapterTitle: '',
+  });
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const {
     autobiography,
@@ -32,47 +38,58 @@ const AutobiographyPage: React.FC = () => {
     setIsModalOpen(false);
   };
 
+  const handleDeleteClick = (chapterId: string, chapterTitle: string) => {
+    setDeleteConfirm({ isOpen: true, chapterId, chapterTitle });
+  };
+
+  const handleDeleteConfirm = async () => {
+    setIsDeleting(true);
+    await deleteChapter(deleteConfirm.chapterId);
+    setIsDeleting(false);
+    setDeleteConfirm({ isOpen: false, chapterId: '', chapterTitle: '' });
+  };
+
   const stats = getCompletionStats();
 
   if (!autobiography) {
     return (
-      <div className="max-w-4xl mx-auto animate-fade-in">
+      <div className="animate-fade-in">
         <h1 className="text-display-md mb-8">
           我的自传
         </h1>
         <Card>
-          <div className="text-center py-12">
-            <div className="w-16 h-16 rounded-full bg-bg-secondary flex items-center justify-center mx-auto mb-5">
-              <svg className="w-8 h-8 text-ink-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
-              </svg>
-            </div>
-            <p className="text-body text-ink-secondary mb-6">
-              您还没有开始创建自传
-            </p>
-            <Button onClick={handleCreateNew}>
-              开始创建自传
-            </Button>
-          </div>
+          <EmptyState
+            illustration="feather-quill"
+            title="您的故事，从这里开始"
+            description="每一部伟大的自传都始于第一个章节。让我们一起创建您的第一章吧。"
+            primaryAction={{
+              label: '开始创作',
+              onClick: handleCreateNew,
+            }}
+            secondaryAction={{
+              label: '了解如何创作',
+              onClick: () => navigate('/dialogue'),
+            }}
+          />
         </Card>
       </div>
     );
   }
 
   return (
-    <div className="max-w-4xl mx-auto animate-fade-in">
-      <div className="flex justify-between items-center mb-8">
+    <div className="animate-fade-in">
+      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-8">
         <div>
           <h1 className="text-display-md">
             {autobiography.title}
           </h1>
           {stats.total > 0 && (
-            <p className="text-caption text-ink-muted mt-1.5">
+            <p className="text-caption text-ink-muted mt-2">
               共 {stats.total} 章 · 已完成 {stats.completed} 章 · 草稿 {stats.draft} 章
             </p>
           )}
         </div>
-        <div className="flex gap-2.5">
+        <div className="flex gap-3">
           <Button variant="secondary" onClick={() => navigate('/dialogue')}>
             对话创作
           </Button>
@@ -84,45 +101,49 @@ const AutobiographyPage: React.FC = () => {
 
       {autobiography.chapters.length === 0 ? (
         <Card>
-          <div className="text-center py-12">
-            <p className="text-body text-ink-secondary mb-6">
-              还没有章节，点击上方按钮添加第一章
-            </p>
-            <Button onClick={() => navigate('/dialogue')}>
-              开始对话创作
-            </Button>
-          </div>
+          <EmptyState
+            illustration="book"
+            title="还没有章节"
+            description="点击上方按钮添加您的第一章，或开始对话创作让AI帮助您梳理人生故事。"
+            primaryAction={{
+              label: '开始对话创作',
+              onClick: () => navigate('/dialogue'),
+            }}
+            secondaryAction={{
+              label: '手动添加章节',
+              onClick: () => setIsModalOpen(true),
+            }}
+          />
         </Card>
       ) : (
         <div className="space-y-5">
           {autobiography.chapters.map((chapter, index) => {
-            const statusLabel = chapter.status === 'completed' ? '已完成'
-              : chapter.status === 'draft' ? '草稿'
-              : chapter.status === 'in_progress' ? '进行中'
-              : '未开始';
-            const statusColor = chapter.status === 'completed' ? 'text-success'
-              : chapter.status === 'draft' ? 'text-warning'
-              : chapter.status === 'in_progress' ? 'text-brand-primary'
-              : 'text-ink-muted';
+            const statusConfig: Record<string, { label: string; color: string; bg: string }> = {
+              completed: { label: '已完成', color: 'text-success', bg: 'bg-success/10' },
+              draft: { label: '草稿', color: 'text-warning', bg: 'bg-warning/10' },
+              in_progress: { label: '进行中', color: 'text-brand-primary', bg: 'bg-brand-primary-light' },
+              empty: { label: '未开始', color: 'text-ink-muted', bg: 'bg-bg-secondary' },
+            };
+            const status = statusConfig[chapter.status || 'empty'] || statusConfig.empty;
 
             return (
               <Card key={chapter.id}>
-                <div className="flex justify-between items-start">
-                  <div>
-                    <div className="flex items-center gap-2">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="text-body font-semibold text-ink-primary">
                         第{index + 1}章: {chapter.title}
                       </h3>
-                      <span className={`text-xs font-medium ${statusColor}`}>
-                        {statusLabel}
+                      <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${status.color} ${status.bg}`}>
+                        {status.label}
                       </span>
                     </div>
-                    <p className="text-caption text-ink-muted mt-1.5">
+                    <p className="text-caption text-ink-muted mt-2">
                       创建于: {new Date(chapter.createdAt).toLocaleDateString()}
                       {chapter.timeRange && ` · ${chapter.timeRange}`}
                     </p>
                   </div>
-                  <div className="flex gap-2.5">
+                  <div className="flex gap-2">
                     <Button
                       variant="secondary"
                       size="sm"
@@ -131,10 +152,9 @@ const AutobiographyPage: React.FC = () => {
                       对话创作
                     </Button>
                     <Button
-                      variant="ghost"
+                      variant="danger"
                       size="sm"
-                      onClick={() => deleteChapter(chapter.id)}
-                      className="text-error hover:text-error hover:bg-error/10"
+                      onClick={() => handleDeleteClick(chapter.id, chapter.title)}
                     >
                       删除
                     </Button>
@@ -180,12 +200,24 @@ const AutobiographyPage: React.FC = () => {
             >
               取消
             </Button>
-            <Button onClick={handleAddChapter}>
+            <Button onClick={handleAddChapter} loadingText="添加中...">
               添加
             </Button>
           </div>
         </div>
       </Modal>
+
+      <ConfirmDialog
+        isOpen={deleteConfirm.isOpen}
+        onClose={() => setDeleteConfirm({ isOpen: false, chapterId: '', chapterTitle: '' })}
+        onConfirm={handleDeleteConfirm}
+        title="删除这一章？"
+        description={`章节「${deleteConfirm.chapterTitle}」及其所有内容将被永久删除，此操作不可撤销。`}
+        confirmText="确认删除"
+        cancelText="取消"
+        confirmVariant="danger"
+        isLoading={isDeleting}
+      />
     </div>
   );
 };
