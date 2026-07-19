@@ -8,6 +8,7 @@ const navItems = [
   { path: '/', label: '首页', icon: 'home' },
   { path: '/dialogue', label: '对话创作', icon: 'message-circle' },
   { path: '/autobiography', label: '我的自传', icon: 'book-text' },
+  { path: '/simulation', label: '模拟人生', icon: 'gamepad' },
   { path: '/settings', label: '设置', icon: 'settings' },
 ];
 
@@ -25,6 +26,11 @@ const iconMap: Record<string, React.ReactNode> = {
   'book-text': (
     <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+    </svg>
+  ),
+  gamepad: (
+    <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6 12h4m-2-2v4m7-1h.01M18 10h.01M17.32 5H6.68a4 4 0 00-3.978 3.59c-.006.052-.01.101-.017.152C2.604 9.416 2 14.456 2 16a3 3 0 003 3c1 0 1.5-.5 2-1l1.414-1.414A2 2 0 019.828 16h4.344a2 2 0 011.414.586L17 18c.5.5 1 1 2 1a3 3 0 003-3c0-1.544-.604-6.584-.685-7.258-.007-.05-.011-.1-.017-.152A4 4 0 0017.32 5z" />
     </svg>
   ),
   settings: (

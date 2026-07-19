@@ -3,3 +3,4 @@ export { default as Dialogue } from './Dialogue';
 export { default as DialogueAgent } from './DialogueAgent';
 export { default as Settings } from './Settings';
 export { default as Autobiography } from './Autobiography';
+export { default as Simulation } from './Simulation';
