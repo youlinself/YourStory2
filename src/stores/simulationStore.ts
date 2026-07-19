@@ -16,11 +16,9 @@ import type {
   LifeRelic,
   Enemy,
   CombatState,
-  EraMap,
   MapNode,
   CultivationState,
   CultivationRealm,
-  ShopState,
   AttributeChange,
 } from '../types/simulation';
 import {
@@ -37,21 +35,15 @@ import {
   SCRIPT_1950_EVENTS,
 } from '../data/simulationData';
 
-// ------------------------------------------
-// 常量
-// ------------------------------------------
 const storageService = StorageService.getInstance();
 const STORAGE_KEY = 'simulation_game_v2';
 
 const MAX_HAND_SIZE = 10;
 const BASE_DRAW_COUNT = 5;
 const BASE_ENERGY = 3;
-const NODES_PER_ERA = 10;
+const LAYERS_PER_ERA = 10;
 const BRANCH_COUNT = 3;
 
-// ------------------------------------------
-// 初始状态
-// ------------------------------------------
 const initialWorldState: WorldState = {
   industryEvolution: {},
   socialClimate: 50,
@@ -60,246 +52,98 @@ const initialWorldState: WorldState = {
 };
 
 const initialAttributes: PlayerAttributes = {
-  energy: 50,
-  physique: 50,
-  health: 50,
-  iq: 50,
-  eq: 50,
-  wealth: 30,
-  network: 30,
-  fame: 10,
+  energy: 50, physique: 50, health: 50, iq: 50,
+  eq: 50, wealth: 30, network: 30, fame: 10,
 };
 
 const initialCombatState: CombatState = {
-  isInCombat: false,
-  phase: 'player_turn',
-  currentTurn: 0,
+  isInCombat: false, phase: 'player_turn', currentTurn: 0,
   player: {
-    currentHealth: 50,
-    maxHealth: 50,
-    block: 0,
-    energy: BASE_ENERGY,
-    maxEnergy: BASE_ENERGY,
-    hand: [],
-    drawPile: [],
-    discardPile: [],
-    exhaustPile: [],
-    statusEffects: [],
+    currentHealth: 50, maxHealth: 50, block: 0,
+    energy: BASE_ENERGY, maxEnergy: BASE_ENERGY,
+    hand: [], drawPile: [], discardPile: [], exhaustPile: [], statusEffects: [],
   },
-  enemies: [],
-  currentEnemyIndex: 0,
-  rewards: { cards: [], gold: 0 },
-  log: [],
+  enemies: [], currentEnemyIndex: 0,
+  rewards: { cards: [], gold: 0 }, log: [],
 };
 
 const initialCultivationState: CultivationState = {
-  realm: 'mortal',
-  maxLifespan: 70,
-  tribulationThreshold: 0,
-  realmBonus: {},
+  realm: 'mortal', maxLifespan: 70, tribulationThreshold: 0, realmBonus: {},
 };
 
 const initialState: GameState = {
-  phase: 'setup',
-  mode: 'normal',
-  birthYear: null,
-  currentYear: 1950,
-  currentEra: 0,
-  age: 0,
-  maxLifespan: 70,
-  remainingLife: 70,
-  attributes: { ...initialAttributes },
-  remainingAttributePoints: 15,
-  hiddenTags: [],
-  npcs: [],
-  choiceHistory: [],
-  lifeRecords: [],
-  deck: [],
-  relics: [],
-  gold: 30,
-  combat: { ...initialCombatState },
-  currentMap: null,
-  shop: null,
-  cultivation: null,
-  worldState: { ...initialWorldState },
-  seed: Date.now(),
+  phase: 'setup', mode: 'normal', birthYear: null, currentYear: 1950,
+  currentEra: 0, age: 0, maxLifespan: 70, remainingLife: 70,
+  attributes: { ...initialAttributes }, remainingAttributePoints: 15,
+  hiddenTags: [], npcs: [], choiceHistory: [], lifeRecords: [],
+  deck: [], relics: [], gold: 30,
+  combat: { ...initialCombatState }, currentMap: null, shop: null,
+  cultivation: null, worldState: { ...initialWorldState }, seed: Date.now(),
 };
 
-// ------------------------------------------
-// 辅助函数
-// ------------------------------------------
-function clamp(value: number, min: number = 0, max: number = 100): number {
-  return Math.max(min, Math.min(max, value));
-}
-
-function seededRandom(seed: number): () => number {
+function clamp(v: number, min = 0, max = 100) { return Math.max(min, Math.min(max, v)); }
+function seededRandom(seed: number) {
   let s = seed;
-  return () => {
-    s = (s * 1664525 + 1013904223) & 0xffffffff;
-    return (s >>> 0) / 0xffffffff;
-  };
+  return () => { s = (s * 1664525 + 1013904223) & 0xffffffff; return (s >>> 0) / 0xffffffff; };
 }
-
-function shuffle<T>(array: T[], rand: () => number = Math.random): T[] {
-  const arr = [...array];
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(rand() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
-  return arr;
+function shuffle<T>(arr: T[], rand = Math.random) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
 }
+function pick<T>(arr: T[], rand = Math.random) { return arr[Math.floor(rand() * arr.length)]; }
+function deepClone<T>(o: T): T { return JSON.parse(JSON.stringify(o)); }
 
-function getRandomItem<T>(array: T[], rand: () => number = Math.random): T {
-  return array[Math.floor(rand() * array.length)];
-}
-
-function deepClone<T>(obj: T): T {
-  return JSON.parse(JSON.stringify(obj));
-}
-
-function applyCardEffect(
-  effect: { type: string; value: number; duration?: number; attribute?: keyof PlayerAttributes },
-  combat: CombatState,
-  targetIndex: number
-): CombatState {
-  const newCombat = { ...combat };
-  newCombat.player = { ...combat.player };
-  newCombat.enemies = combat.enemies.map((e) => ({ ...e, statusEffects: [...e.statusEffects] }));
-
-  const target = newCombat.enemies[targetIndex];
-
+function applyEffect(effect: { type: string; value: number; duration?: number }, combat: CombatState, targetIdx: number): CombatState {
+  const c = { ...combat, player: { ...combat.player }, enemies: combat.enemies.map(e => ({ ...e, statusEffects: [...e.statusEffects] })) };
+  const t = c.enemies[targetIdx];
   switch (effect.type) {
-    case 'damage': {
-      if (target) {
-        const damage = effect.value;
-        const actualDamage = Math.max(0, damage - target.block);
-        target.block = Math.max(0, target.block - damage);
-        target.currentHealth -= actualDamage;
-      }
-      break;
-    }
-    case 'block':
-      newCombat.player.block += effect.value;
-      break;
-    case 'heal':
-      newCombat.player.currentHealth = Math.min(
-        newCombat.player.maxHealth,
-        newCombat.player.currentHealth + effect.value
-      );
-      break;
-    case 'draw':
-      for (let i = 0; i < effect.value; i++) {
-        if (newCombat.player.drawPile.length > 0 && newCombat.player.hand.length < MAX_HAND_SIZE) {
-          newCombat.player.hand.push(newCombat.player.drawPile.shift()!);
-        }
-      }
-      break;
-    case 'gain_energy':
-      newCombat.player.energy += effect.value;
-      break;
-    case 'vulnerable':
-      if (target) {
-        const existing = target.statusEffects.find((s) => s.type === 'vulnerable');
-        if (existing) existing.value += effect.value;
-        else target.statusEffects.push({ type: 'vulnerable', value: effect.value, duration: effect.duration || 2 });
-      }
-      break;
-    case 'weak':
-      if (target) {
-        const existing = target.statusEffects.find((s) => s.type === 'weak');
-        if (existing) existing.value += effect.value;
-        else target.statusEffects.push({ type: 'weak', value: effect.value, duration: effect.duration || 2 });
-      }
-      break;
-    case 'poison':
-      if (target) {
-        const existing = target.statusEffects.find((s) => s.type === 'poison');
-        if (existing) existing.value += effect.value;
-        else target.statusEffects.push({ type: 'poison', value: effect.value, duration: effect.duration || 3 });
-      }
-      break;
-    case 'cure':
-      newCombat.player.statusEffects = newCombat.player.statusEffects.filter(
-        (s) => s.type !== 'weak' && s.type !== 'vulnerable' && s.type !== 'poison'
-      );
-      break;
-    case 'shield':
-      newCombat.player.statusEffects.push({ type: 'shields', value: effect.value, duration: 99 });
-      break;
-    case 'thorns':
-      newCombat.player.statusEffects.push({ type: 'thorns', value: effect.value, duration: effect.duration || 99 });
-      break;
-    case 'rage':
-      newCombat.player.statusEffects.push({ type: 'rage', value: effect.value, duration: effect.duration || 99 });
-      break;
-    case 'strength':
-      newCombat.player.statusEffects.push({ type: 'strength', value: effect.value, duration: effect.duration || 99 });
-      break;
-    case 'dexterity':
-      newCombat.player.statusEffects.push({ type: 'dexterity', value: effect.value, duration: effect.duration || 99 });
-      break;
-    case 'regen':
-      newCombat.player.statusEffects.push({ type: 'regen', value: effect.value, duration: effect.duration || 99 });
-      break;
-    case 'lifesteal':
-      if (target && effect.value) {
-        newCombat.player.currentHealth = Math.min(
-          newCombat.player.maxHealth,
-          newCombat.player.currentHealth + Math.floor(effect.value * 0.5)
-        );
-      }
-      break;
+    case 'damage': if (t) { const d = Math.max(0, effect.value - t.block); t.block = Math.max(0, t.block - effect.value); t.currentHealth -= d; } break;
+    case 'block': c.player.block += effect.value; break;
+    case 'heal': c.player.currentHealth = Math.min(c.player.maxHealth, c.player.currentHealth + effect.value); break;
+    case 'draw': for (let i = 0; i < effect.value; i++) { if (c.player.drawPile.length > 0 && c.player.hand.length < MAX_HAND_SIZE) c.player.hand.push(c.player.drawPile.shift()!); } break;
+    case 'gain_energy': c.player.energy += effect.value; break;
+    case 'vulnerable': if (t) { const e = t.statusEffects.find(s => s.type === 'vulnerable'); if (e) e.value += effect.value; else t.statusEffects.push({ type: 'vulnerable', value: effect.value, duration: effect.duration || 2 }); } break;
+    case 'weak': if (t) { const e = t.statusEffects.find(s => s.type === 'weak'); if (e) e.value += effect.value; else t.statusEffects.push({ type: 'weak', value: effect.value, duration: effect.duration || 2 }); } break;
+    case 'poison': if (t) { const e = t.statusEffects.find(s => s.type === 'poison'); if (e) e.value += effect.value; else t.statusEffects.push({ type: 'poison', value: effect.value, duration: effect.duration || 3 }); } break;
+    case 'cure': c.player.statusEffects = c.player.statusEffects.filter(s => s.type !== 'weak' && s.type !== 'vulnerable' && s.type !== 'poison'); break;
+    case 'shield': c.player.statusEffects.push({ type: 'shields', value: effect.value, duration: 99 }); break;
+    case 'thorns': c.player.statusEffects.push({ type: 'thorns', value: effect.value, duration: effect.duration || 99 }); break;
+    case 'rage': c.player.statusEffects.push({ type: 'rage', value: effect.value, duration: effect.duration || 99 }); break;
+    case 'strength': c.player.statusEffects.push({ type: 'strength', value: effect.value, duration: effect.duration || 99 }); break;
+    case 'dexterity': c.player.statusEffects.push({ type: 'dexterity', value: effect.value, duration: effect.duration || 99 }); break;
+    case 'regen': c.player.statusEffects.push({ type: 'regen', value: effect.value, duration: effect.duration || 99 }); break;
+    case 'lifesteal': if (t && effect.value) c.player.currentHealth = Math.min(c.player.maxHealth, c.player.currentHealth + Math.floor(effect.value * 0.5)); break;
   }
-
-  return newCombat;
+  return c;
 }
 
-// ------------------------------------------
-// Store 定义
-// ------------------------------------------
 interface SimulationState extends GameState {
-  // 游戏流程
   selectMode: (mode: GameMode) => void;
   startGame: (birthYear: BirthYear) => void;
   allocateAttribute: (attr: keyof PlayerAttributes, value: number) => void;
   confirmAllocation: () => void;
   generateMap: () => void;
-  moveToNode: (nodeId: string) => void;
+  selectNode: (nodeId: string) => void;
   enterNode: () => void;
   completeNode: () => void;
   advanceEra: () => void;
   endGame: () => void;
   resetGame: () => void;
-
-  // 战斗
   startCombat: (enemies: Enemy[]) => void;
   playCard: (cardId: string, targetIndex?: number) => void;
   endTurn: () => void;
   selectCardReward: (cardId: string) => void;
   endCombat: (victory: boolean) => void;
-
-  // 事件
   makeChoice: (event: GameEvent, option: EventOption) => void;
-
-  // 商店
   generateShop: () => void;
   buyShopItem: (index: number) => void;
   refreshShop: () => void;
-
-  // 休息
   rest: () => void;
-
-  // 宝藏
-  collectTreasure: (node: MapNode) => void;
-
-  // 修仙
+  collectTreasure: () => void;
   attemptBreakthrough: () => void;
-
-  // 存档
   saveGame: () => Promise<void>;
   loadGame: () => Promise<void>;
-
-  // 计算属性
   getSuccessRate: (option: EventOption) => number;
   getAvailableEvents: () => GameEvent[];
   getEraDefinition: () => (typeof ERAS)[number] | undefined;
@@ -314,945 +158,452 @@ interface SimulationState extends GameState {
 const useSimulationStore = create<SimulationState>((set, get) => ({
   ...initialState,
 
-  // ==========================================
-  // 游戏流程
-  // ==========================================
+  selectMode: (mode) => set({ mode, phase: 'setup' }),
 
-  selectMode: (mode: GameMode) => {
-    set({ mode, phase: 'setup' });
-  },
-
-  startGame: (birthYear: BirthYear) => {
-    const era = ERAS.find((e) => e.year === birthYear);
+  startGame: (birthYear) => {
+    const era = ERAS.find(e => e.year === birthYear);
     if (!era) return;
-
     const mode = get().mode;
     const rand = seededRandom(Date.now());
-    const [minWealth, maxWealth] = era.initialWealthRange;
-    const [minNetwork, maxNetwork] = era.initialNetworkRange;
-
-    const newAttributes: PlayerAttributes = {
+    const [minW, maxW] = era.initialWealthRange;
+    const [minN, maxN] = era.initialNetworkRange;
+    const attrs: PlayerAttributes = {
       ...initialAttributes,
-      wealth: Math.floor(minWealth + rand() * (maxWealth - minWealth)),
-      network: Math.floor(minNetwork + rand() * (maxNetwork - minNetwork)),
-      health: Math.floor(50 + rand() * 20),
-      energy: Math.floor(60 + rand() * 20),
-      physique: Math.floor(40 + rand() * 30),
-      iq: Math.floor(40 + rand() * 30),
-      eq: Math.floor(40 + rand() * 30),
+      wealth: Math.floor(minW + rand() * (maxW - minW)),
+      network: Math.floor(minN + rand() * (maxN - minN)),
+      health: Math.floor(50 + rand() * 20), energy: Math.floor(60 + rand() * 20),
+      physique: Math.floor(40 + rand() * 30), iq: Math.floor(40 + rand() * 30), eq: Math.floor(40 + rand() * 30),
     };
-
-    const starterDeck = STARTER_DECK.map((card) => ({ ...card, id: generateId() }));
-
+    const deck = STARTER_DECK.map(c => ({ ...c, id: generateId() }));
     const state: Partial<GameState> = {
-      phase: 'allocating',
-      birthYear,
-      currentYear: birthYear,
-      currentEra: 0,
-      age: 0,
-      maxLifespan: era.baseLifeExpectancy,
-      remainingLife: era.baseLifeExpectancy,
-      attributes: newAttributes,
-      remainingAttributePoints: era.attributePoints,
-      hiddenTags: [],
-      npcs: [],
-      choiceHistory: [],
-      lifeRecords: [],
-      deck: starterDeck,
-      relics: [],
-      gold: 30,
-      worldState: { ...initialWorldState },
-      seed: Date.now(),
+      phase: 'allocating', birthYear, currentYear: birthYear, currentEra: 0, age: 0,
+      maxLifespan: era.baseLifeExpectancy, remainingLife: era.baseLifeExpectancy,
+      attributes: attrs, remainingAttributePoints: era.attributePoints,
+      hiddenTags: [], npcs: [], choiceHistory: [], lifeRecords: [],
+      deck, relics: [], gold: 30, worldState: { ...initialWorldState }, seed: Date.now(),
     };
-
-    if (mode === 'endless') {
-      state.cultivation = { ...initialCultivationState, maxLifespan: era.baseLifeExpectancy };
-    }
-
+    if (mode === 'endless') state.cultivation = { ...initialCultivationState, maxLifespan: era.baseLifeExpectancy };
     set(state as GameState);
     get().saveGame();
   },
 
-  allocateAttribute: (attr: keyof PlayerAttributes, value: number) => {
-    const state = get();
-    const diff = value - state.attributes[attr];
-    if (diff > state.remainingAttributePoints) return;
-    if (value < 10 || value > 99) return;
-
-    set({
-      attributes: { ...state.attributes, [attr]: value },
-      remainingAttributePoints: state.remainingAttributePoints - diff,
-    });
+  allocateAttribute: (attr, value) => {
+    const s = get();
+    const diff = value - s.attributes[attr];
+    if (diff > s.remainingAttributePoints || value < 10 || value > 99) return;
+    set({ attributes: { ...s.attributes, [attr]: value }, remainingAttributePoints: s.remainingAttributePoints - diff });
   },
 
   confirmAllocation: () => {
-    const state = get();
-    if (state.remainingAttributePoints > 0) return;
+    if (get().remainingAttributePoints > 0) return;
     set({ phase: 'map_view' });
     get().generateMap();
   },
 
-  // ==========================================
-  // 地图生成
-  // ==========================================
-
+  // ========== 地图生成 ==========
   generateMap: () => {
-    const state = get();
-    const era = state.currentEra;
-    const rand = seededRandom(state.seed + era);
-
+    const s = get();
+    const era = s.currentEra;
+    const rand = seededRandom(s.seed + era);
     const nodes: MapNode[] = [];
 
-    for (let x = 0; x < NODES_PER_ERA; x++) {
+    for (let x = 0; x < LAYERS_PER_ERA; x++) {
       for (let y = 0; y < BRANCH_COUNT; y++) {
         const id = `node_${era}_${x}_${y}`;
         let type: MapNode['type'];
-
-        if (x === 0) {
-          type = 'start';
-        } else if (x === NODES_PER_ERA - 1) {
-          type = 'boss';
-        } else {
-          const roll = rand();
-          if (roll < 0.3) type = 'combat';
-          else if (roll < 0.45) type = 'elite';
-          else if (roll < 0.55) type = 'event';
-          else if (roll < 0.65) type = 'rest';
-          else if (roll < 0.75) type = 'shop';
-          else if (roll < 0.85) type = 'treasure';
+        if (x === 0) type = 'start';
+        else if (x === LAYERS_PER_ERA - 1) type = 'boss';
+        else {
+          const r = rand();
+          if (r < 0.3) type = 'combat';
+          else if (r < 0.45) type = 'elite';
+          else if (r < 0.55) type = 'event';
+          else if (r < 0.65) type = 'rest';
+          else if (r < 0.75) type = 'shop';
+          else if (r < 0.85) type = 'treasure';
           else type = 'mystery';
         }
-
         const connections: string[] = [];
-        if (x < NODES_PER_ERA - 1) {
-          const connCount = Math.floor(rand() * 3) + 1;
-          const targets = [0, 1, 2].sort(() => rand() - 0.5).slice(0, connCount);
-          targets.forEach((ty) => connections.push(`node_${era}_${x + 1}_${ty}`));
+        if (x < LAYERS_PER_ERA - 1) {
+          for (let dy = -1; dy <= 1; dy++) {
+            const ny = y + dy;
+            if (ny >= 0 && ny < BRANCH_COUNT) connections.push(`node_${era}_${x + 1}_${ny}`);
+          }
         }
-
-        nodes.push({
-          id,
-          type,
-          x,
-          y,
-          connections,
-          isVisited: false,
-          isAccessible: x === 0,
-        });
+        nodes.push({ id, type, x, y, connections, isVisited: false, isAccessible: x === 0, isCurrent: false });
       }
     }
 
     for (const node of nodes) {
       if (node.type === 'combat') {
-        const enemyPool = [...COMMON_ENEMIES];
-        if (era >= 1) enemyPool.push(...ELITE_ENEMIES.slice(0, 1));
-        const enemy = deepClone(getRandomItem(enemyPool, rand));
-        enemy.id = generateId();
-        enemy.currentHealth = enemy.maxHealth;
-        node.data = { enemyIds: [enemy.id] };
+        const pool = [...COMMON_ENEMIES]; if (era >= 1) pool.push(...ELITE_ENEMIES.slice(0, 1));
+        const e = deepClone(pick(pool, rand)); e.id = generateId(); e.currentHealth = e.maxHealth;
+        node.data = { enemyIds: [e.id] };
       } else if (node.type === 'elite') {
-        const enemyPool = ELITE_ENEMIES.length > 0 ? ELITE_ENEMIES : COMMON_ENEMIES.slice(2);
-        const enemy = deepClone(getRandomItem(enemyPool, rand));
-        enemy.id = generateId();
-        enemy.currentHealth = enemy.maxHealth;
-        node.data = { enemyIds: [enemy.id] };
+        const pool = ELITE_ENEMIES.length > 0 ? ELITE_ENEMIES : COMMON_ENEMIES.slice(2);
+        const e = deepClone(pick(pool, rand)); e.id = generateId(); e.currentHealth = e.maxHealth;
+        node.data = { enemyIds: [e.id] };
       } else if (node.type === 'boss') {
-        const bossPool = state.mode === 'endless' ? [...BOSS_ENEMIES, ...CULTIVATION_BOSSES] : BOSS_ENEMIES;
-        const boss = deepClone(getRandomItem(bossPool, rand));
-        boss.id = generateId();
-        boss.currentHealth = boss.maxHealth;
-        node.data = { enemyIds: [boss.id] };
+        const pool = s.mode === 'endless' ? [...BOSS_ENEMIES, ...CULTIVATION_BOSSES] : BOSS_ENEMIES;
+        const e = deepClone(pick(pool, rand)); e.id = generateId(); e.currentHealth = e.maxHealth;
+        node.data = { enemyIds: [e.id] };
       } else if (node.type === 'event') {
         node.data = { eventId: `event_${era}_${node.x}` };
       } else if (node.type === 'treasure') {
-        node.data = { relicId: getRandomItem(COMMON_RELICS, rand).id };
+        node.data = { relicId: pick(COMMON_RELICS, rand).id };
       }
     }
 
-    const startNode = nodes.find((n) => n.type === 'start');
-    if (startNode) {
-      startNode.isVisited = true;
-      startNode.isAccessible = true;
-      nodes.filter((n) => n.x === 1).forEach((n) => (n.isAccessible = true));
-    }
+    const startNode = nodes.find(n => n.type === 'start');
+    if (startNode) { startNode.isVisited = true; startNode.isAccessible = true; startNode.isCurrent = true; }
 
-    const map: EraMap = {
-      era,
-      nodes,
-      currentNodeId: startNode?.id || nodes[0].id,
-      completed: false,
-    };
-
-    set({ currentMap: map });
+    set({ currentMap: { era, nodes, currentNodeId: startNode?.id || nodes[0].id, currentLayer: 0, maxAccessibleLayer: 0, completed: false } });
   },
 
-  moveToNode: (nodeId: string) => {
-    const state = get();
-    if (!state.currentMap) return;
+  // ========== 选择节点（限制只能选当前层）==========
+  selectNode: (nodeId) => {
+    const s = get();
+    if (!s.currentMap) return;
+    const node = s.currentMap.nodes.find(n => n.id === nodeId);
+    if (!node || !node.isAccessible || node.isVisited) return;
+    if (node.x !== s.currentMap.currentLayer) return;
 
-    const node = state.currentMap.nodes.find((n) => n.id === nodeId);
-    if (!node || !node.isAccessible) return;
-
-    set({
-      currentMap: {
-        ...state.currentMap,
-        currentNodeId: nodeId,
-      },
-    });
+    const newNodes = s.currentMap.nodes.map(n => ({
+      ...n,
+      isCurrent: n.id === nodeId,
+    }));
+    set({ currentMap: { ...s.currentMap, currentNodeId: nodeId, nodes: newNodes } });
   },
 
   enterNode: () => {
-    const state = get();
-    if (!state.currentMap) return;
-
-    const node = state.currentMap.nodes.find((n) => n.id === state.currentMap!.currentNodeId);
+    const s = get();
+    if (!s.currentMap) return;
+    const node = s.currentMap.nodes.find(n => n.id === s.currentMap!.currentNodeId);
     if (!node) return;
-
     switch (node.type) {
-      case 'combat':
-      case 'elite':
-      case 'boss': {
+      case 'combat': case 'elite': case 'boss': {
         const enemies = get().getEnemiesForNode(node);
-        if (enemies.length > 0) {
-          get().startCombat(enemies);
-        }
+        if (enemies.length > 0) get().startCombat(enemies);
         break;
       }
-      case 'event':
-        set({ phase: 'event' });
-        break;
-      case 'shop':
-        get().generateShop();
-        break;
-      case 'rest':
-        set({ phase: 'rest' });
-        break;
-      case 'treasure':
-        get().collectTreasure(node);
-        break;
-      default:
-        break;
+      case 'event': set({ phase: 'event' }); break;
+      case 'shop': get().generateShop(); break;
+      case 'rest': set({ phase: 'rest' }); break;
+      case 'treasure': get().collectTreasure(); break;
+      default: break;
     }
-  },
-
-  getEnemiesForNode: (node: MapNode): Enemy[] => {
-    const state = get();
-    const enemies: Enemy[] = [];
-
-    if (node.data?.enemyIds) {
-      for (const enemyId of node.data.enemyIds) {
-        const enemy = state.combat.enemies.find((e) => e.id === enemyId);
-        if (enemy) enemies.push(deepClone(enemy));
-      }
-    }
-
-    return enemies;
   },
 
   completeNode: () => {
-    const state = get();
-    if (!state.currentMap) return;
+    const s = get();
+    if (!s.currentMap) return;
+    const node = s.currentMap.nodes.find(n => n.id === s.currentMap!.currentNodeId);
+    if (!node) return;
 
-    const nodeIndex = state.currentMap.nodes.findIndex((n) => n.id === state.currentMap!.currentNodeId);
-    if (nodeIndex === -1) return;
+    const newNodes = s.currentMap.nodes.map(n => {
+      if (n.id === node.id) return { ...n, isVisited: true, isCurrent: false };
+      return n;
+    });
 
-    const node = state.currentMap.nodes[nodeIndex];
-    node.isVisited = true;
+    const nextLayer = node.x + 1;
+    const isBoss = node.type === 'boss';
+    const completed = isBoss || nextLayer >= LAYERS_PER_ERA;
 
-    if (node.connections.length > 0) {
+    if (!completed) {
       for (const connId of node.connections) {
-        const connNode = state.currentMap.nodes.find((n) => n.id === connId);
-        if (connNode) {
-          connNode.isAccessible = true;
-        }
+        const connNode = newNodes.find(n => n.id === connId);
+        if (connNode) { connNode.isAccessible = true; connNode.isCurrent = true; }
       }
     }
 
-    if (node.type === 'boss') {
-      state.currentMap.completed = true;
-    }
-
     set({
-      currentMap: { ...state.currentMap },
-      phase: 'map_view',
+      currentMap: {
+        ...s.currentMap,
+        nodes: newNodes,
+        currentLayer: completed ? s.currentMap.currentLayer : nextLayer,
+        maxAccessibleLayer: completed ? s.currentMap.maxAccessibleLayer : nextLayer,
+        completed,
+      },
+      phase: completed ? 'era_transition' : 'map_view',
     });
+
+    if (completed) get().advanceEra();
   },
 
-  collectTreasure: (_node: MapNode) => {
-    const state = get();
-    const rand = seededRandom(state.seed + Date.now());
-
+  collectTreasure: () => {
+    const s = get();
+    const rand = seededRandom(s.seed + Date.now());
     const goldFound = Math.floor(20 + rand() * 50);
-
-    const relicRoll = rand();
+    const r = rand();
     let relic: LifeRelic | undefined;
-    if (relicRoll < 0.5) relic = deepClone(getRandomItem(COMMON_RELICS, rand));
-    else if (relicRoll < 0.8) relic = deepClone(getRandomItem(RARE_RELICS, rand));
-    else relic = deepClone(getRandomItem(LEGENDARY_CARDS as unknown as LifeRelic[], rand));
-
+    if (r < 0.5) relic = deepClone(pick(COMMON_RELICS, rand));
+    else if (r < 0.8) relic = deepClone(pick(RARE_RELICS, rand));
+    else relic = deepClone(pick(LEGENDARY_CARDS as unknown as LifeRelic[], rand));
     if (relic) relic.id = generateId();
-
-    const newRelics = [...state.relics];
-    if (relic) newRelics.push(relic);
-
-    set({ gold: state.gold + goldFound, relics: newRelics });
+    set({ gold: s.gold + goldFound, relics: relic ? [...s.relics, relic] : s.relics });
     get().completeNode();
   },
 
   advanceEra: () => {
-    const state = get();
-    const nextEra = state.currentEra + 1;
-    const nextYear = (state.birthYear || 1950) + nextEra * 10;
-    const lifeDecrease = Math.floor(5 + Math.random() * 5);
-
+    const s = get();
+    const nextEra = s.currentEra + 1;
+    const nextYear = (s.birthYear || 1950) + nextEra * 10;
+    const lifeDec = Math.floor(5 + Math.random() * 5);
     const newTags = get().checkHiddenTags();
-    let newLife = Math.max(0, state.remainingLife - lifeDecrease);
-    let newPhase: GamePhase = 'map_view';
-
-    if (newLife <= 0 || state.attributes.health <= 0) {
-      newPhase = 'ended';
-    }
-
+    const newLife = Math.max(0, s.remainingLife - lifeDec);
+    const newPhase: GamePhase = newLife <= 0 || s.attributes.health <= 0 ? 'ended' : 'map_view';
     set({
-      currentEra: nextEra,
-      currentYear: nextYear,
-      age: state.age + 10,
-      remainingLife: newLife,
-      hiddenTags: newTags,
-      phase: newPhase,
-      currentMap: null,
-      combat: { ...initialCombatState },
-      shop: null,
+      currentEra: nextEra, currentYear: nextYear, age: s.age + 10,
+      remainingLife: newLife, hiddenTags: newTags, phase: newPhase,
+      currentMap: null, combat: { ...initialCombatState }, shop: null,
     });
-
-    if (newPhase === 'map_view') {
-      get().generateMap();
-    }
+    if (newPhase === 'map_view') get().generateMap();
   },
 
-  endGame: () => {
-    set({ phase: 'ended' });
-    get().saveGame();
-  },
+  endGame: () => { set({ phase: 'ended' }); get().saveGame(); },
+  resetGame: () => { set({ ...initialState }); storageService.removeData(STORAGE_KEY); },
 
-  resetGame: () => {
-    set({ ...initialState });
-    storageService.removeData(STORAGE_KEY);
-  },
-
-  // ==========================================
-  // 战斗系统
-  // ==========================================
-
-  startCombat: (enemies: Enemy[]) => {
-    const state = get();
-    const maxHealth = get().getEffectiveMaxHealth();
-
-    const drawPile = shuffle(state.deck);
-    const initialHand = drawPile.splice(0, Math.min(BASE_DRAW_COUNT + get().getDrawCount(), drawPile.length));
-
-    const combatState: CombatState = {
-      isInCombat: true,
-      phase: 'player_turn',
-      currentTurn: 1,
-      player: {
-        currentHealth: state.combat.isInCombat ? state.combat.player.currentHealth : maxHealth,
-        maxHealth,
-        block: 0,
-        energy: get().getEnergy(),
-        maxEnergy: get().getEnergy(),
-        hand: initialHand,
-        drawPile,
-        discardPile: [],
-        exhaustPile: [],
-        statusEffects: [],
+  // ========== 战斗 ==========
+  startCombat: (enemies) => {
+    const s = get();
+    const maxH = get().getEffectiveMaxHealth();
+    const drawPile = shuffle(s.deck);
+    const hand = drawPile.splice(0, Math.min(BASE_DRAW_COUNT + get().getDrawCount(), drawPile.length));
+    set({
+      combat: {
+        isInCombat: true, phase: 'player_turn', currentTurn: 1,
+        player: {
+          currentHealth: s.combat.isInCombat ? s.combat.player.currentHealth : maxH,
+          maxHealth: maxH, block: 0, energy: get().getEnergy(), maxEnergy: get().getEnergy(),
+          hand, drawPile, discardPile: [], exhaustPile: [], statusEffects: [],
+        },
+        enemies: enemies.map(e => ({ ...e, id: generateId(), currentHealth: e.maxHealth, block: 0, statusEffects: [], currentIntentIndex: 0 })),
+        currentEnemyIndex: 0, rewards: { cards: [], gold: 0 }, log: [],
       },
-      enemies: enemies.map((e) => ({
-        ...e,
-        id: generateId(),
-        currentHealth: e.maxHealth,
-        block: 0,
-        statusEffects: [],
-        currentIntentIndex: 0,
-      })),
-      currentEnemyIndex: 0,
-      rewards: { cards: [], gold: 0 },
-      log: [],
-    };
-
-    set({ combat: combatState, phase: 'combat' });
+      phase: 'combat',
+    });
   },
 
-  playCard: (cardId: string, targetIndex: number = 0) => {
-    const state = get();
-    const { combat } = state;
-    if (combat.phase !== 'player_turn') return;
-
-    const cardIndex = combat.player.hand.findIndex((c) => c.id === cardId);
-    if (cardIndex === -1) return;
-
-    const card = combat.player.hand[cardIndex];
-    if (card.cost > combat.player.energy) return;
-
-    let newCombat = { ...combat };
-    newCombat.player = { ...combat.player };
-    newCombat.player.hand = [...combat.player.hand];
-    newCombat.player.hand.splice(cardIndex, 1);
-    newCombat.player.energy -= card.cost;
-
-    if (newCombat.player.drawPile.length < newCombat.player.hand.length + 5) {
-      newCombat.player.drawPile = shuffle([
-        ...newCombat.player.drawPile,
-        ...newCombat.player.discardPile,
-      ]);
-      newCombat.player.discardPile = [];
-    }
-
-    for (const effect of card.effects) {
-      newCombat = applyCardEffect(effect, newCombat, targetIndex);
-    }
-
-    newCombat.player.discardPile.push(card);
-
-    set({ combat: newCombat });
+  playCard: (cardId, targetIdx = 0) => {
+    const s = get();
+    if (s.combat.phase !== 'player_turn') return;
+    const idx = s.combat.player.hand.findIndex(c => c.id === cardId);
+    if (idx === -1) return;
+    const card = s.combat.player.hand[idx];
+    if (card.cost > s.combat.player.energy) return;
+    let c = { ...s.combat, player: { ...s.combat.player, hand: [...s.combat.player.hand] } };
+    c.player.hand.splice(idx, 1);
+    c.player.energy -= card.cost;
+    if (c.player.drawPile.length < c.player.hand.length + 5) { c.player.drawPile = shuffle([...c.player.drawPile, ...c.player.discardPile]); c.player.discardPile = []; }
+    for (const eff of card.effects) c = applyEffect(eff, c, targetIdx);
+    c.player.discardPile.push(card);
+    set({ combat: c });
   },
 
   endTurn: () => {
-    const state = get();
-    let { combat } = state;
-    if (combat.phase !== 'player_turn') return;
+    const s = get();
+    let c = s.combat;
+    if (c.phase !== 'player_turn') return;
+    c.player.block = 0; c.player.energy = c.player.maxEnergy;
+    c.player.discardPile.push(...c.player.hand); c.player.hand = [];
 
-    combat.player.block = 0;
-    combat.player.energy = combat.player.maxEnergy;
-
-    combat.player.discardPile.push(...combat.player.hand);
-    combat.player.hand = [];
-
-    for (const enemy of combat.enemies) {
-      if (enemy.currentHealth <= 0) continue;
-
-      const intent = enemy.intents[enemy.currentIntentIndex % enemy.intents.length];
-
+    for (const e of c.enemies) {
+      if (e.currentHealth <= 0) continue;
+      const intent = e.intents[e.currentIntentIndex % e.intents.length];
       if (intent.type === 'attack') {
-        let damage = intent.damage;
-        const hits = intent.hits || 1;
-
-        const strength = enemy.statusEffects.find((s) => s.type === 'strength');
-        if (strength) damage += strength.value;
-
-        const weak = enemy.statusEffects.find((s) => s.type === 'weak');
-        if (weak) damage = Math.floor(damage * 0.75);
-
+        let dmg = intent.damage; const hits = intent.hits || 1;
+        const str = e.statusEffects.find(x => x.type === 'strength'); if (str) dmg += str.value;
+        const wk = e.statusEffects.find(x => x.type === 'weak'); if (wk) dmg = Math.floor(dmg * 0.75);
         for (let i = 0; i < hits; i++) {
-          const totalDamage = Math.max(0, damage - combat.player.block);
-          combat.player.block = Math.max(0, combat.player.block - damage);
-          combat.player.currentHealth -= totalDamage;
-
-          const thorns = combat.player.statusEffects.find((s) => s.type === 'thorns');
-          if (thorns && enemy.currentHealth > 0) {
-            enemy.currentHealth -= thorns.value;
-          }
-
-          const shields = combat.player.statusEffects.find((s) => s.type === 'shields');
-          if (shields && shields.value > 0) {
-            const absorb = Math.min(shields.value, totalDamage);
-            shields.value -= absorb;
-            combat.player.currentHealth += absorb;
-          }
+          const d = Math.max(0, dmg - c.player.block); c.player.block = Math.max(0, c.player.block - dmg); c.player.currentHealth -= d;
+          const th = c.player.statusEffects.find(x => x.type === 'thorns'); if (th && e.currentHealth > 0) e.currentHealth -= th.value;
+          const sh = c.player.statusEffects.find(x => x.type === 'shields'); if (sh && sh.value > 0) { const ab = Math.min(sh.value, d); sh.value -= ab; c.player.currentHealth += ab; }
         }
-      } else if (intent.type === 'defend') {
-        enemy.block += intent.block;
-      } else if (intent.type === 'buff') {
-        const existing = enemy.statusEffects.find((s) => s.type === intent.effect);
-        if (existing) existing.value += intent.value;
-        else enemy.statusEffects.push({ type: intent.effect as any, value: intent.value, duration: 99 });
-      } else if (intent.type === 'debuff') {
-        combat.player.statusEffects.push({
-          type: intent.effect as any,
-          value: intent.value,
-          duration: 2,
-        });
-      }
-
-      enemy.currentIntentIndex = (enemy.currentIntentIndex + 1) % enemy.intents.length;
+      } else if (intent.type === 'defend') { e.block += intent.block; }
+      else if (intent.type === 'buff') { const ex = e.statusEffects.find(x => x.type === intent.effect); if (ex) ex.value += intent.value; else e.statusEffects.push({ type: intent.effect as any, value: intent.value, duration: 99 }); }
+      else if (intent.type === 'debuff') { c.player.statusEffects.push({ type: intent.effect as any, value: intent.value, duration: 2 }); }
+      e.currentIntentIndex = (e.currentIntentIndex + 1) % e.intents.length;
     }
 
-    for (const effect of combat.player.statusEffects) {
-      if (effect.type === 'poison') {
-        combat.player.currentHealth -= effect.value;
-      } else if (effect.type === 'regen') {
-        combat.player.currentHealth = Math.min(combat.player.maxHealth, combat.player.currentHealth + effect.value);
-      }
-      effect.duration--;
+    for (const eff of c.player.statusEffects) {
+      if (eff.type === 'poison') c.player.currentHealth -= eff.value;
+      else if (eff.type === 'regen') c.player.currentHealth = Math.min(c.player.maxHealth, c.player.currentHealth + eff.value);
+      eff.duration--;
     }
-    combat.player.statusEffects = combat.player.statusEffects.filter((s) => s.duration > 0);
+    c.player.statusEffects = c.player.statusEffects.filter(x => x.duration > 0);
 
-    if (combat.player.currentHealth <= 0) {
-      combat.phase = 'defeat';
-      set({ combat, phase: 'ended' });
+    if (c.player.currentHealth <= 0) { set({ combat: { ...c, phase: 'defeat' }, phase: 'ended' }); return; }
+    if (c.enemies.every(e => e.currentHealth <= 0)) {
+      const gold = c.enemies.reduce((sum, e) => { const [a, b] = e.goldReward; return sum + Math.floor(a + Math.random() * (b - a)); }, 0);
+      const cards = c.enemies.flatMap(e => e.cardRewards).filter(Boolean);
+      const relic = c.enemies.find(e => e.isBoss)?.relicReward;
+      set({ combat: { ...c, phase: 'victory', rewards: { cards, gold, relic: relic ? deepClone(relic) : undefined } }, phase: 'reward' });
       return;
     }
-
-    if (combat.enemies.every((e) => e.currentHealth <= 0)) {
-      combat.phase = 'victory';
-      const totalGold = combat.enemies.reduce((sum, e) => {
-        const [min, max] = e.goldReward;
-        return sum + Math.floor(min + Math.random() * (max - min));
-      }, 0);
-
-      const rewardCards: LifeCard[] = combat.enemies.flatMap((e) => e.cardRewards).filter(Boolean);
-      const relicReward = combat.enemies.find((e) => e.isBoss)?.relicReward;
-
-      combat.rewards = {
-        cards: rewardCards,
-        gold: totalGold,
-        relic: relicReward ? deepClone(relicReward) : undefined,
-      };
-
-      set({ combat, phase: 'reward' });
-      return;
+    c.currentTurn++; c.phase = 'player_turn';
+    const draw = BASE_DRAW_COUNT + get().getDrawCount();
+    for (let i = 0; i < draw; i++) {
+      if (c.player.drawPile.length === 0) { c.player.drawPile = shuffle(c.player.discardPile); c.player.discardPile = []; }
+      if (c.player.drawPile.length > 0 && c.player.hand.length < MAX_HAND_SIZE) c.player.hand.push(c.player.drawPile.shift()!);
     }
-
-    combat.currentTurn++;
-    combat.phase = 'player_turn';
-
-    const drawCount = BASE_DRAW_COUNT + get().getDrawCount();
-    for (let i = 0; i < drawCount; i++) {
-      if (combat.player.drawPile.length === 0) {
-        combat.player.drawPile = shuffle(combat.player.discardPile);
-        combat.player.discardPile = [];
-      }
-      if (combat.player.drawPile.length > 0 && combat.player.hand.length < MAX_HAND_SIZE) {
-        combat.player.hand.push(combat.player.drawPile.shift()!);
-      }
-    }
-
-    set({ combat });
+    set({ combat: c });
   },
 
-  endCombat: (victory: boolean) => {
-    const state = get();
-
+  endCombat: (victory) => {
+    const s = get();
     if (victory) {
-      const goldEarned = state.combat.rewards.gold;
-      const relicReward = state.combat.rewards.relic;
-
-      const newRelics = [...state.relics];
-      if (relicReward) newRelics.push(relicReward);
-
-      set({
-        gold: state.gold + goldEarned,
-        relics: newRelics,
-      });
-
-      if (state.combat.rewards.cards.length > 0) {
-        set({ phase: 'reward' });
-      } else {
-        get().completeNode();
-      }
+      const gold = s.combat.rewards.gold; const relic = s.combat.rewards.relic;
+      set({ gold: s.gold + gold, relics: relic ? [...s.relics, relic] : s.relics });
+      if (s.combat.rewards.cards.length > 0) set({ phase: 'reward' });
+      else get().completeNode();
     } else {
       set({ phase: 'ended' });
     }
   },
 
-  selectCardReward: (cardId: string) => {
-    const state = get();
-    const card = state.combat.rewards.cards.find((c) => c.id === cardId);
-    if (card) {
-      const newCard = { ...deepClone(card), id: generateId() };
-      set({ deck: [...state.deck, newCard] });
-    }
+  selectCardReward: (cardId) => {
+    const s = get();
+    const card = s.combat.rewards.cards.find(c => c.id === cardId);
+    if (card) set({ deck: [...s.deck, { ...deepClone(card), id: generateId() }] });
     get().completeNode();
   },
 
-  // ==========================================
-  // 事件系统
-  // ==========================================
-
-  makeChoice: (event: GameEvent, option: EventOption) => {
-    const state = get();
-    const successRate = get().getSuccessRate(option);
-    const rand = Math.random();
-    const isSuccess = rand <= successRate;
-
-    const outcome = isSuccess ? option.successOutcome : option.failureOutcome;
-    const newAttrs = { ...state.attributes };
-    const attributeChanges: AttributeChange[] = [];
-
-    for (const [key, value] of Object.entries(outcome.attributeChanges)) {
-      const attr = key as keyof PlayerAttributes;
-      const oldValue = newAttrs[attr];
-      const newValue = clamp(oldValue + (value || 0));
-      newAttrs[attr] = newValue;
-      attributeChanges.push({
-        attr,
-        oldValue,
-        newValue,
-        reason: outcome.description,
-        timestamp: Date.now(),
-      });
+  // ========== 事件 ==========
+  makeChoice: (event, option) => {
+    const s = get();
+    const rate = get().getSuccessRate(option);
+    const success = Math.random() <= rate;
+    const outcome = success ? option.successOutcome : option.failureOutcome;
+    const attrs = { ...s.attributes };
+    const changes: AttributeChange[] = [];
+    for (const [k, v] of Object.entries(outcome.attributeChanges)) {
+      const a = k as keyof PlayerAttributes;
+      const old = attrs[a]; const nv = clamp(old + (v || 0));
+      attrs[a] = nv; changes.push({ attr: a, oldValue: old, newValue: nv, reason: outcome.description, timestamp: Date.now() });
     }
-
-    let newRemainingLife = state.remainingLife;
-    if (outcome.lifeCost) newRemainingLife = Math.max(0, newRemainingLife - outcome.lifeCost);
-
-    let newGold = state.gold;
-    if (outcome.goldReward) newGold += outcome.goldReward;
-
-    let newDeck = [...state.deck];
-    if (outcome.cardRewards) {
-      for (const card of outcome.cardRewards) {
-        newDeck.push({ ...deepClone(card), id: generateId() });
-      }
-    }
-
-    let newRelics = [...state.relics];
-    if (outcome.relicRewards) {
-      for (const relic of outcome.relicRewards) {
-        newRelics.push(deepClone(relic));
-      }
-    }
-
-    const choiceRecord: ChoiceRecord = {
-      era: state.currentEra,
-      year: state.currentYear,
-      eventId: event.id,
-      optionId: option.id,
-      success: isSuccess,
-      timestamp: Date.now(),
-      description: `${event.title} - ${option.text} (${isSuccess ? '成功' : '失败'})`,
-    };
-
-    const lifeRecord: LifeRecord = {
-      id: generateId(),
-      era: state.currentEra,
-      year: state.currentYear,
-      title: event.title,
-      content: outcome.description,
-      attributeChanges,
-      timestamp: Date.now(),
-    };
-
-    const newWorldState = { ...state.worldState };
-    if (event.isMilestone && isSuccess) {
-      newWorldState.customEvents.push(outcome.description);
-    }
-
-    let newPhase = state.phase;
-    if (newRemainingLife <= 0 || newAttrs.health <= 0) {
-      newPhase = 'ended';
-    }
-
-    set({
-      attributes: newAttrs,
-      remainingLife: newRemainingLife,
-      gold: newGold,
-      deck: newDeck,
-      relics: newRelics,
-      choiceHistory: [...state.choiceHistory, choiceRecord],
-      lifeRecords: [...state.lifeRecords, lifeRecord],
-      worldState: newWorldState,
-      phase: newPhase,
-    });
-
-    const newTags = get().checkHiddenTags();
-    if (newTags.length > state.hiddenTags.length) set({ hiddenTags: newTags });
-
-    if (newPhase !== 'ended') get().completeNode();
+    let life = s.remainingLife; if (outcome.lifeCost) life = Math.max(0, life - outcome.lifeCost);
+    let gold = s.gold; if (outcome.goldReward) gold += outcome.goldReward;
+    let deck = [...s.deck]; if (outcome.cardRewards) for (const c of outcome.cardRewards) deck.push({ ...deepClone(c), id: generateId() });
+    let relics = [...s.relics]; if (outcome.relicRewards) for (const r of outcome.relicRewards) relics.push(deepClone(r));
+    const rec: ChoiceRecord = { era: s.currentEra, year: s.currentYear, eventId: event.id, optionId: option.id, success, timestamp: Date.now(), description: `${event.title} - ${option.text} (${success ? '成功' : '失败'})` };
+    const lr: LifeRecord = { id: generateId(), era: s.currentEra, year: s.currentYear, title: event.title, content: outcome.description, attributeChanges: changes, timestamp: Date.now() };
+    const ws = { ...s.worldState }; if (event.isMilestone && success) ws.customEvents.push(outcome.description);
+    let ph = s.phase; if (life <= 0 || attrs.health <= 0) ph = 'ended';
+    set({ attributes: attrs, remainingLife: life, gold, deck, relics, choiceHistory: [...s.choiceHistory, rec], lifeRecords: [...s.lifeRecords, lr], worldState: ws, phase: ph });
+    const tags = get().checkHiddenTags(); if (tags.length > s.hiddenTags.length) set({ hiddenTags: tags });
+    if (ph !== 'ended') get().completeNode();
   },
 
-  // ==========================================
-  // 商店系统
-  // ==========================================
-
+  // ========== 商店 ==========
   generateShop: () => {
-    const state = get();
+    const s = get();
     const discount = get().getShopDiscount();
-    const rand = seededRandom(state.seed + state.currentEra * 1000 + Date.now());
-
+    const rand = seededRandom(s.seed + s.currentEra * 1000 + Date.now());
     const items: { card?: LifeCard; relic?: LifeRelic; price: number }[] = [];
-
     for (let i = 0; i < 3 + Math.floor(rand() * 2); i++) {
-      const rarityRoll = rand();
-      let pool: LifeCard[];
-      if (rarityRoll < 0.6) pool = [...COMMON_ENEMIES.map((e) => e.cardRewards[0]).filter(Boolean) as LifeCard[]].slice(0, 5);
-      else if (rarityRoll < 0.85) pool = [] as LifeCard[]; // rare cards placeholder
+      const r = rand(); let pool: LifeCard[];
+      if (r < 0.6) pool = [...COMMON_ENEMIES.map(e => e.cardRewards[0]).filter(Boolean) as LifeCard[]].slice(0, 5);
+      else if (r < 0.85) pool = [] as LifeCard[];
       else pool = LEGENDARY_CARDS;
-
       if (pool.length === 0) pool = LEGENDARY_CARDS;
-      const card = deepClone(getRandomItem(pool, rand));
-      card.id = generateId();
-      const price = clamp(card.rarity === 'legendary' ? 99 : card.rarity === 'rare' ? 50 : 25, 10, 999);
-      items.push({ card, price });
+      const card = deepClone(pick(pool, rand)); card.id = generateId();
+      items.push({ card, price: clamp(card.rarity === 'legendary' ? 99 : card.rarity === 'rare' ? 50 : 25, 10, 999) });
     }
-
     for (let i = 0; i < 1 + Math.floor(rand() * 2); i++) {
       const pool = rand() < 0.7 ? COMMON_RELICS : RARE_RELICS;
-      const relic = deepClone(getRandomItem(pool, rand));
-      relic.id = generateId();
-      const price = clamp(relic.rarity === 'rare' ? 150 : 80, 20, 999);
-      items.push({ relic, price });
+      const relic = deepClone(pick(pool, rand)); relic.id = generateId();
+      items.push({ relic, price: clamp(relic.rarity === 'rare' ? 150 : 80, 20, 999) });
     }
-
-    const shop: ShopState = {
-      items: items.map((item) => ({
-        ...item,
-        price: Math.floor(item.price * (1 - discount)),
-        isPurchased: false,
-      })),
-      refreshCost: 25,
-      era: state.currentEra,
-    };
-
-    set({ shop, phase: 'shop' });
+    set({ shop: { items: items.map(it => ({ ...it, price: Math.floor(it.price * (1 - discount)), isPurchased: false })), refreshCost: 25, era: s.currentEra }, phase: 'shop' });
   },
 
-  buyShopItem: (index: number) => {
-    const state = get();
-    if (!state.shop) return;
-
-    const item = state.shop.items[index];
-    if (!item || item.isPurchased) return;
-    if (state.gold < item.price) return;
-
-    let newDeck = [...state.deck];
-    let newRelics = [...state.relics];
-
-    if (item.card) {
-      newDeck.push({ ...deepClone(item.card), id: generateId() });
-    }
-    if (item.relic) {
-      newRelics.push({ ...deepClone(item.relic), id: generateId() });
-    }
-
-    const newItems = [...state.shop.items];
-    newItems[index] = { ...item, isPurchased: true };
-
-    set({
-      gold: state.gold - item.price,
-      deck: newDeck,
-      relics: newRelics,
-      shop: { ...state.shop, items: newItems },
-    });
+  buyShopItem: (idx) => {
+    const s = get(); if (!s.shop) return;
+    const item = s.shop.items[idx]; if (!item || item.isPurchased || s.gold < item.price) return;
+    const deck = item.card ? [...s.deck, { ...deepClone(item.card), id: generateId() }] : [...s.deck];
+    const relics = item.relic ? [...s.relics, { ...deepClone(item.relic), id: generateId() }] : [...s.relics];
+    const items = [...s.shop.items]; items[idx] = { ...item, isPurchased: true };
+    set({ gold: s.gold - item.price, deck, relics, shop: { ...s.shop, items } });
   },
 
   refreshShop: () => {
-    const state = get();
-    if (!state.shop || state.gold < state.shop.refreshCost) return;
-    set({ gold: state.gold - state.shop.refreshCost });
-    get().generateShop();
+    const s = get(); if (!s.shop || s.gold < s.shop.refreshCost) return;
+    set({ gold: s.gold - s.shop.refreshCost }); get().generateShop();
   },
 
-  // ==========================================
-  // 休息
-  // ==========================================
-
   rest: () => {
-    const state = get();
+    const s = get();
     set({
-      combat: {
-        ...state.combat,
-        player: {
-          ...state.combat.player,
-          currentHealth: Math.min(
-            state.combat.player.maxHealth,
-            state.combat.player.currentHealth + Math.floor(state.combat.player.maxHealth * 0.3)
-          ),
-        },
-      },
-      remainingLife: Math.max(0, state.remainingLife - 1),
+      combat: { ...s.combat, player: { ...s.combat.player, currentHealth: Math.min(s.combat.player.maxHealth, s.combat.player.currentHealth + Math.floor(s.combat.player.maxHealth * 0.3)) } },
+      remainingLife: Math.max(0, s.remainingLife - 1),
     });
     get().completeNode();
   },
 
-  // ==========================================
-  // 修仙系统
-  // ==========================================
-
   attemptBreakthrough: () => {
-    const state = get();
-    if (!state.cultivation) return;
-
-    const current = state.cultivation.realm;
-    const realms: CultivationRealm[] = [
-      'mortal', 'qi_refining', 'foundation', 'golden_core', 'nascent',
-      'spirit', 'void', 'integration', 'mahayana', 'tribulation',
-    ];
-    const currentIndex = realms.indexOf(current);
-    if (currentIndex >= realms.length - 1) return;
-
-    const nextRealm = realms[currentIndex + 1];
-    const totalAttrs = Object.values(state.attributes).reduce((a, b) => a + b, 0);
-
-    if (totalAttrs < 100 * (currentIndex + 1)) {
-      return;
-    }
-
-    const nextBoss = CULTIVATION_BOSSES.find((b) => b.id === nextRealm);
-    if (nextBoss) {
-      const boss = deepClone(nextBoss);
-      boss.id = generateId();
-      boss.currentHealth = boss.maxHealth;
-      get().startCombat([boss]);
-      set({
-        cultivation: {
-          ...state.cultivation,
-          realm: nextRealm,
-          maxLifespan: state.maxLifespan + 20,
-          tribulationThreshold: 100 * (currentIndex + 2),
-          realmBonus: {
-            iq: (state.cultivation.realmBonus.iq || 0) + 5,
-            physique: (state.cultivation.realmBonus.physique || 0) + 5,
-          },
-        },
-      });
-    }
+    const s = get(); if (!s.cultivation) return;
+    const realms: CultivationRealm[] = ['mortal', 'qi_refining', 'foundation', 'golden_core', 'nascent', 'spirit', 'void', 'integration', 'mahayana', 'tribulation'];
+    const ci = realms.indexOf(s.cultivation.realm);
+    if (ci >= realms.length - 1) return;
+    const next = realms[ci + 1];
+    if (Object.values(s.attributes).reduce((a, b) => a + b, 0) < 100 * (ci + 1)) return;
+    const boss = CULTIVATION_BOSSES.find(b => b.id === next);
+    if (boss) { const b = deepClone(boss); b.id = generateId(); b.currentHealth = b.maxHealth; get().startCombat([b]); }
   },
 
-  // ==========================================
-  // 存档系统
-  // ==========================================
-
   saveGame: async () => {
-    const state = get();
+    const s = get();
     try {
-      const saveData = {
-        id: generateId(),
-        gameState: {
-          phase: state.phase,
-          mode: state.mode,
-          birthYear: state.birthYear,
-          currentYear: state.currentYear,
-          currentEra: state.currentEra,
-          age: state.age,
-          maxLifespan: state.maxLifespan,
-          remainingLife: state.remainingLife,
-          attributes: state.attributes,
-          remainingAttributePoints: state.remainingAttributePoints,
-          hiddenTags: state.hiddenTags,
-          npcs: state.npcs,
-          choiceHistory: state.choiceHistory,
-          lifeRecords: state.lifeRecords,
-          deck: state.deck,
-          relics: state.relics,
-          gold: state.gold,
-          worldState: state.worldState,
-          seed: state.seed,
-          cultivation: state.cultivation,
-        },
-        updatedAt: new Date().toISOString(),
-        isDead: false,
-      };
-      await storageService.saveData(STORAGE_KEY, saveData);
-    } catch (error) {
-      console.error('保存失败:', error);
-    }
+      await storageService.saveData(STORAGE_KEY, {
+        id: generateId(), gameState: { phase: s.phase, mode: s.mode, birthYear: s.birthYear, currentYear: s.currentYear, currentEra: s.currentEra, age: s.age, maxLifespan: s.maxLifespan, remainingLife: s.remainingLife, attributes: s.attributes, remainingAttributePoints: s.remainingAttributePoints, hiddenTags: s.hiddenTags, npcs: s.npcs, choiceHistory: s.choiceHistory, lifeRecords: s.lifeRecords, deck: s.deck, relics: s.relics, gold: s.gold, worldState: s.worldState, seed: s.seed, cultivation: s.cultivation }, updatedAt: new Date().toISOString(), isDead: false,
+      });
+    } catch (e) { console.error('保存失败:', e); }
   },
 
   loadGame: async () => {
-    try {
-      const saveData = await storageService.loadData<any>(STORAGE_KEY);
-      if (saveData && saveData.gameState && !saveData.isDead) {
-        set(saveData.gameState);
-      }
-    } catch (error) {
-      console.error('加载失败:', error);
-    }
+    try { const d = await storageService.loadData<any>(STORAGE_KEY); if (d?.gameState && !d.isDead) set(d.gameState); }
+    catch (e) { console.error('加载失败:', e); }
   },
 
-  // ==========================================
-  // 计算属性
-  // ==========================================
-
-  getSuccessRate: (option: EventOption) => {
-    const state = get();
-    const weights = option.successRate;
-    let totalWeight = 0;
-    let weightedSum = 0;
-
-    for (const [key, weight] of Object.entries(weights)) {
-      const attr = key as keyof PlayerAttributes;
-      weightedSum += state.attributes[attr] * (weight || 0);
-      totalWeight += weight || 0;
-    }
-
-    const baseRate = totalWeight > 0 ? weightedSum / totalWeight / 100 : 0.5;
-    let tagBonus = 0;
-    if (option.tagModifier && state.hiddenTags.includes(option.tagModifier.tag)) {
-      tagBonus = option.tagModifier.rateBonus;
-    }
-
-    return clamp(baseRate + tagBonus, 0.05, 0.95);
+  getSuccessRate: (option) => {
+    const s = get(); const w = option.successRate; let tw = 0, ws = 0;
+    for (const [k, v] of Object.entries(w)) { ws += s.attributes[k as keyof PlayerAttributes] * (v || 0); tw += v || 0; }
+    const base = tw > 0 ? ws / tw / 100 : 0.5;
+    let bonus = 0; if (option.tagModifier && s.hiddenTags.includes(option.tagModifier.tag)) bonus = option.tagModifier.rateBonus;
+    return clamp(base + bonus, 0.05, 0.95);
   },
 
-  getAvailableEvents: () => {
-    return SCRIPT_1950_EVENTS;
-  },
-
-  getEraDefinition: () => {
-    const state = get();
-    return ERAS.find((e) => e.year === state.birthYear);
-  },
+  getAvailableEvents: () => SCRIPT_1950_EVENTS,
+  getEraDefinition: () => ERAS.find(e => e.year === get().birthYear),
 
   checkHiddenTags: () => {
-    const state = get();
-    const currentTags = new Set(state.hiddenTags);
-
-    for (const tag of HIDDEN_TAGS) {
-      if (!currentTags.has(tag.id) && tag.condition(state)) {
-        currentTags.add(tag.id);
-      }
-    }
-
-    return Array.from(currentTags);
+    const s = get(); const tags = new Set(s.hiddenTags);
+    for (const t of HIDDEN_TAGS) if (!tags.has(t.id) && t.condition(s)) tags.add(t.id);
+    return Array.from(tags);
   },
 
   getEffectiveMaxHealth: () => {
-    const state = get();
-    let maxHealth = state.attributes.health;
-    for (const relic of state.relics) {
-      for (const effect of relic.effects) {
-        if (effect.type === 'max_health_bonus') maxHealth += effect.value;
-      }
-    }
-    if (state.cultivation) {
-      maxHealth += (state.cultivation.realmBonus.physique || 0) * 2;
-    }
-    return Math.max(30, maxHealth);
+    const s = get(); let h = s.attributes.health;
+    for (const r of s.relics) for (const e of r.effects) if (e.type === 'max_health_bonus') h += e.value;
+    if (s.cultivation) h += (s.cultivation.realmBonus.physique || 0) * 2;
+    return Math.max(30, h);
   },
 
-  getDrawCount: () => {
-    const state = get();
-    let bonus = 0;
-    for (const relic of state.relics) {
-      for (const effect of relic.effects) {
-        if (effect.type === 'card_draw_bonus') bonus += effect.value;
-      }
-    }
-    return bonus;
-  },
+  getDrawCount: () => { const s = get(); let b = 0; for (const r of s.relics) for (const e of r.effects) if (e.type === 'card_draw_bonus') b += e.value; return b; },
 
   getEnergy: () => {
-    const state = get();
-    let energy = BASE_ENERGY;
-    for (const relic of state.relics) {
-      for (const effect of relic.effects) {
-        if (effect.type === 'energy_bonus') energy += effect.value;
-      }
-    }
-    if (state.cultivation && state.cultivation.realm !== 'mortal') energy += 1;
-    return energy;
+    const s = get(); let e = BASE_ENERGY;
+    for (const r of s.relics) for (const ef of r.effects) if (ef.type === 'energy_bonus') e += ef.value;
+    if (s.cultivation && s.cultivation.realm !== 'mortal') e += 1;
+    return e;
   },
 
-  getShopDiscount: () => {
-    const state = get();
-    let discount = 0;
-    for (const relic of state.relics) {
-      for (const effect of relic.effects) {
-        if (effect.type === 'discount') discount += effect.value;
-      }
-    }
-    return Math.min(0.5, discount);
+  getShopDiscount: () => { const s = get(); let d = 0; for (const r of s.relics) for (const e of r.effects) if (e.type === 'discount') d += e.value; return Math.min(0.5, d); },
+
+  getEnemiesForNode: (node) => {
+    const s = get(); const enemies: Enemy[] = [];
+    if (node.data?.enemyIds) for (const id of node.data.enemyIds) { const e = s.combat.enemies.find(en => en.id === id); if (e) enemies.push(deepClone(e)); }
+    return enemies;
   },
 }));
 
