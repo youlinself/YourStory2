@@ -1,8 +1,9 @@
 import { useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import { MainLayout, ToastProvider } from "./components";
+import { ToastProvider } from "./components";
 import { Home, DialogueAgent, Settings, Autobiography } from "./pages";
 import { useAIStore } from "./stores";
+import { AppLayout } from "./components/layout";
 import "./App.css";
 
 function App() {
@@ -16,39 +17,13 @@ function App() {
     <Router>
       <ToastProvider>
         <Routes>
-          <Route path="/" element={<Home />} />
-          <Route
-            path="/dialogue"
-            element={
-              <MainLayout>
-                <DialogueAgent />
-              </MainLayout>
-            }
-          />
-          <Route
-            path="/dialogue/:chapterId"
-            element={
-              <MainLayout>
-                <DialogueAgent />
-              </MainLayout>
-            }
-          />
-          <Route
-            path="/settings"
-            element={
-              <MainLayout>
-                <Settings />
-              </MainLayout>
-            }
-          />
-          <Route
-            path="/autobiography"
-            element={
-              <MainLayout>
-                <Autobiography />
-              </MainLayout>
-            }
-          />
+          <Route element={<AppLayout />}>
+            <Route path="/" element={<Home />} />
+            <Route path="/dialogue" element={<DialogueAgent />} />
+            <Route path="/dialogue/:chapterId" element={<DialogueAgent />} />
+            <Route path="/autobiography" element={<Autobiography />} />
+        <Route path="/settings" element={<Settings />} />
+          </Route>
         </Routes>
       </ToastProvider>
     </Router>
