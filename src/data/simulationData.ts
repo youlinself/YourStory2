@@ -1,16 +1,26 @@
-import type { EraDefinition, HiddenTag, ScriptTemplate } from '../types/simulation';
+import type {
+  EraDefinition,
+  HiddenTag,
+  LifeCard,
+  LifeRelic,
+  Enemy,
+  CultivationRealm,
+  GameEvent,
+  StatusEffect,
+} from '../types/simulation';
 
 // ==========================================
-// 时代定义 - 出生年选项 [1950-2070]
+// 时代定义
 // ==========================================
 export const ERAS: EraDefinition[] = [
   {
     year: 1950,
     name: '萌芽纪元',
     baseLifeExpectancy: 70,
-    description: '百废待兴的年代，到处都是机会，也充满了挑战。物资匮乏，但人心淳朴。',
+    description: '百废待兴的年代，到处都是机会，也充满了挑战。',
     initialWealthRange: [5, 25],
     initialNetworkRange: [10, 40],
+    attributePoints: 15,
   },
   {
     year: 1960,
@@ -19,6 +29,7 @@ export const ERAS: EraDefinition[] = [
     description: '社会剧烈变革的十年，有人乘风破浪，有人随波逐流。',
     initialWealthRange: [5, 20],
     initialNetworkRange: [15, 45],
+    attributePoints: 15,
   },
   {
     year: 1970,
@@ -27,6 +38,7 @@ export const ERAS: EraDefinition[] = [
     description: '黎明前的黑暗即将过去，新时代的曙光即将到来。',
     initialWealthRange: [8, 25],
     initialNetworkRange: [15, 40],
+    attributePoints: 16,
   },
   {
     year: 1980,
@@ -35,6 +47,7 @@ export const ERAS: EraDefinition[] = [
     description: '思想解放的浪潮席卷大地，到处都是创业的声音。',
     initialWealthRange: [10, 35],
     initialNetworkRange: [15, 50],
+    attributePoints: 16,
   },
   {
     year: 1990,
@@ -43,6 +56,7 @@ export const ERAS: EraDefinition[] = [
     description: '体制变革带来巨大的机遇和风险，敢问路在何方。',
     initialWealthRange: [15, 45],
     initialNetworkRange: [20, 55],
+    attributePoints: 17,
   },
   {
     year: 2000,
@@ -51,6 +65,7 @@ export const ERAS: EraDefinition[] = [
     description: '互联网浪潮来临，世界开始连接，新的规则正在建立。',
     initialWealthRange: [20, 55],
     initialNetworkRange: [20, 60],
+    attributePoints: 17,
   },
   {
     year: 2010,
@@ -59,6 +74,7 @@ export const ERAS: EraDefinition[] = [
     description: '智能手机普及，让每个人都能触摸到整个世界。',
     initialWealthRange: [25, 60],
     initialNetworkRange: [25, 65],
+    attributePoints: 18,
   },
   {
     year: 2020,
@@ -67,6 +83,7 @@ export const ERAS: EraDefinition[] = [
     description: 'AI、大数据、元宇宙...科技与生活的边界正在模糊。',
     initialWealthRange: [30, 65],
     initialNetworkRange: [30, 70],
+    attributePoints: 18,
   },
   {
     year: 2030,
@@ -75,6 +92,7 @@ export const ERAS: EraDefinition[] = [
     description: '新能源技术突破，传统行业正在重新洗牌。',
     initialWealthRange: [35, 70],
     initialNetworkRange: [30, 75],
+    attributePoints: 19,
   },
   {
     year: 2040,
@@ -83,6 +101,7 @@ export const ERAS: EraDefinition[] = [
     description: '太空商业化起步，人类的视野投向星辰大海。',
     initialWealthRange: [40, 75],
     initialNetworkRange: [35, 80],
+    attributePoints: 19,
   },
   {
     year: 2050,
@@ -91,6 +110,7 @@ export const ERAS: EraDefinition[] = [
     description: '人机融合成为常态，生命的定义正在被改写。',
     initialWealthRange: [45, 80],
     initialNetworkRange: [40, 85],
+    attributePoints: 20,
   },
   {
     year: 2060,
@@ -99,6 +119,7 @@ export const ERAS: EraDefinition[] = [
     description: '太阳系殖民成为现实，人类的脚步不再局限于地球。',
     initialWealthRange: [50, 85],
     initialNetworkRange: [45, 90],
+    attributePoints: 21,
   },
   {
     year: 2070,
@@ -107,11 +128,12 @@ export const ERAS: EraDefinition[] = [
     description: '没有人知道未来会怎样，因为未来由你来定义。',
     initialWealthRange: [55, 90],
     initialNetworkRange: [50, 95],
+    attributePoints: 22,
   },
 ];
 
 // ==========================================
-// 隐藏标签 - 由玩家选择自然形成
+// 隐藏标签
 // ==========================================
 export const HIDDEN_TAGS: HiddenTag[] = [
   {
@@ -124,12 +146,7 @@ export const HIDDEN_TAGS: HiddenTag[] = [
     id: 'steady_walker',
     name: '守望者',
     description: '你选择了稳健的道路，虽然不耀眼但走得长远',
-    condition: (state) => {
-      const stableChoices = state.choiceHistory.filter(
-        () => Math.random() > 0.3
-      ).length;
-      return stableChoices >= 8 && state.remainingLife >= 40;
-    },
+    condition: (state) => state.remainingLife >= 40 && state.deck.length <= 15,
   },
   {
     id: 'wisdom_seeker',
@@ -162,434 +179,909 @@ export const HIDDEN_TAGS: HiddenTag[] = [
     condition: (state) => state.worldState.customEvents.length >= 3,
   },
   {
-    id: 'mentor',
-    name: '引路人',
-    description: '你帮助了许多人，桃李满天下',
-    condition: (state) => state.npcs.filter((n) => n.relationship > 70).length >= 2 && state.attributes.eq >= 70,
+    id: 'collector',
+    name: '收藏家',
+    description: '你收集了无数珍宝和知识',
+    condition: (state) => state.relics.length >= 10,
+  },
+  {
+    id: 'minimalist',
+    name: '极简主义者',
+    description: '你追求纯粹的卡组和人生',
+    condition: (state) => state.deck.length <= 8 && state.currentEra >= 3,
+  },
+  {
+    id: 'cultivator',
+    name: '修真者',
+    description: '你突破了凡人的极限',
+    condition: (state) => state.cultivation !== null && state.cultivation.realm !== 'mortal',
   },
 ];
 
 // ==========================================
-// 1950年代剧本模板（换皮骨架）
+// 卡牌数据库 - 贴合人生阶段
 // ==========================================
-const SCRIPT_1950: ScriptTemplate = {
-  era: 0,
-  eraDescription: '你出生在{year}年，这是{era_name}。{era_desc}',
 
-  // 固定节点 - 必定发生
-  fixedNodes: [
+// 通用攻击卡（所有时代可用）
+export const COMMON_ATTACK_CARDS: LifeCard[] = [
+  {
+    id: 'strike',
+    name: '日常努力',
+    type: 'attack',
+    rarity: 'common',
+    cost: 1,
+    target: 'enemy',
+    effects: [{ type: 'damage', value: 6 }],
+    description: '普通的一击，持之以恒亦有力量',
+    icon: '👊',
+    tags: ['通用'],
+  },
+  {
+    id: 'quick_action',
+    name: '快速行动',
+    type: 'attack',
+    rarity: 'common',
+    cost: 0,
+    target: 'enemy',
+    effects: [{ type: 'damage', value: 3 }, { type: 'draw', value: 1 }],
+    description: '速度即是力量，先发制人',
+    icon: '⚡',
+    tags: ['速度'],
+  },
+  {
+    id: 'focused_strike',
+    name: '专注打击',
+    type: 'attack',
+    rarity: 'common',
+    cost: 1,
+    target: 'enemy',
+    effects: [{ type: 'damage', value: 8 }, { type: 'gain_energy', value: 1, duration: 1 }],
+    description: '集中精力，一击必中',
+    icon: '🎯',
+    tags: ['专注'],
+  },
+];
+
+// 通用技能卡
+export const COMMON_SKILL_CARDS: LifeCard[] = [
+  {
+    id: 'defend',
+    name: '稳扎稳打',
+    type: 'skill',
+    rarity: 'common',
+    cost: 1,
+    target: 'self',
+    effects: [{ type: 'block', value: 5 }],
+    description: '先稳住阵脚，再图进取',
+    icon: '🛡️',
+    tags: ['防御'],
+  },
+  {
+    id: 'bandage',
+    name: '自我疗愈',
+    type: 'skill',
+    rarity: 'common',
+    cost: 1,
+    target: 'self',
+    effects: [{ type: 'heal', value: 4 }],
+    description: '给身体一些恢复的时间',
+    icon: '🏥',
+    tags: ['健康'],
+  },
+  {
+    id: 'plan_ahead',
+    name: '提前规划',
+    type: 'skill',
+    rarity: 'common',
+    cost: 0,
+    target: 'self',
+    effects: [{ type: 'draw', value: 2 }],
+    description: '好的计划让你事半功倍',
+    icon: '📝',
+    tags: ['策略'],
+  },
+];
+
+// 稀有卡
+export const RARE_CARDS: LifeCard[] = [
+  {
+    id: 'investment',
+    name: '投资理财',
+    type: 'skill',
+    rarity: 'rare',
+    cost: 1,
+    target: 'self',
+    effects: [{ type: 'gain_energy', value: 2 }, { type: 'draw', value: 1 }],
+    description: '钱生钱，让财富为你工作',
+    icon: '💰',
+    tags: ['财富', '投资'],
+  },
+  {
+    id: 'networking',
+    name: '拓展人脉',
+    type: 'skill',
+    rarity: 'rare',
+    cost: 1,
+    target: 'self',
+    effects: [{ type: 'block', value: 3 }, { type: 'heal', value: 2 }, { type: 'draw', value: 1 }],
+    description: '多个朋友多条路',
+    icon: '🤝',
+    tags: ['人脉'],
+  },
+  {
+    id: 'career_breakthrough',
+    name: '事业突破',
+    type: 'attack',
+    rarity: 'rare',
+    cost: 2,
+    target: 'enemy',
+    effects: [{ type: 'damage', value: 15 }, { type: 'gain_attribute', value: 2, attribute: 'wealth' }],
+    description: '多年的积累终于迎来了收获',
+    icon: '🚀',
+    tags: ['事业'],
+  },
+];
+
+// 史诗/传说卡
+export const LEGENDARY_CARDS: LifeCard[] = [
+  {
+    id: 'destiny_choice',
+    name: '命运抉择',
+    type: 'skill',
+    rarity: 'legendary',
+    cost: 3,
+    target: 'self',
+    effects: [
+      { type: 'draw', value: 3 },
+      { type: 'gain_energy', value: 2 },
+      { type: 'gain_max_energy', value: 1 },
+    ],
+    description: '在人生的十字路口，你做出了正确的选择',
+    icon: '💫',
+    tags: ['命运'],
+  },
+  {
+    id: 'decade_mastery',
+    name: '十年磨一剑',
+    type: 'attack',
+    rarity: 'legendary',
+    cost: 3,
+    target: 'enemy',
+    effects: [{ type: 'damage', value: 30 }, { type: 'lifesteal', value: 0.5 }],
+    description: '厚积薄发，一击致命',
+    icon: '⚔️',
+    tags: ['大成'],
+  },
+];
+
+// 修仙模式专属卡
+export const CULTIVATION_CARDS: LifeCard[] = [
+  {
+    id: 'qi_absorption',
+    name: '吐纳练气',
+    type: 'power',
+    rarity: 'common',
+    cost: 1,
+    target: 'self',
+    effects: [{ type: 'heal', value: 2 }, { type: 'regen', value: 1, duration: 99 }],
+    description: '吸收天地灵气，强身健体',
+    icon: '🌬️',
+    tags: ['修仙', '炼气'],
+  },
+  {
+    id: 'foundation_building',
+    name: '筑基丹',
+    type: 'skill',
+    rarity: 'rare',
+    cost: 2,
+    target: 'self',
+    effects: [{ type: 'shield', value: 20 }, { type: 'gain_max_energy', value: 1 }],
+    description: '打下坚实的根基',
+    icon: '💊',
+    tags: ['修仙', '筑基'],
+  },
+{
+    id: 'golden_core',
+    name: '金丹大道',
+    type: 'power',
+    rarity: 'legendary',
+    cost: 2,
+    target: 'self',
+    effects: [
+      { type: 'shield', value: 15 },
+      { type: 'rage', value: 3, duration: 99 },
+      { type: 'strength', value: 2, duration: 99 },
+    ],
+    description: '结成金丹，实力大增',
+    icon: '🔥',
+    tags: ['修仙', '金丹'],
+  },
+  {
+    id: 'tribulation_survive',
+    name: '渡劫重生',
+    type: 'skill',
+    rarity: 'legendary',
+    cost: 0,
+    target: 'self',
+    effects: [
+      { type: 'heal', value: 50 },
+      { type: 'cure', value: 99 },
+      { type: 'thorns', value: 5, duration: 99 },
+    ],
+    description: '天劫淬洗，涅槃重生',
+    icon: '🌩️',
+    tags: ['修仙', '渡劫'],
+  },
+];
+
+// 年龄阶段卡
+export const AGE_SPECIFIC_CARDS: Record<number, LifeCard[]> = [
+  // 0-9岁 - 童年
+  [
     {
-      id: 'born_1950',
-      type: 'world_event',
-      era: 0,
-      title: '呱呱坠地',
-      baseText: '{family_situation}。你来到了这个世界。',
-      skinRule: (attrs) => {
-        if (attrs.wealth >= 40) return '你出生在一个相对富裕的家庭，家里有{home_condition}。母亲看着你，眼里满是欣慰。';
-        if (attrs.wealth >= 20) return '你出生在一个普通家庭，{home_condition}。虽然不富裕，但一家人其乐融融。';
-        return '你出生在一个贫苦的家庭，{home_condition}。但困难的环境让你从小就懂得了生活的不易。';
-      },
-      options: [],
-      isMilestone: true,
-    },
-    {
-      id: 'childhood_1950',
-      type: 'fixed',
-      era: 0,
-      title: '童年印象',
-      baseText: '到了上学的年纪，{school_experience}。',
-      skinRule: (attrs, _history, _tags) => {
-        if (attrs.iq >= 65 && attrs.wealth >= 30) return '你在学校表现优异，老师们都很喜欢你。放学后，你还得帮忙做家务。';
-        if (attrs.iq >= 65) return '你聪明好学，但家里学费凑得吃力。每天你都在油灯下写作业，眼睛酸涩也不敢停。';
-        if (attrs.physique >= 60) return '你不太爱读书，但身体健壮，是同龄孩子里的孩子王。';
-        return '你的童年过得平平淡淡，和其他孩子一样，上学、玩耍、帮家里干活。';
-      },
-      options: [
-        {
-          id: 'study_hard',
-          text: '发奋读书',
-          successRate: { iq: 0.4, energy: 0.3, physique: 0.1, health: 0.2 },
-          successOutcome: {
-            description: '你的成绩突飞猛进，成为班级的尖子生。奖学金减轻了家里的负担。',
-            attributeChanges: { iq: 5, energy: -3 },
-            unlockEvents: ['scholarship_1950'],
-          },
-          failureOutcome: {
-            description: '你虽然努力，但基础较弱，进步并不明显。不过你没有放弃。',
-            attributeChanges: { iq: 2, energy: -5 },
-          },
-          tagModifier: { tag: 'wisdom_seeker', rateBonus: 0.15 },
-        },
-        {
-          id: 'help_family',
-          text: '帮家里干活',
-          successRate: { physique: 0.4, energy: 0.3, health: 0.3 },
-          successOutcome: {
-            description: '你成为了家里的好帮手，田间地头的活儿样样拿手。邻里都夸你懂事。',
-            attributeChanges: { physique: 4, network: 3, energy: -4 },
-            npcRelationshipChanges: [{ npcId: 'neighbor_1', delta: 10 }],
-          },
-          failureOutcome: {
-            description: '繁重的体力活让你疲惫不堪，但也锻炼了你的意志。',
-            attributeChanges: { physique: 2, health: -2 },
-          },
-        },
-        {
-          id: 'play_outside',
-          text: '尽情玩耍',
-          successRate: { physique: 0.3, eq: 0.4, health: 0.3 },
-          successOutcome: {
-            description: '你和伙伴们一起玩耍，度过了无忧无虑的童年。你们的友谊一直延续到成年。',
-            attributeChanges: { eq: 5, physique: 3 },
-            npcRelationshipChanges: [{ npcId: 'childhood_friend', delta: 15 }],
-            unlockEvents: ['friendship_1950'],
-          },
-          failureOutcome: {
-            description: '你摔了一跤，膝盖留下了一小块疤，但很快又笑着跑开了。',
-            attributeChanges: { health: -1 },
-          },
-        },
-      ],
-    },
-    {
-      id: 'teenage_choice_1950',
-      type: 'fixed',
-      era: 0,
-      title: '少年志向',
-      baseText: '不知不觉，你长成了少年。{career_path_question}',
-      skinRule: (attrs, history) => {
-        const hasScholarship = history.some((c) => c.eventId === 'scholarship_1950');
-        if (hasScholarship) return '优异的成绩让你有了选择的权利。是继续深造，还是早点出来工作？';
-        if (attrs.iq >= 60) return '你虽然聪明，但家里并不宽裕。你需要为自己的未来做一个决定。';
-        if (attrs.wealth >= 40) return '家里已经为你安排好了一条路。是遵从父母的意愿，还是追寻自己的梦想？';
-        return '家里需要劳动力。留下来帮忙，还是出去闯一闯？这是一个艰难的选择。';
-      },
-      options: [
-        {
-          id: 'continue_study',
-          text: '继续求学',
-          successRate: { iq: 0.5, eq: 0.2, energy: 0.3 },
-          successOutcome: {
-            description: '你考上了{ school_type }，成为村里的骄傲。一切都是新的开始。',
-            attributeChanges: { iq: 8, wealth: -5, fame: 5 },
-            unlockEvents: ['school_life_1950', 'graduation_1950'],
-            nextEraModifier: 0.2,
-          },
-          failureOutcome: {
-            description: '考试失利，名落孙山。虽然遗憾，但你决定明年再战。',
-            attributeChanges: { energy: -3 },
-          },
-          tagModifier: { tag: 'wisdom_seeker', rateBonus: 0.2 },
-        },
-        {
-          id: 'join_workforce',
-          text: '参加工作',
-          successRate: { energy: 0.3, physique: 0.3, eq: 0.4 },
-          successOutcome: {
-            description: '你进入{factory_type}工作。虽然辛苦，但稳定的收入让家人松了一口气。',
-            attributeChanges: { wealth: 8, network: 5, fame: 2 },
-            unlockEvents: ['work_life_1950', 'career_advance_1950'],
-            nextEraModifier: 0.1,
-          },
-          failureOutcome: {
-            description: '工作并不如想象中顺利，但你咬牙坚持了下来。',
-            attributeChanges: { energy: -4, wealth: 2 },
-          },
-        },
-        {
-          id: 'learn_craft',
-          text: '学一门手艺',
-          successRate: { physique: 0.3, iq: 0.3, energy: 0.4 },
-          successOutcome: {
-            description: '你拜了师傅学手艺。这条路虽然辛苦，但一技傍身，走到哪里都不怕。',
-            attributeChanges: { physique: 4, iq: 4, network: 4 },
-            unlockEvents: ['craftsman_path_1950'],
-            nextEraModifier: 0.15,
-          },
-          failureOutcome: {
-            description: '师傅很严厉，学艺很苦，但你咬牙坚持。',
-            attributeChanges: { energy: -3 },
-          },
-        },
-      ],
+      id: 'childhood_curiosity',
+      name: '童年好奇',
+      type: 'skill',
+      rarity: 'common',
+      cost: 0,
+      target: 'self',
+      effects: [{ type: 'draw', value: 1 }, { type: 'gain_attribute', value: 1, attribute: 'iq' }],
+      description: '童年的每一次好奇都在塑造大脑',
+      icon: '🧒',
+      tags: ['童年', '学习'],
     },
   ],
-
-  // 随机事件池 - 从中抽取填充
-  randomEventPool: [
+  // 10-19岁 - 少年
+  [
     {
-      id: 'neighbor_help_1950',
-      type: 'random',
-      era: 0,
-      title: '邻里互助',
-      baseText: '邻居{problem_situation}。他们来找你帮忙。',
-      skinRule: (attrs) => {
-        if (attrs.wealth >= 30) return '隔壁的邻居遇到了困难，想跟你家借点粮食。';
-        return '一个你看着长大的老人突然生病了，家里没人照顾。';
-      },
-      options: [
-        {
-          id: 'help_generously',
-          text: '尽力相助',
-          successRate: { eq: 0.4, wealth: 0.3, network: 0.3 },
-          successOutcome: {
-            description: '你的善意被所有人看在眼里。从此以后，你在四邻八乡都有了好名声。',
-            attributeChanges: { network: 6, fame: 4, wealth: -3 },
-            npcRelationshipChanges: [{ npcId: 'neighbor_1', delta: 20 }],
-          },
-          failureOutcome: {
-            description: '你虽然尽力了，但还是没有帮上太大的忙。不过这份心意大家都记在心里。',
-            attributeChanges: { network: 2 },
-          },
-        },
-        {
-          id: 'help_limited',
-          text: '意思一下',
-          successRate: { eq: 0.3, iq: 0.3, energy: 0.4 },
-          successOutcome: {
-            description: '你给了力所能及的帮助，虽然不多，但也是一份心意。',
-            attributeChanges: { network: 2, wealth: -1 },
-          },
-          failureOutcome: {
-            description: '你的敷衍被看出来了，虽然没有明说，但关系终究是生疏了一些。',
-            attributeChanges: { network: -2 },
-          },
-        },
-        {
-          id: 'refuse',
-          text: '委婉拒绝',
-          successRate: { iq: 0.5, eq: 0.5 },
-          successOutcome: {
-            description: '你找了个合适的理由推脱了。虽然有点愧疚，但你知道自己的能力有限。',
-            attributeChanges: { network: -3 },
-          },
-          failureOutcome: {
-            description: '你的拒绝被误解为冷漠，街坊邻居之间多了一些闲言碎语。',
-            attributeChanges: { network: -5, fame: -2 },
-          },
-        },
-      ],
+      id: 'study_session',
+      name: '寒窗苦读',
+      type: 'skill',
+      rarity: 'common',
+      cost: 1,
+      target: 'self',
+      effects: [{ type: 'draw', value: 2 }, { type: 'gain_attribute', value: 1, attribute: 'iq' }],
+      description: '知识改变命运',
+      icon: '📚',
+      tags: ['少年', '学术'],
     },
     {
-      id: 'luck_encounter_1950',
-      type: 'random',
-      era: 0,
-      title: '意外邂逅',
-      baseText: '一次偶然的机会，你{encounter_situation}。',
-      skinRule: (attrs) => {
-        if (attrs.wealth >= 35) return '在集市上遇到了一个外地来的货郎，他在卖一些稀罕物件。';
-        if (attrs.iq >= 60) return '在废品站翻到一本旧书，书里夹着一张泛黄的图纸。';
-        return '在河边钓鱼时，救了一个落水的孩子。';
-      },
-      options: [
-        {
-          id: 'seize_opportunity',
-          text: '抓住机会',
-          successRate: { iq: 0.3, eq: 0.3, energy: 0.4 },
-          successOutcome: {
-            description: '你的果断得到了回报。这次经历成为你人生中的一个重要转折点。',
-            attributeChanges: { wealth: 5, fame: 3, iq: 2 },
-            unlockEvents: ['opportunity_chain_1950'],
-            nextEraModifier: 0.1,
-          },
-          failureOutcome: {
-            description: '事情并没有朝你期望的发展方向走，但你也不后悔。',
-            attributeChanges: { energy: -2 },
-          },
-        },
-        {
-          id: 'observe_carefully',
-          text: '谨慎观望',
-          successRate: { iq: 0.5, eq: 0.3, health: 0.2 },
-          successOutcome: {
-            description: '你冷静观察后做出了正确的判断。虽然错过了一些东西，但避免了可能的损失。',
-            attributeChanges: { iq: 3 },
-          },
-          failureOutcome: {
-            description: '等你终于想清楚，机会已经溜走了。',
-            attributeChanges: { energy: -1 },
-          },
-        },
-      ],
-    },
-    {
-      id: 'health_crisis_1950',
-      type: 'random',
-      era: 0,
-      title: '健康考验',
-      baseText: '{health_issue}。',
-      skinRule: (attrs) => {
-        if (attrs.health >= 60) return '你生了一场小病，好在身体底子好，很快就好了。';
-        return '你突然病倒了，村里的条件有限，家里人为你担心。';
-      },
-      options: [
-        {
-          id: 'rest_recover',
-          text: '好好休养',
-          successRate: { health: 0.4, wealth: 0.3, energy: 0.3 },
-          successOutcome: {
-            description: '充足的休息让你恢复了健康。你对身体的重要性有了更深的认识。',
-            attributeChanges: { health: 5, energy: 3, wealth: -2 },
-          },
-          failureOutcome: {
-            description: '恢复得很慢，但你终于还是好了。',
-            attributeChanges: { energy: 2, health: 1 },
-          },
-        },
-        {
-          id: 'push_through',
-          text: '咬牙坚持',
-          successRate: { physique: 0.5, energy: 0.5 },
-          successOutcome: {
-            description: '你坚持了下来，证明了你的意志力是强大的。',
-            attributeChanges: { physique: 3, health: -2 },
-          },
-          failureOutcome: {
-            description: '逞强的代价是病情加重，不得不多休息了几天。',
-            attributeChanges: { health: -5, energy: -4 },
-            lifeCost: 2,
-          },
-          tagModifier: { tag: 'steady_walker', rateBonus: 0.1 },
-        },
-      ],
-    },
-    {
-      id: 'talent_discovery_1950',
-      type: 'random',
-      era: 0,
-      title: '天赋初现',
-      baseText: '你发现了自己在{ talent_area }方面的天赋。',
-      skinRule: (attrs) => {
-        if (attrs.iq >= 65) return '学习';
-        if (attrs.physique >= 65) return '运动';
-        if (attrs.eq >= 65) return '与人交往';
-        return '动手实践';
-      },
-      options: [
-        {
-          id: 'develop_talent',
-          text: '投入培育',
-          successRate: { iq: 0.3, energy: 0.4, eq: 0.3 },
-          successOutcome: {
-            description: '你的天赋得到了很好的开发，这为你后来的成功打下了基础。',
-            attributeChanges: { iq: 4, eq: 3, energy: -3 },
-            unlockEvents: ['talent_growth_1950'],
-          },
-          failureOutcome: {
-            description: '虽然努力了，但进步不明显。不过至少你发现了一条可能的路。',
-            attributeChanges: { energy: -2 },
-          },
-        },
-        {
-          id: 'natural_development',
-          text: '顺其自然',
-          successRate: { eq: 0.4, health: 0.3, energy: 0.3 },
-          successOutcome: {
-            description: '你不刻意追求，反而让天赋自然发展，水到渠成。',
-            attributeChanges: { iq: 2, eq: 2 },
-          },
-          failureOutcome: {
-            description: '由于缺乏引导，你的天赋并没有得到充分发挥。',
-            attributeChanges: {},
-          },
-          tagModifier: { tag: 'life_enjoyer', rateBonus: 0.1 },
-        },
-      ],
-    },
-    {
-      id: 'family_event_1950',
-      type: 'random',
-      era: 0,
-      title: '家庭变故',
-      baseText: '{family_news}。',
-      skinRule: (attrs) => {
-        if (attrs.wealth >= 30) return '家里得到了一笔意外的收入，家人商量着怎么花。';
-        return '家里的经济状况突然紧张起来，父母开始为生计发愁。';
-      },
-      options: [
-        {
-          id: 'family_first',
-          text: '家庭为重',
-          successRate: { eq: 0.5, network: 0.3, energy: 0.2 },
-          successOutcome: {
-            description: '你把家庭放在第一位，家人之间的感情更加紧密了。',
-            attributeChanges: { network: 5, eq: 3 },
-            npcRelationshipChanges: [{ npcId: 'family_1', delta: 15 }],
-          },
-          failureOutcome: {
-            description: '虽然家庭为重，但你牺牲了一些个人发展的机会。',
-            attributeChanges: { network: 3, iq: -1 },
-          },
-        },
-        {
-          id: 'self_development',
-          text: '追求自我',
-          successRate: { iq: 0.4, energy: 0.3, physique: 0.3 },
-          successOutcome: {
-            description: '你坚持走自己的路，虽然和家人有些摩擦，但最终证明自己是对的。',
-            attributeChanges: { iq: 4, wealth: 2 },
-            npcRelationshipChanges: [{ npcId: 'family_1', delta: -5 }],
-          },
-          failureOutcome: {
-            description: '你走了自己的路，但和家人产生了裂痕。',
-            attributeChanges: { iq: 2, network: -3 },
-          },
-        },
-      ],
+      id: 'adolescent_rebellion',
+      name: '青春叛逆',
+      type: 'attack',
+      rarity: 'common',
+      cost: 1,
+      target: 'enemy',
+      effects: [{ type: 'damage', value: 10 }, { type: 'gain_attribute', value: 1, attribute: 'fame' }],
+      description: '年轻就是资本，敢想敢做',
+      icon: '🔥',
+      tags: ['少年', '叛逆'],
     },
   ],
-
-  // NPC模板
-  npcTemplates: [
+  // 20-29岁 - 青年
+  [
     {
-      name: '老王叔',
-      role: '邻居',
-      basePersonality: '热心肠的退伍老兵',
-      eventTriggerChance: 0.3,
+      id: 'college_life',
+      name: '大学生活',
+      type: 'skill',
+      rarity: 'uncommon',
+      cost: 1,
+      target: 'self',
+      effects: [
+        { type: 'draw', value: 1 },
+        { type: 'block', value: 3 },
+        { type: 'heal', value: 3 },
+        { type: 'gain_attribute', value: 1, attribute: 'network' },
+      ],
+      description: '图书馆、社团、朋友，收获满满',
+      icon: '🎓',
+      tags: ['青年', '学术'],
     },
     {
-      name: '小芳',
-      role: '童年玩伴',
-      basePersonality: '扎着两条辫子的邻家女孩',
-      eventTriggerChance: 0.25,
-    },
-    {
-      name: '李老师',
-      role: '小学老师',
-      basePersonality: '严厉但负责的教书匠',
-      eventTriggerChance: 0.2,
-    },
-    {
-      name: '张伯',
-      role: '村长',
-      basePersonality: '德高望重的长辈',
-      eventTriggerChance: 0.15,
-    },
-    {
-      name: '阿福',
-      role: '发小',
-      basePersonality: '调皮的孤儿，和你一起长大',
-      eventTriggerChance: 0.2,
+      id: 'startup',
+      name: '创业初期',
+      type: 'attack',
+      rarity: 'rare',
+      cost: 2,
+      target: 'enemy',
+      effects: [{ type: 'damage', value: 12 }, { type: 'vulnerable', value: 2, duration: 2 }],
+      description: '没有退路，只有前进',
+      icon: '🚀',
+      tags: ['青年', '创业'],
     },
   ],
+  // 30-39岁 - 壮年
+  [
+    {
+      id: 'career_peak',
+      name: '事业巅峰',
+      type: 'attack',
+      rarity: 'rare',
+      cost: 2,
+      target: 'enemy',
+      effects: [{ type: 'damage', value: 18 }, { type: 'gain_attribute', value: 2, attribute: 'wealth' }],
+      description: '多年的积累终于迎来收获',
+      icon: '💼',
+      tags: ['壮年', '事业'],
+    },
+    {
+      id: 'family_time',
+      name: '家庭时光',
+      type: 'skill',
+      rarity: 'uncommon',
+      cost: 1,
+      target: 'self',
+      effects: [{ type: 'heal', value: 8 }, { type: 'block', value: 5 }],
+      description: '家人的支持是最强的后盾',
+      icon: '👨‍👩‍👧',
+      tags: ['壮年', '家庭'],
+    },
+  ],
+  // 40-49岁 - 中年
+  [
+    {
+      id: 'midlife_crisis',
+      name: '中年危机',
+      type: 'curse',
+      rarity: 'common',
+      cost: 0,
+      target: 'self',
+      effects: [{ type: 'lose_attribute', value: 3, attribute: 'energy', duration: 2 }],
+      description: '突如其来的空虚感',
+      icon: '😰',
+      tags: ['中年', '危机'],
+    },
+    {
+      id: 'wisdom_of_ages',
+      name: '岁月沉淀',
+      type: 'power',
+      rarity: 'rare',
+      cost: 2,
+      target: 'self',
+      effects: [{ type: 'strength', value: 1, duration: 99 }, { type: 'dexterity', value: 1, duration: 99 }],
+      description: '历经风雨后的从容与智慧',
+      icon: '🧘',
+      tags: ['中年', '智慧'],
+    },
+  ],
+  // 50-59岁 - 知天命
+  [
+    {
+      id: 'legacy_building',
+      name: '遗产规划',
+      type: 'skill',
+      rarity: 'rare',
+      cost: 2,
+      target: 'self',
+      effects: [{ type: 'block', value: 10 }, { type: 'heal', value: 10 }],
+      description: '为未来做好准备',
+      icon: '📜',
+      tags: ['知天命', '传承'],
+    },
+  ],
+  // 60-69岁 - 花甲
+  [
+    {
+      id: 'retirement',
+      name: '退休生活',
+      type: 'skill',
+      rarity: 'common',
+      cost: 1,
+      target: 'self',
+      effects: [{ type: 'heal', value: 12 }, { type: 'cure', value: 99 }],
+      description: '终于有时间享受生活了',
+      icon: '🌴',
+      tags: ['花甲', '休闲'],
+    },
+  ],
+];
+
+// 负面卡
+export const CURSE_CARDS: LifeCard[] = [
+  {
+    id: 'burnout',
+    name: '心力交瘁',
+    type: 'curse',
+    rarity: 'common',
+    cost: 0,
+    target: 'self',
+    effects: [{ type: 'lose_attribute', value: 5, attribute: 'energy', duration: 1 }],
+    description: '压力和疲惫让你喘不过气',
+    icon: '😫',
+    tags: ['负面', '疲劳'],
+  },
+  {
+    id: 'bad_luck',
+    name: '霉运当头',
+    type: 'curse',
+    rarity: 'common',
+    cost: 0,
+    target: 'self',
+    effects: [{ type: 'lose_attribute', value: 2, attribute: 'wealth', duration: 1 }],
+    description: '喝凉水都塞牙',
+    icon: '🍀',
+    tags: ['负面', '破财'],
+  },
+  {
+    id: 'serious_illness',
+    name: '重病缠身',
+    type: 'curse',
+    rarity: 'rare',
+    cost: 0,
+    target: 'self',
+    effects: [{ type: 'poison', value: 3, duration: 3 }],
+    description: '健康是最大的财富',
+    icon: '🤒',
+    tags: ['负面', '重病'],
+  },
+];
+
+// 初始卡组
+export const STARTER_DECK: LifeCard[] = [
+  { ...COMMON_ATTACK_CARDS[0] },  // 日常努力
+  { ...COMMON_ATTACK_CARDS[0] },
+  { ...COMMON_ATTACK_CARDS[0] },
+  { ...COMMON_ATTACK_CARDS[1] },  // 快速行动
+  { ...COMMON_ATTACK_CARDS[2] },  // 专注打击
+  { ...COMMON_SKILL_CARDS[0] },   // 稳扎稳打
+  { ...COMMON_SKILL_CARDS[0] },
+  { ...COMMON_SKILL_CARDS[1] },   // 自我疗愈
+  { ...COMMON_SKILL_CARDS[2] },   // 提前规划
+];
+
+// ==========================================
+// 遗物数据库
+// ==========================================
+
+// 普通遗物
+export const COMMON_RELICS: LifeRelic[] = [
+  {
+    id: 'family_heirloom',
+    name: '传家玉佩',
+    rarity: 'common',
+    description: '家族的祝福让你更健康',
+    icon: '💎',
+    stackable: false,
+    effects: [{ type: 'max_health_bonus', value: 10 }],
+  },
+  {
+    id: 'old_friend_letter',
+    name: '老友书信',
+    rarity: 'common',
+    description: '多年的友谊是最大的财富',
+    icon: '📨',
+    stackable: true,
+    maxStacks: 5,
+    effects: [{ type: 'card_draw_bonus', value: 1 }],
+  },
+  {
+    id: 'lucky_coin',
+    name: '幸运硬币',
+    rarity: 'common',
+    description: '小幸运，大不同',
+    icon: '🪙',
+    stackable: true,
+    maxStacks: 3,
+    effects: [{ type: 'discount', value: 0.1 }],
+  },
+  {
+    id: 'wellbeing_tea',
+    name: '养生茶',
+    rarity: 'common',
+    description: '每天一杯，神清气爽',
+    icon: '🍵',
+    stackable: false,
+    effects: [{ type: 'heal_on_rest', value: 5 }],
+  },
+];
+
+// 稀有遗物
+export const RARE_RELICS: LifeRelic[] = [
+  {
+    id: 'masters_degree',
+    name: '名校文凭',
+    rarity: 'rare',
+    description: '知识让你事半功倍',
+    icon: '🎓',
+    stackable: false,
+    effects: [
+      { type: 'card_draw_bonus', value: 1 },
+      { type: 'card_type_bonus', value: 0.2, cardType: 'skill' },
+    ],
+  },
+  {
+    id: 'property_deed',
+    name: '房产证',
+    rarity: 'rare',
+    description: '有恒产者有恒心',
+    icon: '🏠',
+    stackable: false,
+    effects: [{ type: 'max_health_bonus', value: 20 }, { type: 'discount', value: 0.05 }],
+  },
+  {
+    id: 'mentor_gratitude',
+    name: '恩师遗物',
+    rarity: 'rare',
+    description: '恩师的遗物，精神传承',
+    icon: '📿',
+    stackable: false,
+    effects: [
+      { type: 'extra_card_reward', value: 1 },
+      { type: 'attribute_scaling', value: 0.1, attribute: 'iq' },
+    ],
+  },
+];
+
+// 史诗遗物
+export const EPIC_RELICS: LifeRelic[] = [
+  {
+    id: 'political_power',
+    name: '权柄',
+    rarity: 'rare',
+    description: '权力是最好的武器',
+    icon: '⚖️',
+    stackable: false,
+    effects: [
+      { type: 'double_damage', value: 0.2 },
+      { type: 'card_draw_bonus', value: 1 },
+    ],
+  },
+  {
+    id: 'industry_monopoly',
+    name: '行业垄断',
+    rarity: 'rare',
+    description: '站着把钱挣了',
+    icon: '🏛️',
+    stackable: false,
+    effects: [
+      { type: 'discount', value: 0.2 },
+      { type: 'max_health_bonus', value: 15 },
+      { type: 'heal_on_rest', value: 10 },
+    ],
+  },
+];
+
+// Boss遗物（只能从Boss获得）
+export const BOSS_RELICS: LifeRelic[] = [
+  {
+    id: 'era_treasure',
+    name: '时代宝藏',
+    rarity: 'boss',
+    description: '这个时代最珍贵的奖赏',
+    icon: '🏆',
+    stackable: false,
+    effects: [
+      { type: 'max_health_bonus', value: 25 },
+      { type: 'card_draw_bonus', value: 1 },
+      { type: 'extra_card_reward', value: 1 },
+    ],
+  },
+  {
+    id: 'legend_legacy',
+    name: '传奇遗产',
+    rarity: 'boss',
+    description: '你已经成为这个时代的传奇',
+    icon: '👑',
+    stackable: false,
+    effects: [
+      { type: 'max_health_bonus', value: 30 },
+      { type: 'double_damage', value: 0.15 },
+      { type: 'discount', value: 0.15 },
+    ],
+  },
+];
+
+// 修仙遗物
+export const CULTIVATION_RELICS: LifeRelic[] = [
+  {
+    id: 'spirit_stone',
+    name: '灵石',
+    rarity: 'common',
+    description: '蕴含着天地灵气',
+    icon: '💠',
+    stackable: true,
+    maxStacks: 99,
+    effects: [{ type: 'energy_bonus', value: 1 }],
+  },
+  {
+    id: 'immortal_fruit',
+    name: '蟠桃',
+    rarity: 'rare',
+    description: '天庭的仙果，延年益寿',
+    icon: '🍑',
+    stackable: false,
+    effects: [{ type: 'lifespan_extend', value: 20 }],
+  },
+  {
+    id: 'dao_comprehension',
+    name: '悟道石',
+    rarity: 'rare',
+    description: '蕴含大道至理',
+    icon: '🪨',
+    stackable: false,
+    effects: [
+      { type: 'card_type_bonus', value: 0.25, cardType: 'power' },
+      { type: 'lifespan_extend', value: 15 },
+    ],
+  },
+  {
+    id: 'heavenly_tribulation_pearl',
+    name: '渡劫珠',
+    rarity: 'legendary',
+    description: '渡劫成功后的天道馈赠',
+    icon: '🌟',
+    stackable: false,
+    effects: [
+      { type: 'lifespan_extend', value: 50 },
+      { type: 'max_health_bonus', value: 50 },
+      { type: 'double_damage', value: 0.3 },
+    ],
+  },
+];
+
+// ==========================================
+// 敌人数据库 - 人生怪物化
+// ==========================================
+
+// 普通战斗敌人
+export const COMMON_ENEMIES: Enemy[] = [
+  {
+    id: 'procrastination_slime',
+    name: '拖延史莱姆',
+    maxHealth: 20,
+    currentHealth: 20,
+    block: 0,
+    intents: [
+      { type: 'attack', damage: 4 },
+      { type: 'defend', block: 3 },
+      { type: 'attack', damage: 6 },
+    ],
+    currentIntentIndex: 0,
+    statusEffects: [],
+    icon: '🟢',
+    isBoss: false,
+    cardRewards: [COMMON_ATTACK_CARDS[1], COMMON_SKILL_CARDS[2], COMMON_ATTACK_CARDS[2]],
+    goldReward: [5, 15],
+    description: '拖延是时间最大的小偷',
+  },
+  {
+    id: 'anxiety_ghost',
+    name: '焦虑幽灵',
+    maxHealth: 25,
+    currentHealth: 25,
+    block: 0,
+    intents: [
+      { type: 'attack', damage: 3, hits: 2 },
+      { type: 'buff', effect: 'strength', value: 1 },
+      { type: 'attack', damage: 8 },
+    ],
+    currentIntentIndex: 0,
+    statusEffects: [],
+    icon: '👻',
+    isBoss: false,
+    cardRewards: [COMMON_SKILL_CARDS[0], COMMON_SKILL_CARDS[1], RARE_CARDS[0]],
+    goldReward: [8, 20],
+    description: '焦虑让你无法集中注意力',
+  },
+  {
+    id: 'obligation_golem',
+    name: '责任傀儡',
+    maxHealth: 35,
+    currentHealth: 35,
+    block: 5,
+    intents: [
+      { type: 'defend', block: 8 },
+      { type: 'attack', damage: 10 },
+      { type: 'attack', damage: 6 },
+    ],
+    currentIntentIndex: 0,
+    statusEffects: [{ type: 'block', value: 5, duration: 99 }],
+    icon: '🗿',
+    isBoss: false,
+    cardRewards: [COMMON_ATTACK_CARDS[0], COMMON_ATTACK_CARDS[1], RARE_CARDS[1]],
+    goldReward: [10, 25],
+    description: '家庭、工作、社会责任...你无法逃避',
+  },
+  {
+    id: 'self_doubt_wraith',
+    name: '自我怀疑的幽灵',
+    maxHealth: 18,
+    currentHealth: 18,
+    block: 0,
+    intents: [
+      { type: 'debuff', effect: 'weak', value: 2 },
+      { type: 'attack', damage: 5 },
+      { type: 'debuff', effect: 'vulnerable', value: 2 },
+    ],
+    currentIntentIndex: 0,
+    statusEffects: [],
+    icon: '👤',
+    isBoss: false,
+    cardRewards: [COMMON_SKILL_CARDS[0], COMMON_SKILL_CARDS[1], COMMON_SKILL_CARDS[2]],
+    goldReward: [5, 15],
+    description: '内心的声音在质疑你的一切',
+  },
+];
+
+// 精英敌人
+export const ELITE_ENEMIES: Enemy[] = [
+  {
+    id: 'midlife_crisis_boss',
+    name: '中年危机首领',
+    maxHealth: 80,
+    currentHealth: 80,
+    block: 0,
+    intents: [
+      { type: 'attack', damage: 15 },
+      { type: 'buff', effect: 'strength', value: 2 },
+      { type: 'attack', damage: 10, hits: 2 },
+      { type: 'defend', block: 10 },
+    ],
+    currentIntentIndex: 0,
+    statusEffects: [],
+    icon: '👔',
+    isBoss: false,
+    cardRewards: [RARE_CARDS[0], RARE_CARDS[1], RARE_CARDS[2]],
+    goldReward: [25, 50],
+    description: '上有老下有小，左右为难',
+  },
+  {
+    id: 'burnout_demon',
+    name: '过劳恶魔',
+    maxHealth: 65,
+    currentHealth: 65,
+    block: 0,
+    intents: [
+      { type: 'attack', damage: 12 },
+      { type: 'debuff', effect: 'weak', value: 3 },
+      { type: 'attack', damage: 8, hits: 2 },
+      { type: 'special', name: '燃烧', description: '造成持续伤害' },
+    ],
+    currentIntentIndex: 0,
+    statusEffects: [{ type: 'strength', value: 1, duration: 99 }],
+    icon: '😈',
+    isBoss: false,
+    cardRewards: [RARE_CARDS[1], RARE_CARDS[2], LEGENDARY_CARDS[0]],
+    goldReward: [30, 60],
+    description: '996的阴影笼罩着你',
+  },
+];
+
+// Boss敌人
+export const BOSS_ENEMIES: Enemy[] = [
+  {
+    id: 'collective_responsibility',
+    name: '社会责任巨兽',
+    maxHealth: 120,
+    currentHealth: 120,
+    block: 10,
+    intents: [
+      { type: 'attack', damage: 18 },
+      { type: 'defend', block: 15 },
+      { type: 'attack', damage: 12, hits: 2 },
+      { type: 'buff', effect: 'strength', value: 2 },
+    ],
+    currentIntentIndex: 0,
+    statusEffects: [{ type: 'block', value: 10, duration: 99 }],
+    icon: '🏛️',
+    isBoss: true,
+    cardRewards: [LEGENDARY_CARDS[0], LEGENDARY_CARDS[1], RARE_CARDS[2]],
+    relicReward: BOSS_RELICS[0],
+    goldReward: [50, 100],
+    description: '作为社会的一员，你别无选择',
+  },
+  {
+    id: 'final_exam_boss',
+    name: '人生终考',
+    maxHealth: 150,
+    currentHealth: 150,
+    block: 0,
+    intents: [
+      { type: 'special', name: '审判', description: '造成巨额固定伤害' },
+      { type: 'attack', damage: 20 },
+      { type: 'debuff', effect: 'weak', value: 3 },
+      { type: 'attack', damage: 15, hits: 2 },
+    ],
+    currentIntentIndex: 0,
+    statusEffects: [{ type: 'strength', value: 2, duration: 99 }],
+    icon: '⚖️',
+    isBoss: true,
+    cardRewards: [LEGENDARY_CARDS[0], LEGENDARY_CARDS[1], RARE_CARDS[2]],
+    relicReward: BOSS_RELICS[1],
+    goldReward: [80, 150],
+    description: '回顾你的一生，你满意吗？',
+  },
+  {
+    id: 'infinite_doubt',
+    name: '无限质疑',
+    maxHealth: 180,
+    currentHealth: 180,
+    block: 5,
+    intents: [
+      { type: 'attack', damage: 22 },
+      { type: 'debuff', effect: 'vulnerable', value: 4 },
+      { type: 'attack', damage: 10, hits: 3 },
+      { type: 'special', name: '心灵打击', description: '降低最大生命' },
+    ],
+    currentIntentIndex: 0,
+    statusEffects: [
+      { type: 'strength', value: 3, duration: 99 },
+      { type: 'artifact', value: 1, duration: 99 },
+    ],
+    icon: '🌀',
+    isBoss: true,
+    cardRewards: [LEGENDARY_CARDS[1], RARE_CARDS[2], RARE_CARDS[0]],
+    relicReward: BOSS_RELICS[1],
+    goldReward: [100, 200],
+    description: '你内心最深处的恐惧',
+  },
+];
+
+// 修仙Boss
+export const CULTIVATION_BOSSES: Enemy[] = [
+  {
+    id: 'heart_demon',
+    name: '心魔',
+    maxHealth: 100,
+    currentHealth: 100,
+    block: 0,
+    intents: [
+      { type: 'debuff', effect: 'weak', value: 4 },
+      { type: 'attack', damage: 15 },
+      { type: 'special', name: '内魔爆发', description: '无视防御' },
+    ],
+    currentIntentIndex: 0,
+    statusEffects: [],
+    icon: '👿',
+    isBoss: true,
+    cardRewards: [CULTIVATION_CARDS[1], CULTIVATION_CARDS[2], LEGENDARY_CARDS[1]],
+    goldReward: [100, 200],
+    description: '一念之差，走火入魔',
+  },
+  {
+    id: 'heavenly_tribulation',
+    name: '天劫',
+    maxHealth: 250,
+    currentHealth: 250,
+    block: 20,
+    intents: [
+      { type: 'special', name: '雷劫', description: '高额固定伤害' },
+      { type: 'attack', damage: 30 },
+      { type: 'buff', effect: 'strength', value: 5 },
+      { type: 'attack', damage: 20, hits: 2 },
+    ],
+    currentIntentIndex: 0,
+    statusEffects: [{ type: 'block', value: 20, duration: 99 }],
+    icon: '⚡',
+    isBoss: true,
+    cardRewards: [CULTIVATION_CARDS[3], CULTIVATION_CARDS[3], LEGENDARY_CARDS[1]],
+    relicReward: CULTIVATION_RELICS[3],
+    goldReward: [500, 1000],
+    description: '天道不容，降下九重天劫',
+  },
+];
+
+// ==========================================
+// 修仙境界
+// ==========================================
+export const CULTIVATION_REALMS: Record<
+  CultivationRealm,
+  { name: string; lifespanBonus: number; threshold: number; icon: string }
+> = {
+  mortal: { name: '凡人', lifespanBonus: 0, threshold: 0, icon: '👤' },
+  qi_refining: { name: '炼气期', lifespanBonus: 10, threshold: 50, icon: '🌬️' },
+  foundation: { name: '筑基期', lifespanBonus: 25, threshold: 80, icon: '🧱' },
+  golden_core: { name: '金丹期', lifespanBonus: 50, threshold: 120, icon: '🔥' },
+  nascent: { name: '元婴期', lifespanBonus: 80, threshold: 170, icon: '👶' },
+  spirit: { name: '化神期', lifespanBonus: 120, threshold: 230, icon: '👻' },
+  void: { name: '炼虚期', lifespanBonus: 170, threshold: 300, icon: '🌀' },
+  integration: { name: '合体期', lifespanBonus: 230, threshold: 380, icon: '🤝' },
+  mahayana: { name: '大乘期', lifespanBonus: 300, threshold: 470, icon: '🎯' },
+  tribulation: { name: '渡劫期', lifespanBonus: 400, threshold: 570, icon: '⚡' },
 };
 
 // ==========================================
-// 剧本模板库（按时代索引）
-// ==========================================
-export const SCRIPT_TEMPLATES: Record<number, ScriptTemplate> = {
-  0: SCRIPT_1950,
-};
-
-// ==========================================
-// 获取指定时代的剧本模板
-// ==========================================
-export function getScriptTemplate(era: number): ScriptTemplate | undefined {
-  return SCRIPT_TEMPLATES[era];
-}
-
-// ==========================================
-// 属性中文名映射
+// 属性中文名
 // ==========================================
 export const ATTRIBUTE_NAMES: Record<string, string> = {
   energy: '精力',
@@ -623,3 +1115,134 @@ export const ATTRIBUTE_COLORS: Record<string, string> = {
   network: '#06B6D4',
   fame: '#EC4899',
 };
+
+// ==========================================
+// 1950年代事件（兼容旧系统）
+// ==========================================
+export const SCRIPT_1950_EVENTS: GameEvent[] = [
+  {
+    id: 'born_1950',
+    type: 'world_event',
+    era: 0,
+    title: '呱呱坠地',
+    baseText: '{family_situation}。你来到了这个世界。',
+    skinRule: (attrs) => {
+      if (attrs.wealth >= 40) return '你出生在一个相对富裕的家庭，家里有房有地。母亲看着你，眼里满是欣慰。';
+      if (attrs.wealth >= 20) return '你出生在一个普通家庭，虽然不富裕，但一家人其乐融融。';
+      return '你出生在一个贫苦的家庭，但困难的环境让你从小就懂得了生活的不易。';
+    },
+    options: [],
+    isMilestone: true,
+  },
+  {
+    id: 'childhood_1950',
+    type: 'fixed',
+    era: 0,
+    title: '童年印象',
+    baseText: '到了上学的年纪，{school_experience}。',
+    skinRule: (attrs, _history) => {
+      if (attrs.iq >= 65 && attrs.wealth >= 30) return '你在学校表现优异，老师们都很喜欢你。';
+      if (attrs.iq >= 65) return '你聪明好学，但家里学费凑得吃力。每天你都在油灯下写作业。';
+      if (attrs.physique >= 60) return '你不太爱读书，但身体健壮，是同龄孩子里的孩子王。';
+      return '你的童年过得平平淡淡。';
+    },
+    options: [
+      {
+        id: 'study_hard',
+        text: '发奋读书',
+        successRate: { iq: 0.4, energy: 0.3 },
+        successOutcome: {
+          description: '你的成绩突飞猛进，成为班级的尖子生。',
+          attributeChanges: { iq: 5 },
+          goldReward: 50,
+        },
+        failureOutcome: {
+          description: '你虽然努力，但进步并不明显。',
+          attributeChanges: { energy: -3 },
+        },
+      },
+      {
+        id: 'help_family',
+        text: '帮家里干活',
+        successRate: { physique: 0.4, energy: 0.3 },
+        successOutcome: {
+          description: '你成为家里的好帮手，邻里都夸你懂事。',
+          attributeChanges: { physique: 4, network: 3 },
+        },
+        failureOutcome: {
+          description: '繁重的体力活让你疲惫不堪。',
+          attributeChanges: { energy: -5 },
+        },
+      },
+    ],
+  },
+];
+
+// ==========================================
+// 辅助函数
+// ==========================================
+
+// 根据年龄获取对应阶段卡牌
+export function getAgeSpecificCards(age: number): LifeCard[] {
+  const index = Math.min(Math.floor(age / 10), 6);
+  return AGE_SPECIFIC_CARDS[index] || [];
+}
+
+// 根据稀有度获取随机卡牌
+export function getRandomCardByRarity(rarity: CardRarity): LifeCard {
+  // 简化返回，实际应该按权重随机
+  const pool = rarity === 'common'
+    ? [...COMMON_ATTACK_CARDS, ...COMMON_SKILL_CARDS]
+    : rarity === 'uncommon'
+    ? [...RARE_CARDS]
+    : rarity === 'rare'
+    ? [...RARE_CARDS]
+    : [...LEGENDARY_CARDS];
+  return pool[0];
+}
+
+// 类型别名
+type CardRarity = 'common' | 'uncommon' | 'rare' | 'legendary';
+
+// 根据时代获取敌人池
+export function getEnemyPool(era: number): Enemy[] {
+  const pool = [...COMMON_ENEMIES];
+  if (era >= 1) pool.push(...ELITE_ENEMIES);
+  return pool;
+}
+
+// 根据时代获取Boss
+export function getBossByEra(era: number): Enemy {
+  const idx = era % BOSS_ENEMIES.length;
+  return BOSS_ENEMIES[idx];
+}
+
+// 计算敌人实际伤害
+export function calculateEnemyDamage(intent: { type: string; damage?: number; hits?: number }, enemy: Enemy): number {
+  if (intent.type !== 'attack' || !intent.damage) return 0;
+  const hits = intent.hits || 1;
+  let damage = intent.damage * hits;
+  // 力量加成
+  const strength = enemy.statusEffects.find((e) => e.type === 'strength');
+  if (strength) damage += strength.value * hits;
+  return Math.max(0, damage);
+}
+
+// 计算实际伤害（考虑各种加成）
+export function calculateDamage(baseDamage: number, attackerEffects: StatusEffect[], defenderEffects: StatusEffect[]): number {
+  let damage = baseDamage;
+
+  // 攻击者加成
+  const strength = attackerEffects.find((e) => e.type === 'strength');
+  if (strength) damage += strength.value;
+  const rage = attackerEffects.find((e) => e.type === 'rage');
+  if (rage) damage = Math.floor(damage * 1.5);
+
+  // 防御者加成
+  const vulnerable = defenderEffects.find((e) => e.type === 'vulnerable');
+  if (vulnerable) damage = Math.floor(damage * 1.25);
+  const intangible = defenderEffects.find((e) => e.type === 'intangible');
+  if (intangible) damage = 1;
+
+  return Math.max(0, damage);
+}
