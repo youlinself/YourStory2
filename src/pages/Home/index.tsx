@@ -1,16 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import useAutobiographyStore from '../../stores/autobiographyStore';
+import useDialogueStore from '../../stores/dialogueStore';
 import RightPanel from '../../components/home/RightPanel';
+import { EmptyState } from '../../components/ui';
+import Modal from '../../components/ui/Modal';
 
 const HomePage: React.FC = () => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'chapters' | 'steps'>('chapters');
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [newChapterTitle, setNewChapterTitle] = useState('');
+  const [newChapterTimeRange, setNewChapterTimeRange] = useState('');
 
-  const chapters = [
-    { title: '童年趣事', desc: '童年生活的点滴记录，无忧无虑的时光', progress: 100, status: '已完成', badge: 'complete' },
-    { title: '学生时代', desc: '求学阶段的成长故事，从小学到大学', progress: 100, status: '已完成', badge: 'complete' },
-    { title: '工作生涯', desc: '职场经历与感悟，一路走来的成长与收获', progress: 100, status: '已完成', badge: 'complete' },
-    { title: '婚姻家庭', desc: '爱情与生活，另一半和家庭故事', progress: 65, status: '进行中', badge: 'progress' },
-    { title: '人生感悟', desc: '积累多年的思考与感悟，人生的得与失', progress: 40, status: '进行中', badge: 'progress' },
-  ];
+  const { autobiography, load, create, createChapter, getCompletionStats } = useAutobiographyStore();
+  const { initSession } = useDialogueStore();
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const chapters = autobiography?.chapters || [];
+  const stats = getCompletionStats();
 
   const steps = [
     { title: '话题引导', desc: '通过对话形式，引导你回忆和讲述人生故事', num: 1 },
@@ -18,9 +29,52 @@ const HomePage: React.FC = () => {
     { title: '审阅编辑', desc: '你可以对生成的内容进行修改和润色，使之更符合你的想法', num: 3 },
   ];
 
+  const getChapterProgress = (status?: string): number => {
+    switch (status) {
+      case 'completed': return 100;
+      case 'in_progress': return 50;
+      case 'draft': return 30;
+      default: return 0;
+    }
+  };
+
+  const getChapterStatus = (status?: string): { text: string; badge: string } => {
+    switch (status) {
+      case 'completed': return { text: '已完成', badge: 'complete' };
+      case 'in_progress': return { text: '进行中', badge: 'progress' };
+      case 'draft': return { text: '草稿', badge: 'draft' };
+      default: return { text: '未开始', badge: 'empty' };
+    }
+  };
+
+  const handleChapterClick = async (chapterId: string) => {
+    await initSession(chapterId);
+    navigate(`/dialogue/${chapterId}`);
+  };
+
+  const handleAddChapter = async () => {
+    if (!newChapterTitle.trim()) return;
+
+    if (!autobiography) {
+      await create();
+    }
+
+    const chapterId = await createChapter(newChapterTitle.trim(), newChapterTimeRange.trim());
+    setNewChapterTitle('');
+    setNewChapterTimeRange('');
+    setIsAddModalOpen(false);
+
+    if (chapterId) {
+      await initSession(chapterId);
+      navigate(`/dialogue/${chapterId}`);
+    }
+  };
+
   const badgeStyles: Record<string, string> = {
     complete: 'badge badge-success',
     progress: 'badge badge-brand',
+    draft: 'badge badge-warning',
+    empty: 'badge badge-ghost',
   };
 
   return (
@@ -29,12 +83,12 @@ const HomePage: React.FC = () => {
         <div className="animate-fade-in">
           <div className="flex items-center gap-1 mb-1">
             <h1 className="text-2xl font-semibold heading-serif tracking-tight text-ink">
-              欢迎回来，李华
+              欢迎回来
             </h1>
             <span className="text-2xl">👋</span>
           </div>
           <p className="text-ink-muted text-[14px] leading-relaxed">
-            今天想聊聊人生中的哪个阶段呢？
+            {chapters.length > 0 ? '今天想聊聊人生中的哪个阶段呢？' : '开始创作你的人生故事吧'}
           </p>
 
           <div
@@ -61,37 +115,67 @@ const HomePage: React.FC = () => {
             </button>
             <button className="tab">
               统计
-              <span className="text-xs ml-1" style={{ color: 'var(--color-ink-faint)' }}>4</span>
+              <span className="text-xs ml-1" style={{ color: 'var(--color-ink-faint)' }}>
+                {stats.completed}
+              </span>
             </button>
           </div>
 
           {activeTab === 'chapters' && (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mt-6">
-              {chapters.map((chapter, index) => (
-                <div key={index} className="chapter-card">
-                  <div className="flex items-start justify-between mb-3">
-                    <h3 className="text-[15px] font-semibold leading-snug text-ink">{chapter.title}</h3>
-                    <span className={badgeStyles[chapter.badge]} style={{ marginTop: '1px' }}>
-                      {chapter.status}
-                    </span>
-                  </div>
-                  <p className="text-sm text-ink-muted leading-relaxed mb-3">{chapter.desc}</p>
-                  <div className="mt-auto">
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-xs text-ink-faint">完成度</span>
-                      <span className="text-xs font-medium text-ink-muted">{chapter.progress}%</span>
+              {chapters.length > 0 ? (
+                chapters.map((chapter) => {
+                  const progress = getChapterProgress(chapter.status);
+                  const statusInfo = getChapterStatus(chapter.status);
+                  return (
+                    <div
+                      key={chapter.id}
+                      className="chapter-card cursor-pointer"
+                      onClick={() => handleChapterClick(chapter.id)}
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <h3 className="text-[15px] font-semibold leading-snug text-ink">{chapter.title}</h3>
+                        <span className={badgeStyles[statusInfo.badge]} style={{ marginTop: '1px' }}>
+                          {statusInfo.text}
+                        </span>
+                      </div>
+                      <p className="text-sm text-ink-muted leading-relaxed mb-3">
+                        {chapter.timeRange ? `${chapter.timeRange} · ` : ''}
+                        {chapter.content ? `${chapter.content.slice(0, 50)}...` : '暂无内容'}
+                      </p>
+                      <div className="mt-auto">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-xs text-ink-faint">完成度</span>
+                          <span className="text-xs font-medium text-ink-muted">{progress}%</span>
+                        </div>
+                        <div className="progress-track">
+                          <div
+                            className={`progress-fill ${progress === 100 ? 'complete' : ''}`}
+                            style={{ width: `${progress}%` }}
+                          />
+                        </div>
+                      </div>
                     </div>
-                    <div className="progress-track">
-                      <div
-                        className={`progress-fill ${chapter.progress === 100 ? 'complete' : ''}`}
-                        style={{ width: `${chapter.progress}%` }}
-                      />
-                    </div>
-                  </div>
+                  );
+                })
+              ) : (
+                <div className="col-span-full">
+                  <EmptyState
+                    illustration="feather-quill"
+                    title="还没有任何章节"
+                    description="开始创作你的人生故事吧，每一个章节都将成为你人生的珍贵记录"
+                    primaryAction={{
+                      label: '创建第一个章节',
+                      onClick: () => setIsAddModalOpen(true),
+                    }}
+                  />
                 </div>
-              ))}
+              )}
 
-              <button className="add-chapter-card text-ink-muted">
+              <button
+                className="add-chapter-card text-ink-muted"
+                onClick={() => setIsAddModalOpen(true)}
+              >
                 <svg className="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                 </svg>
@@ -117,6 +201,49 @@ const HomePage: React.FC = () => {
       <aside className="right-panel">
         <RightPanel />
       </aside>
+
+      <Modal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        title="添加新章节"
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="text-sm font-medium text-ink mb-2 block">章节标题</label>
+            <input
+              className="input w-full"
+              placeholder="例如：童年趣事、学生时代..."
+              value={newChapterTitle}
+              onChange={(e) => setNewChapterTitle(e.target.value)}
+              autoFocus
+            />
+          </div>
+          <div>
+            <label className="text-sm font-medium text-ink mb-2 block">时间范围（可选）</label>
+            <input
+              className="input w-full"
+              placeholder="例如：1990-2000"
+              value={newChapterTimeRange}
+              onChange={(e) => setNewChapterTimeRange(e.target.value)}
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <button
+              className="btn btn-ghost"
+              onClick={() => setIsAddModalOpen(false)}
+            >
+              取消
+            </button>
+            <button
+              className="btn btn-primary"
+              onClick={handleAddChapter}
+              disabled={!newChapterTitle.trim()}
+            >
+              创建章节
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

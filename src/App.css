@@ -708,3 +708,133 @@ td, th {
 th {
   white-space: nowrap;
 }
+
+/* Dark Mode */
+.dark {
+  --color-ink: #f0f0f0;
+  --color-ink-secondary: #c0c0c0;
+  --color-ink-tertiary: #a0a0a0;
+  --color-ink-muted: #808080;
+  --color-ink-faint: #606060;
+
+  --color-bg: #1a1a1a;
+  --color-bg-elevated: #242424;
+  --color-bg-subtle: #2e2e2e;
+  --color-bg-hover: rgba(255, 255, 255, 0.04);
+
+  --color-border: rgba(255, 255, 255, 0.1);
+  --color-border-subtle: rgba(255, 255, 255, 0.06);
+  --color-border-emphasis: rgba(255, 255, 255, 0.15);
+
+  --color-brand: #e08866;
+  --color-brand-hover: #d4795a;
+  --color-brand-light: rgba(224, 136, 102, 0.15);
+  --color-brand-surface: rgba(224, 136, 102, 0.08);
+
+  --color-gold: #d4b77e;
+  --color-gold-light: rgba(212, 183, 126, 0.15);
+  --color-sage: #8eb592;
+  --color-sage-light: rgba(142, 181, 146, 0.15);
+
+  --color-success: #4ade80;
+  --color-success-bg: rgba(74, 222, 128, 0.15);
+  --color-warning: #fbbf24;
+  --color-warning-bg: rgba(251, 191, 36, 0.15);
+  --color-danger: #f87171;
+  --color-danger-bg: rgba(248, 113, 113, 0.15);
+
+  --background: #1a1a1a;
+  --foreground: #f0f0f0;
+  --card: #242424;
+  --card-foreground: #f0f0f0;
+  --popover: #242424;
+  --popover-foreground: #f0f0f0;
+  --primary: #e08866;
+  --primary-foreground: #ffffff;
+  --secondary: #2e2e2e;
+  --secondary-foreground: #f0f0f0;
+  --muted: #2e2e2e;
+  --muted-foreground: #808080;
+  --accent: rgba(224, 136, 102, 0.08);
+  --accent-foreground: #f0f0f0;
+  --border: rgba(255, 255, 255, 0.1);
+  --input: rgba(255, 255, 255, 0.1);
+  --ring: rgba(224, 136, 102, 0.3);
+}
+
+.dark ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); }
+.dark ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.25); }
+
+.dark .chat-bubble-ai {
+  background: var(--color-bg-subtle);
+  border-color: var(--color-border);
+}
+
+.dark .toggle-slider::before {
+  background: #e0e0e0;
+}
+
+/* 打印友好格式 */
+@media print {
+  /* 隐藏交互元素 */
+  .btn,
+  .toggle-switch,
+  .tab,
+  button[title="搜索对话"],
+  button[title="收起面板"],
+  button[title="展开面板"],
+  .sidebar,
+  .input,
+  textarea,
+  .toggle-switch {
+    display: none !important;
+  }
+
+  /* 重置背景和颜色 */
+  body,
+  .content-panel,
+  .card,
+  .chat-bubble-user,
+  .chat-bubble-ai {
+    background: white !important;
+    color: black !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  /* 链接颜色 */
+  a {
+    color: black !important;
+    text-decoration: none !important;
+  }
+
+  /* 确保内容可见 */
+  .print-content {
+    display: block !important;
+    page-break-inside: avoid;
+  }
+
+  /* 页面设置 */
+  @page {
+    margin: 2cm;
+    size: A4;
+  }
+
+  /* 避免在章节中间断开 */
+  .chapter-page {
+    page-break-before: always;
+  }
+
+  /* 优化标题显示 */
+  h1, h2, h3 {
+    page-break-after: avoid;
+  }
+
+  /* 移除深色模式的影响 */
+  .dark {
+    --color-ink: #000000 !important;
+    --color-bg: #ffffff !important;
+    --color-bg-elevated: #ffffff !important;
+    --color-border: #cccccc !important;
+  }
+}

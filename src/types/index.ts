@@ -65,6 +65,8 @@ export interface DialogueSession {
   messages: Message[];
   createdAt: Date;
   updatedAt: Date;
+  /** 会话标签 */
+  tags?: string[];
 }
 
 /** 智能建议 */

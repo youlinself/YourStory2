@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { StorageService } from '../services';
 import { getDefaultBaseUrl, getDefaultModel } from '../ai_config';
+import { encrypt, decrypt } from '../utils/encryption';
 import type { AISettings } from '../types';
 
 interface AIState extends AISettings {
@@ -49,7 +50,7 @@ const useAIStore = create<AIState>((set, get) => ({
       const settings = await storageService.loadData<AISettings>(STORAGE_KEY);
       if (settings) {
         set({
-          apiKey: settings.apiKey ?? '',
+          apiKey: settings.apiKey ? decrypt(settings.apiKey) : '',
           model: settings.model ?? 'gpt-4o-mini',
           baseUrl: settings.baseUrl ?? 'https://api.openai.com/v1',
           vendor: settings.vendor ?? 'openai',
@@ -67,7 +68,7 @@ const useAIStore = create<AIState>((set, get) => ({
     try {
       const { apiKey, model, baseUrl, vendor, temperature, maxInputTokens, maxOutputTokens } = get();
       await storageService.saveData(STORAGE_KEY, {
-        apiKey,
+        apiKey: apiKey ? encrypt(apiKey) : '',
         model,
         baseUrl,
         vendor,

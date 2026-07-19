@@ -1,21 +1,250 @@
-import React, { useState } from 'react';
-import { useSettingsStore } from '../../store/settingsStore';
+import React, { useState, useEffect } from 'react';
+import useAIStore from '../../stores/aiStore';
+import useSettingsStore from '../../stores/settingsStore';
+import useAutobiographyStore from '../../stores/autobiographyStore';
+import { useTheme } from '../../contexts/ThemeContext';
+import { useNotification } from '../../hooks/useNotification';
+import ExportService from '../../services/export/ExportService';
+import BackupService from '../../services/backup/BackupService';
+import { isTauriEnvironment, migrateToTauriStorage } from '../../services/storage/tauriStorage';
+import { useToast } from '../../components';
+import { AI_VENDORS, getVendorById, getVendorModels } from '../../ai_config/vendors';
 
 const SettingsPage: React.FC = () => {
-  useSettingsStore();
-  const [selectedModel, setSelectedModel] = useState('claude-sonnet');
-  const [apiKey, setApiKey] = useState('');
-  const [temperature, setTemperature] = useState(0.7);
-  const [autoSave, setAutoSave] = useState(true);
-  const [darkMode, setDarkMode] = useState(false);
-  const [notifications, setNotifications] = useState(true);
+  const {
+    apiKey,
+    model,
+    baseUrl,
+    vendor,
+    temperature,
+    setApiKey,
+    setModel,
+    setBaseUrl,
+    setVendor,
+    setTemperature,
+    loadSettings,
+    saveSettings,
+  } = useAIStore();
 
-  const models = [
-    { id: 'claude-sonnet', name: 'Claude Sonnet 4', provider: 'Anthropic', desc: '综合能力均衡，适合传记写作' },
-    { id: 'claude-haiku', name: 'Claude Haiku 3.5', provider: 'Anthropic', desc: '响应速度快，适合快速对话' },
-    { id: 'gpt-4o', name: 'GPT-4o', provider: 'OpenAI', desc: '多模态理解能力强' },
-    { id: 'gpt-4o-mini', name: 'GPT-4o Mini', provider: 'OpenAI', desc: '经济实惠，适合日常使用' },
-  ];
+  const {
+    autoSave,
+    notifications,
+    setAutoSave,
+    setNotifications,
+    loadSettings: loadAppSettings,
+    saveSettings: saveAppSettings,
+  } = useSettingsStore();
+
+  const { autobiography } = useAutobiographyStore();
+
+  const { isDark, setTheme } = useTheme();
+  const { permission: notificationPermission, requestPermission, isSupported: notificationSupported } = useNotification();
+  const toast = useToast();
+
+  const [isValidating, setIsValidating] = useState(false);
+  const [validationResult, setValidationResult] = useState<'success' | 'error' | null>(null);
+  const [validationMessage, setValidationMessage] = useState('');
+  const [availableModels, setAvailableModels] = useState<string[]>([]);
+
+  useEffect(() => {
+    loadSettings();
+    loadAppSettings();
+  }, [loadSettings, loadAppSettings]);
+
+  useEffect(() => {
+    const models = getVendorModels(vendor);
+    setAvailableModels(models);
+  }, [vendor]);
+
+  const currentVendor = getVendorById(vendor);
+
+  const handleVendorChange = async (newVendor: string) => {
+    setVendor(newVendor);
+    setValidationResult(null);
+    await saveSettings();
+  };
+
+  const handleModelChange = async (newModel: string) => {
+    setModel(newModel);
+    await saveSettings();
+  };
+
+  const handleApiKeyChange = (newApiKey: string) => {
+    setApiKey(newApiKey);
+    setValidationResult(null);
+  };
+
+  const handleApiKeyBlur = async () => {
+    await saveSettings();
+  };
+
+  const handleTemperatureChange = async (value: number) => {
+    setTemperature(value);
+    await saveSettings();
+  };
+
+  const handleToggleAutoSave = async (value: boolean) => {
+    setAutoSave(value);
+    await saveAppSettings();
+  };
+
+  const handleToggleDarkMode = async (value: boolean) => {
+    setTheme(value ? 'dark' : 'light');
+  };
+
+  const handleToggleNotifications = async (value: boolean) => {
+    if (value && notificationSupported && notificationPermission !== 'granted') {
+      const granted = await requestPermission();
+      if (!granted) {
+        alert('请在浏览器设置中允许通知权限');
+        return;
+      }
+    }
+    setNotifications(value);
+    await saveAppSettings();
+  };
+
+  const handleExportData = () => {
+    ExportService.downloadAsMarkdown(autobiography);
+  };
+
+  const handleExportSettings = () => {
+    const settings = {
+      ai: { apiKey: apiKey.slice(0, 8) + '***', model, baseUrl, vendor, temperature },
+      app: { autoSave, notifications },
+    };
+    const content = JSON.stringify(settings, null, 2);
+    ExportService.download(content, 'settings.json', 'application/json;charset=utf-8');
+  };
+
+  const handleImportSettings = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+        if (data.ai) {
+          if (data.ai.model) setModel(data.ai.model);
+          if (data.ai.baseUrl) setBaseUrl(data.ai.baseUrl);
+          if (data.ai.vendor) setVendor(data.ai.vendor);
+          if (data.ai.temperature) setTemperature(data.ai.temperature);
+          await saveSettings();
+        }
+        if (data.app) {
+          if (typeof data.app.autoSave === 'boolean') setAutoSave(data.app.autoSave);
+          if (typeof data.app.notifications === 'boolean') setNotifications(data.app.notifications);
+          await saveAppSettings();
+        }
+        alert('设置导入成功！');
+      } catch (error) {
+        alert('导入失败：文件格式错误');
+      }
+    };
+    input.click();
+  };
+
+  const handleBackup = () => {
+    try {
+      BackupService.createBackup();
+      toast.addToast({ type: 'success', message: '备份创建成功' });
+    } catch (error) {
+      toast.addToast({ type: 'error', message: error instanceof Error ? error.message : '备份失败' });
+    }
+  };
+
+  const handleRestore = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      try {
+        await BackupService.restoreBackup(file);
+        toast.addToast({ type: 'success', message: '数据恢复成功' });
+      } catch (error) {
+        toast.addToast({ type: 'error', message: error instanceof Error ? error.message : '恢复失败' });
+      }
+    };
+    input.click();
+  };
+
+  const handleLocalBackup = () => {
+    try {
+      BackupService.createLocalBackup();
+      toast.addToast({ type: 'success', message: '本地备份创建成功' });
+    } catch (error) {
+      toast.addToast({ type: 'error', message: error instanceof Error ? error.message : '本地备份失败' });
+    }
+  };
+
+  const handleMigrateToTauri = async () => {
+    const keys = ['autobiography', 'dialogue-sessions', 'ai-settings', 'settings'];
+    try {
+      const result = await migrateToTauriStorage(keys);
+      toast.addToast({
+        type: 'success',
+        message: `迁移完成：成功 ${result.success.length} 项，失败 ${result.failed.length} 项`,
+      });
+    } catch (error) {
+      toast.addToast({ type: 'error', message: error instanceof Error ? error.message : '迁移失败' });
+    }
+  };
+
+  const handleValidateApiKey = async () => {
+    if (!apiKey.trim()) {
+      setValidationResult('error');
+      setValidationMessage('请先输入 API Key');
+      return;
+    }
+
+    setIsValidating(true);
+    setValidationResult(null);
+    setValidationMessage('');
+
+    try {
+      const headers: Record<string, string> = {};
+      const vendorInfo = getVendorById(vendor);
+      if (vendorInfo) {
+        headers[vendorInfo.authHeader] = `${vendorInfo.authPrefix}${apiKey}`;
+      } else {
+        headers['Authorization'] = `Bearer ${apiKey}`;
+      }
+
+      const response = await fetch(`${baseUrl}/models`, {
+        method: 'GET',
+        headers,
+      });
+
+      if (response.ok) {
+        setValidationResult('success');
+        setValidationMessage('API Key 验证成功！');
+
+        try {
+          const data = await response.json();
+          const models = data.data?.map((m: { id: string }) => m.id).filter(Boolean) || [];
+          if (models.length > 0) {
+            setAvailableModels(models);
+          }
+        } catch {
+          // 忽略解析错误
+        }
+      } else {
+        const errorText = await response.text().catch(() => '');
+        setValidationResult('error');
+        setValidationMessage(`验证失败: ${response.status} ${errorText.slice(0, 100)}`);
+      }
+    } catch (error) {
+      setValidationResult('error');
+      setValidationMessage(`网络错误: ${error instanceof Error ? error.message : '未知错误'}`);
+    } finally {
+      setIsValidating(false);
+    }
+  };
 
   return (
     <div className="content-panel">
@@ -29,27 +258,43 @@ const SettingsPage: React.FC = () => {
             <h2 className="section-title mb-4">AI 配置</h2>
             <div className="card p-5 space-y-4">
               <div>
-                <label className="text-sm font-medium text-ink mb-2 block">模型选择</label>
+                <label className="text-sm font-medium text-ink mb-2 block">AI 供应商</label>
                 <div className="grid grid-cols-2 gap-3">
-                  {models.map((model) => (
+                  {AI_VENDORS.filter((v) => v.id !== 'custom').map((v) => (
                     <div
-                      key={model.id}
-                      className={`model-card ${selectedModel === model.id ? 'selected' : ''}`}
-                      onClick={() => setSelectedModel(model.id)}
+                      key={v.id}
+                      className={`model-card ${vendor === v.id ? 'selected' : ''}`}
+                      onClick={() => handleVendorChange(v.id)}
                     >
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-medium text-ink">{model.name}</span>
-                        {selectedModel === model.id && (
+                        <span className="text-sm font-medium text-ink">{v.name}</span>
+                        {vendor === v.id && (
                           <svg className="model-check w-4 h-4 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
                           </svg>
                         )}
                       </div>
-                      <p className="text-xs text-ink-muted">{model.provider}</p>
-                      <p className="text-xs text-ink-faint mt-1">{model.desc}</p>
+                      <p className="text-xs text-ink-faint">{v.defaultModel}</p>
                     </div>
                   ))}
                 </div>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-ink mb-2 block">模型选择</label>
+                <select
+                  className="input w-full"
+                  value={model}
+                  onChange={(e) => handleModelChange(e.target.value)}
+                >
+                  {availableModels.length > 0 ? (
+                    availableModels.map((m) => (
+                      <option key={m} value={m}>{m}</option>
+                    ))
+                  ) : (
+                    <option value={model}>{model}</option>
+                  )}
+                </select>
               </div>
 
               <div>
@@ -60,10 +305,27 @@ const SettingsPage: React.FC = () => {
                     type="password"
                     placeholder="输入你的 API Key"
                     value={apiKey}
-                    onChange={(e) => setApiKey(e.target.value)}
+                    onChange={(e) => handleApiKeyChange(e.target.value)}
+                    onBlur={handleApiKeyBlur}
                   />
-                  <button className="btn btn-outline">验证</button>
+                  <button
+                    className="btn btn-outline"
+                    onClick={handleValidateApiKey}
+                    disabled={isValidating || !apiKey.trim()}
+                  >
+                    {isValidating ? '验证中...' : '验证'}
+                  </button>
                 </div>
+                {validationResult && (
+                  <p className={`text-xs mt-1 ${validationResult === 'success' ? 'text-success' : 'text-danger'}`}>
+                    {validationMessage}
+                  </p>
+                )}
+                {currentVendor && (
+                  <p className="text-xs text-ink-faint mt-1">
+                    当前使用 {currentVendor.name} 的 {currentVendor.authHeader} 认证方式
+                  </p>
+                )}
               </div>
 
               <div>
@@ -78,13 +340,26 @@ const SettingsPage: React.FC = () => {
                   max="1"
                   step="0.1"
                   value={temperature}
-                  onChange={(e) => setTemperature(parseFloat(e.target.value))}
+                  onChange={(e) => handleTemperatureChange(parseFloat(e.target.value))}
                 />
                 <div className="flex justify-between text-[10px] text-ink-faint mt-1">
                   <span>精确</span>
                   <span>创意</span>
                 </div>
               </div>
+
+              {vendor === 'custom' && (
+                <div>
+                  <label className="text-sm font-medium text-ink mb-2 block">自定义 Base URL</label>
+                  <input
+                    className="input w-full"
+                    placeholder="https://api.example.com/v1"
+                    value={baseUrl}
+                    onChange={(e) => setBaseUrl(e.target.value)}
+                    onBlur={saveSettings}
+                  />
+                </div>
+              )}
             </div>
           </section>
 
@@ -100,7 +375,7 @@ const SettingsPage: React.FC = () => {
                   <input
                     type="checkbox"
                     checked={autoSave}
-                    onChange={(e) => setAutoSave(e.target.checked)}
+                    onChange={(e) => handleToggleAutoSave(e.target.checked)}
                   />
                   <span className="toggle-slider" />
                 </label>
@@ -114,8 +389,8 @@ const SettingsPage: React.FC = () => {
                 <label className="toggle-switch">
                   <input
                     type="checkbox"
-                    checked={darkMode}
-                    onChange={(e) => setDarkMode(e.target.checked)}
+                    checked={isDark}
+                    onChange={(e) => handleToggleDarkMode(e.target.checked)}
                   />
                   <span className="toggle-slider" />
                 </label>
@@ -130,7 +405,7 @@ const SettingsPage: React.FC = () => {
                   <input
                     type="checkbox"
                     checked={notifications}
-                    onChange={(e) => setNotifications(e.target.checked)}
+                    onChange={(e) => handleToggleNotifications(e.target.checked)}
                   />
                   <span className="toggle-slider" />
                 </label>
@@ -144,23 +419,59 @@ const SettingsPage: React.FC = () => {
               <div className="flex items-center justify-between py-2">
                 <div>
                   <p className="text-sm font-medium text-ink">导出所有数据</p>
-                  <p className="text-xs text-ink-faint mt-0.5">下载全部传记内容</p>
+                  <p className="text-xs text-ink-faint mt-0.5">下载全部传记内容（Markdown格式）</p>
                 </div>
-                <button className="btn btn-outline text-xs">导出</button>
+                <button className="btn btn-outline text-xs" onClick={handleExportData}>导出</button>
+              </div>
+              <div className="flex items-center justify-between py-2">
+                <div>
+                  <p className="text-sm font-medium text-ink">完整备份</p>
+                  <p className="text-xs text-ink-faint mt-0.5">备份所有数据到本地文件</p>
+                </div>
+                <div className="flex gap-2">
+                  <button className="btn btn-outline text-xs" onClick={handleBackup}>创建备份</button>
+                  <button className="btn btn-outline text-xs" onClick={handleRestore}>恢复备份</button>
+                </div>
+              </div>
+              <div className="flex items-center justify-between py-2">
+                <div>
+                  <p className="text-sm font-medium text-ink">本地自动备份</p>
+                  <p className="text-xs text-ink-faint mt-0.5">保存到浏览器本地存储（最多5份）</p>
+                </div>
+                <button className="btn btn-outline text-xs" onClick={handleLocalBackup}>创建</button>
+              </div>
+              <div className="flex items-center justify-between py-2">
+                <div>
+                  <p className="text-sm font-medium text-ink">导入/导出设置</p>
+                  <p className="text-xs text-ink-faint mt-0.5">备份或恢复应用设置</p>
+                </div>
+                <div className="flex gap-2">
+                  <button className="btn btn-outline text-xs" onClick={handleImportSettings}>导入</button>
+                  <button className="btn btn-outline text-xs" onClick={handleExportSettings}>导出</button>
+                </div>
               </div>
               <div className="flex items-center justify-between py-2">
                 <div>
                   <p className="text-sm font-medium text-ink">清除对话历史</p>
                   <p className="text-xs text-ink-faint mt-0.5">删除所有对话记录</p>
                 </div>
-                <button className="btn btn-outline text-xs">清除</button>
+                <button className="btn btn-outline text-xs" disabled>清除</button>
               </div>
+              {isTauriEnvironment() && (
+                <div className="flex items-center justify-between py-2">
+                  <div>
+                    <p className="text-sm font-medium text-ink">迁移数据到文件系统</p>
+                    <p className="text-xs text-ink-faint mt-0.5">将localStorage数据迁移到Tauri文件系统</p>
+                  </div>
+                  <button className="btn btn-outline text-xs" onClick={handleMigrateToTauri}>迁移</button>
+                </div>
+              )}
               <div className="flex items-center justify-between py-2">
                 <div>
                   <p className="text-sm text-danger">删除账户</p>
                   <p className="text-xs text-ink-faint mt-0.5">永久删除账户及所有数据</p>
                 </div>
-                <button className="btn btn-outline text-xs text-danger border-danger/20 hover:bg-danger/5">删除</button>
+                <button className="btn btn-outline text-xs text-danger border-danger/20 hover:bg-danger/5" disabled>删除</button>
               </div>
             </div>
           </section>

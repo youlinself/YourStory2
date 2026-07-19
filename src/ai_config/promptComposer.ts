@@ -4,6 +4,9 @@ import CONTEXT_COMPACT from './prompts/context_compact.md?raw';
 import CONTENT_EXTRACT from './prompts/content_extract.md?raw';
 import SUGGESTION_GEN from './prompts/suggestion_gen.md?raw';
 import WELCOME_GUIDE from './prompts/welcome_guide.md?raw';
+import CONTENT_MERGE from './prompts/content_merge.md?raw';
+import STYLE_CHECK from './prompts/style_check.md?raw';
+import TIMELINE_ORGANIZE from './prompts/timeline_organize.md?raw';
 import type { ChapterContext } from '../types';
 
 /**
@@ -181,6 +184,126 @@ export const PromptComposer = {
     if (!trimmed.startsWith('/compact')) return null;
     const directive = trimmed.slice('/compact'.length).trim();
     return directive || null;
+  },
+
+  /**
+   * 获取内容合并提示词
+   */
+  getMergePrompt(): string {
+    return CONTENT_MERGE;
+  },
+
+  /**
+   * 构建内容合并的消息数组
+   * @param existingContent 当前章节已有的草稿内容
+   * @param newExtracts 新提取的内容段落数组
+   * @param chapterContext 章节上下文信息
+   */
+  buildMergeMessages(
+    existingContent: string,
+    newExtracts: string[],
+    chapterContext?: ChapterContext,
+  ): Array<{ role: string; content: string }> {
+    const systemContent = `${SYSTEM_PROMPT}\n\n${this.getMergePrompt()}`;
+
+    const parts: string[] = [];
+
+    if (chapterContext) {
+      parts.push(`当前章节：${chapterContext.chapterTitle}`);
+      if (chapterContext.timeRange) {
+        parts.push(`时间范围：${chapterContext.timeRange}`);
+      }
+      parts.push('');
+    }
+
+    parts.push('## 当前草稿内容');
+    parts.push(existingContent || '（暂无内容）');
+    parts.push('');
+
+    parts.push('## 新提取的内容（共' + newExtracts.length + '段）');
+    newExtracts.forEach((extract, index) => {
+      parts.push(`\n### 第${index + 1}段提取内容`);
+      parts.push(extract);
+    });
+
+    parts.push('\n\n请将上述内容合并为一个连贯的章节草稿：');
+
+    return [
+      { role: 'system', content: systemContent },
+      { role: 'user', content: parts.join('\n') },
+    ];
+  },
+
+  /**
+   * 获取风格检查提示词
+   */
+  getStyleCheckPrompt(): string {
+    return STYLE_CHECK;
+  },
+
+  /**
+   * 构建风格检查的消息数组
+   * @param chapters 章节内容数组（标题+内容）
+   */
+  buildStyleCheckMessages(
+    chapters: Array<{ title: string; timeRange?: string; content: string }>,
+  ): Array<{ role: string; content: string }> {
+    const systemContent = `${SYSTEM_PROMPT}\n\n${this.getStyleCheckPrompt()}`;
+
+    const parts: string[] = ['请检查以下自传章节的写作风格一致性：\n'];
+
+    chapters.forEach((chapter, index) => {
+      parts.push(`## 章节 ${index + 1}：${chapter.title}`);
+      if (chapter.timeRange) {
+        parts.push(`*时间范围：${chapter.timeRange}*`);
+      }
+      parts.push('');
+      parts.push(chapter.content);
+      parts.push('');
+    });
+
+    return [
+      { role: 'system', content: systemContent },
+      { role: 'user', content: parts.join('\n') },
+    ];
+  },
+
+  /**
+   * 获取时间线整理提示词
+   */
+  getTimelinePrompt(): string {
+    return TIMELINE_ORGANIZE;
+  },
+
+  /**
+   * 构建时间线整理的消息数组
+   * @param chapters 章节列表（标题、时间范围、内容摘要）
+   */
+  buildTimelineMessages(
+    chapters: Array<{ id: string; title: string; timeRange?: string; content?: string }>,
+  ): Array<{ role: string; content: string }> {
+    const systemContent = `${SYSTEM_PROMPT}\n\n${this.getTimelinePrompt()}`;
+
+    const parts: string[] = ['请根据以下章节信息，按时间顺序整理自传章节：\n'];
+
+    chapters.forEach((chapter, index) => {
+      parts.push(`## 章节 ${index + 1}`);
+      parts.push(`ID: ${chapter.id}`);
+      parts.push(`标题: ${chapter.title}`);
+      if (chapter.timeRange) {
+        parts.push(`时间范围: ${chapter.timeRange}`);
+      }
+      if (chapter.content) {
+        const summary = chapter.content.slice(0, 200);
+        parts.push(`内容摘要: ${summary}${chapter.content.length > 200 ? '...' : ''}`);
+      }
+      parts.push('');
+    });
+
+    return [
+      { role: 'system', content: systemContent },
+      { role: 'user', content: parts.join('\n') },
+    ];
   },
 };
 

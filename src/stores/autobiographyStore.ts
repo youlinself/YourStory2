@@ -14,6 +14,7 @@ interface AutobiographyState {
   updateChapterContent: (chapterId: string, content: string) => Promise<void>;
   updateChapterDraft: (chapterId: string, draftContent: string) => Promise<void>;
   confirmChapterDraft: (chapterId: string) => Promise<void>;
+  setAutobiography: (autobiography: Autobiography) => void;
   getCompletionStats: () => { total: number; completed: number; inProgress: number; draft: number };
 }
 
@@ -144,6 +145,10 @@ const useAutobiographyStore = create<AutobiographyState>((set, get) => ({
     const updated = { ...autobiography, chapters, updatedAt: new Date() };
     await storageService.saveData(STORAGE_KEY, updated);
     set({ autobiography: updated });
+  },
+
+  setAutobiography: (autobiography: Autobiography) => {
+    set({ autobiography });
   },
 
   getCompletionStats: () => {

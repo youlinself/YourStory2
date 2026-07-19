@@ -10,6 +10,13 @@ export interface AIServiceConfig {
   maxOutputTokens?: number;
 }
 
+export interface StreamChunk {
+  content: string;
+  done: boolean;
+}
+
+export type StreamCallback = (chunk: StreamChunk) => void;
+
 const DEFAULT_CONFIG: Partial<AIServiceConfig> = {
   model: 'gpt-4o-mini',
   baseUrl: 'https://api.openai.com/v1',
@@ -278,6 +285,215 @@ class AIService {
     } catch (error) {
       console.error('AI服务错误:', error);
       throw error;
+    }
+  }
+
+  /** 流式生成响应（SSE） */
+  async generateStreamingResponse(
+    userInput: string,
+    conversationHistory: Message[],
+    callback: StreamCallback,
+    chapterContext?: ChapterContext,
+  ): Promise<void> {
+    const compactDirective = PromptComposer.parseCompactCommand(userInput);
+    if (compactDirective !== null) {
+      const result = await this.handleCompact(conversationHistory, compactDirective);
+      callback({ content: result, done: true });
+      return;
+    }
+
+    const historyForPrompt = conversationHistory.map((msg) => ({
+      role: (msg.isUser ? 'user' : 'assistant') as 'user' | 'assistant',
+      content: msg.content,
+    }));
+
+    const messages = PromptComposer.buildMessages(userInput, historyForPrompt, chapterContext);
+    const vendorLimit = getMaxOutputTokens(this.vendor);
+    const maxTokens = Math.min(this.maxOutputTokens, vendorLimit);
+
+    try {
+      const response = await fetch(`${this.baseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${this.apiKey}`,
+        },
+        body: JSON.stringify({
+          model: this.model,
+          messages,
+          max_tokens: maxTokens,
+          temperature: this.temperature,
+          stream: true,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => '');
+        throw new Error(
+          `API请求失败: ${response.status}${errorText ? ` - ${errorText.slice(0, 200)}` : ''}`,
+        );
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error('无法读取响应流');
+      }
+
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      const readChunk = async (): Promise<void> => {
+        const { done, value } = await reader.read();
+        if (done) {
+          callback({ content: '', done: true });
+          return;
+        }
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || !trimmed.startsWith('data: ')) continue;
+          const data = trimmed.slice(6);
+          if (data === '[DONE]') {
+            callback({ content: '', done: true });
+            return;
+          }
+
+          try {
+            const parsed = JSON.parse(data);
+            const content = parsed.choices?.[0]?.delta?.content;
+            if (content) {
+              callback({ content, done: false });
+            }
+          } catch {
+            // 忽略解析错误的 chunk
+          }
+        }
+
+        return readChunk();
+      };
+
+      await readChunk();
+    } catch (error) {
+      console.error('AI流式响应错误:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 智能合并提取内容到章节草稿
+   * @param existingContent 当前章节已有的草稿内容
+   * @param newExtracts 新提取的内容段落数组
+   * @param chapterContext 章节上下文信息
+   * @returns 合并后的完整章节草稿
+   */
+  async mergeExtractedContent(
+    existingContent: string,
+    newExtracts: string[],
+    chapterContext?: ChapterContext,
+  ): Promise<string> {
+    const messages = PromptComposer.buildMergeMessages(existingContent, newExtracts, chapterContext);
+    return this.sendRequest(messages);
+  }
+
+  /**
+   * 检查自传各章节的写作风格一致性
+   * @param chapters 章节内容数组
+   * @returns JSON格式的分析结果
+   */
+  async checkStyleConsistency(
+    chapters: Array<{ title: string; timeRange?: string; content: string }>,
+  ): Promise<{
+    overall_consistency: number;
+    issues: Array<{
+      chapter: string;
+      type: string;
+      description: string;
+      suggestion: string;
+      examples: string[];
+    }>;
+    suggestions: string[];
+  }> {
+    const messages = PromptComposer.buildStyleCheckMessages(chapters);
+    const response = await this.sendRequest(messages);
+
+    try {
+      // 尝试解析JSON响应
+      const jsonMatch = response.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        return JSON.parse(jsonMatch[0]);
+      }
+      // 如果无法解析，返回默认结构
+      return {
+        overall_consistency: 0.5,
+        issues: [],
+        suggestions: ['无法解析分析结果，请重试'],
+      };
+    } catch {
+      return {
+        overall_consistency: 0.5,
+        issues: [],
+        suggestions: ['分析失败，请稍后重试'],
+      };
+    }
+  }
+
+  /**
+   * 自动整理时间线
+   * @param chapters 章节列表
+   * @returns JSON格式的整理结果
+   */
+  async organizeTimeline(
+    chapters: Array<{ id: string; title: string; timeRange?: string; content?: string }>,
+  ): Promise<{
+    sortedChapters: Array<{
+      id: string;
+      title: string;
+      timeRange: string;
+      startYear: number;
+      endYear: number;
+      order: number;
+    }>;
+    gaps: Array<{
+      period: string;
+      description: string;
+      suggestedTitle: string;
+    }>;
+    conflicts: Array<{
+      chapterId: string;
+      issue: string;
+      suggestion: string;
+    }>;
+  }> {
+    const messages = PromptComposer.buildTimelineMessages(chapters);
+    const response = await this.sendRequest(messages);
+
+    try {
+      const jsonMatch = response.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        return JSON.parse(jsonMatch[0]);
+      }
+      return {
+        sortedChapters: chapters.map((ch, i) => ({
+          id: ch.id,
+          title: ch.title,
+          timeRange: ch.timeRange || '',
+          startYear: 0,
+          endYear: 0,
+          order: i + 1,
+        })),
+        gaps: [],
+        conflicts: [],
+      };
+    } catch {
+      return {
+        sortedChapters: [],
+        gaps: [],
+        conflicts: [],
+      };
     }
   }
 }

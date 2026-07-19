@@ -1,5 +1,8 @@
-import React from 'react';
-import { Outlet, useLocation, Link } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { Outlet, useLocation, Link, useParams } from 'react-router-dom';
+import useAutobiographyStore from '../../stores/autobiographyStore';
+import useDialogueStore from '../../stores/dialogueStore';
+import type { Chapter } from '../../types';
 
 const navItems = [
   { path: '/', label: '首页', icon: 'home' },
@@ -35,18 +38,48 @@ const iconMap: Record<string, React.ReactNode> = {
 const SidebarBottomContent: React.FC = () => {
   const location = useLocation();
   const path = location.pathname;
+  const { chapterId: routeChapterId } = useParams<{ chapterId?: string }>();
+
+  const { autobiography, load, getCompletionStats } = useAutobiographyStore();
+  const { activeSession } = useDialogueStore();
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const chapters = autobiography?.chapters || [];
+  const stats = getCompletionStats();
+  const totalChapters = stats.total;
+  const completedChapters = stats.completed;
+  const progressPercent = totalChapters > 0 ? Math.round((completedChapters / totalChapters) * 100) : 0;
+
+  const currentChapterId = routeChapterId || activeSession?.chapterId;
+  const currentChapter = currentChapterId ? chapters.find((ch: Chapter) => ch.id === currentChapterId) : null;
+
+  const getChapterProgress = (status?: string): number => {
+    switch (status) {
+      case 'completed': return 100;
+      case 'in_progress': return 50;
+      case 'draft': return 30;
+      default: return 0;
+    }
+  };
 
   if (path === '/') {
     return (
       <div className="px-5 py-5 border-t border-border-subtle">
         <div className="flex items-center justify-between mb-2">
           <span className="text-xs font-medium text-ink-muted">整体进度</span>
-          <span className="text-xs font-semibold text-brand">38%</span>
+          <span className="text-xs font-semibold text-brand">{progressPercent}%</span>
         </div>
         <div className="progress-track">
-          <div className="progress-fill" style={{ width: '38%' }} />
+          <div className="progress-fill" style={{ width: `${progressPercent}%` }} />
         </div>
-        <p className="text-[11px] mt-2 text-ink-faint">3/8 章节已完成 · 继续加油</p>
+        <p className="text-[11px] mt-2 text-ink-faint">
+          {totalChapters > 0
+            ? `${completedChapters}/${totalChapters} 章节已完成 · 继续加油`
+            : '还没有章节，开始创作吧'}
+        </p>
       </div>
     );
   }
@@ -56,17 +89,26 @@ const SidebarBottomContent: React.FC = () => {
       <div className="px-5 py-5 border-t border-border-subtle">
         <p className="text-xs font-medium text-ink-muted mb-2">写作进度</p>
         <div className="flex items-end gap-1.5 mb-2">
-          {[100, 100, 100, 65, 40].map((h, i) => (
-            <div key={i} className="flex-1 flex flex-col items-center gap-1">
-              <div
-                className={`w-full rounded-sm ${h === 100 ? 'bg-success' : 'bg-brand'}`}
-                style={{ height: `${h * 0.4}px` }}
-              />
-              <span className="text-[9px] text-ink-faint">{i + 1}</span>
-            </div>
-          ))}
+          {chapters.length > 0 ? (
+            chapters.slice(0, 5).map((ch: Chapter, i: number) => {
+              const h = getChapterProgress(ch.status);
+              return (
+                <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                  <div
+                    className={`w-full rounded-sm ${ch.status === 'completed' ? 'bg-success' : 'bg-brand'}`}
+                    style={{ height: `${Math.max(h * 0.4, 8)}px` }}
+                  />
+                  <span className="text-[9px] text-ink-faint">{i + 1}</span>
+                </div>
+              );
+            })
+          ) : (
+            <p className="text-[10px] text-ink-faint">暂无章节</p>
+          )}
         </div>
-        <p className="text-[11px] text-ink-faint">预计还需 5 小时完成</p>
+        <p className="text-[11px] text-ink-faint">
+          {totalChapters > 0 ? `共 ${totalChapters} 个章节` : '开始创作你的故事'}
+        </p>
       </div>
     );
   }
@@ -81,6 +123,12 @@ const SidebarBottomContent: React.FC = () => {
   }
 
   if (path.startsWith('/dialogue')) {
+    const sessionMessages = activeSession?.messages || [];
+    const userMessageCount = sessionMessages.filter((m) => m.isUser).length;
+    const generatedWords = sessionMessages
+      .filter((m) => !m.isUser)
+      .reduce((acc: number, m) => acc + m.content.length, 0);
+
     return (
       <>
         <div className="px-3 py-4">
@@ -92,25 +140,32 @@ const SidebarBottomContent: React.FC = () => {
                 </svg>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-ink truncate">童年趣事</p>
+                <p className="text-xs font-medium text-ink truncate">
+                  {currentChapter?.title || '自由对话'}
+                </p>
                 <p className="text-[10px] text-ink-faint">当前章节</p>
               </div>
             </div>
             <div className="progress-track">
-              <div className="progress-fill complete" style={{ width: '100%' }} />
+              <div
+                className={`progress-fill ${currentChapter?.status === 'completed' ? 'complete' : ''}`}
+                style={{ width: `${getChapterProgress(currentChapter?.status)}%` }}
+              />
             </div>
-            <p className="text-[10px] text-ink-faint mt-1.5">已完成</p>
+            <p className="text-[10px] text-ink-faint mt-1.5">
+              {currentChapter?.status === 'completed' ? '已完成' : '创作中'}
+            </p>
           </div>
         </div>
         <div className="px-5 py-4 border-t border-border-subtle">
           <p className="text-xs font-medium text-ink-muted mb-2">本次会话</p>
           <div className="flex items-center justify-between mb-1">
             <span className="text-xs text-ink-faint">对话轮次</span>
-            <span className="text-xs font-medium text-ink">12</span>
+            <span className="text-xs font-medium text-ink">{userMessageCount}</span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-xs text-ink-faint">生成字数</span>
-            <span className="text-xs font-medium text-ink">2,580</span>
+            <span className="text-xs font-medium text-ink">{generatedWords > 1000 ? `${(generatedWords / 1000).toFixed(1)}K` : generatedWords}</span>
           </div>
         </div>
       </>
