@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>设置 · YourStory</title>
+    <style id="theme-vars">
+@import "tailwindcss";
+
+@theme {
+  /* Brand - Warm Terracotta (暖赤陶) */
+  --color-brand: #da7756;
+  --color-brand-hover: #c4684a;
+  --color-brand-light: rgba(218, 119, 86, 0.1);
+  --color-brand-surface: rgba(218, 119, 86, 0.06);
+  
+  /* Literary Accent Colors (文学感辅助色) */
+  --color-gold: #c9a96e;
+  --color-gold-light: rgba(201, 169, 110, 0.12);
+  --color-sage: #7a9e7e;
+  --color-sage-light: rgba(122, 158, 126, 0.12);
+  
+  /* Neutrals */
+  --color-ink: #1a1a1a;
+  --color-ink-secondary: #4a4a4a;
+  --color-ink-tertiary: #6b6b6b;
+  --color-ink-muted: #8a8a8a;
+  --color-ink-faint: #b0b0b0;
+  
+  /* Backgrounds */
+  --color-bg: #faf8f5;
+  --color-bg-elevated: #ffffff;
+  --color-bg-subtle: #f5f0eb;
+  --color-bg-hover: rgba(0, 0, 0, 0.02);
+  
+  /* Borders */
+  --color-border: rgba(0, 0, 0, 0.1);
+  --color-border-subtle: rgba(0, 0, 0, 0.06);
+  --color-border-emphasis: rgba(0, 0, 0, 0.15);
+  
+  /* Semantic */
+  --color-success: #2d9d4e;
+  --color-success-bg: rgba(45, 157, 78, 0.1);
+  --color-warning: #e5a100;
+  --color-warning-bg: rgba(229, 161, 0, 0.1);
+  --color-danger: #d1242f;
+  --color-danger-bg: rgba(209, 36, 47, 0.1);
+  
+  /* Typography */
+  --font-serif: "Noto Serif SC", Georgia, serif;
+  --font-sans: "Inter", "Noto Sans SC", system-ui, sans-serif;
+  
+  /* Spacing */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+  --radius-full: 9999px;
+  
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.03);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.08);
+  
+  /* Animation */
+  --ease-out: cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+:root {
+  --background: #faf8f5;
+  --foreground: #1a1a1a;
+  --card: #ffffff;
+  --card-foreground: #1a1a1a;
+  --popover: #ffffff;
+  --popover-foreground: #1a1a1a;
+  --primary: #da7756;
+  --primary-foreground: #ffffff;
+  --secondary: #f5f0eb;
+  --secondary-foreground: #1a1a1a;
+  --muted: #f5f0eb;
+  --muted-foreground: #8a8a8a;
+  --accent: rgba(218, 119, 86, 0.06);
+  --accent-foreground: #1a1a1a;
+  --border: rgba(0, 0, 0, 0.1);
+  --input: rgba(0, 0, 0, 0.1);
+  --ring: rgba(218, 119, 86, 0.2);
+  --radius-small: 6px;
+  --radius-medium: 10px;
+  --radius-large: 14px;
+}
+
+.text-serif { font-family: var(--font-serif); }
+.text-sans { font-family: var(--font-sans); }
+
+body {
+  font-family: var(--font-sans);
+  background: var(--color-bg);
+  color: var(--color-ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: var(--radius-full); }
+::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.15); }
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in { animation: fadeIn 0.35s var(--ease-out); }
+.animate-slide-up { animation: slideUp 0.4s var(--ease-out); }
+
+/* Button */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: var(--radius-md);
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s var(--ease-out);
+  white-space: nowrap;
+}
+.btn:active { transform: scale(0.97); }
+.btn-primary {
+  background: var(--color-brand);
+  color: white;
+  box-shadow: 0 1px 2px rgba(218, 119, 86, 0.15);
+}
+.btn-primary:hover { background: var(--color-brand-hover); box-shadow: var(--shadow-md); }
+.btn-ghost {
+  background: transparent;
+  color: var(--color-ink-tertiary);
+}
+.btn-ghost:hover { background: var(--color-bg-hover); color: var(--color-ink); }
+
+/* Input */
+.input {
+  width: 100%;
+  padding: 0.625rem 0.875rem;
+  font-size: 0.875rem;
+  color: var(--color-ink);
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  outline: none;
+  transition: all 0.15s var(--ease-out);
+}
+.input:hover { border-color: var(--color-border-emphasis); }
+.input:focus { border-color: var(--color-brand); box-shadow: 0 0 0 3px var(--color-brand-light); }
+.input::placeholder { color: var(--color-ink-faint); }
+
+/* Tab */
+.tab {
+  padding: 0.5rem 0;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-ink-muted);
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s var(--ease-out);
+}
+.tab:hover { color: var(--color-ink); }
+.tab.active { color: var(--color-brand); border-bottom-color: var(--color-brand); }
+
+/* Card */
+.card {
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+}
+
+/* Badge */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: var(--radius-full);
+  line-height: 1.4;
+}
+
+/* Nav Link */
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  color: var(--color-ink-muted);
+  transition: all 0.15s var(--ease-out);
+  cursor: pointer;
+}
+.nav-link:hover { background: var(--color-bg-hover); color: var(--color-ink); }
+.nav-link.active { background: var(--color-brand-surface); color: var(--color-brand); font-weight: 500; }
+.nav-link svg { width: 18px; height: 18px; stroke-width: 1.5; }
+
+/* Progress Bar */
+.progress-track {
+  height: 4px;
+  border-radius: var(--radius-full);
+  background: var(--color-bg-subtle);
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  background: var(--color-brand);
+  transition: width 0.4s var(--ease-out);
+}
+
+/* Sidebar */
+.sidebar {
+  width: 240px;
+  background: var(--color-bg-elevated);
+  border-right: 1px solid var(--color-border-subtle);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+/* Main content area */
+.main-area {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Content panel */
+.content-panel {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.5rem 2rem;
+}
+
+/* Right panel */
+.right-panel {
+  width: 260px;
+  background: var(--color-bg-elevated);
+  border-left: 1px solid var(--color-border-subtle);
+  overflow-y: auto;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Section heading */
+.section-title {
+  font-family: var(--font-serif);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-ink);
+}
+
+/* Stat item */
+.stat-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.625rem 0;
+}
+.stat-row + .stat-row { border-top: 1px solid var(--color-border-subtle); }
+
+/* Activity item */
+.activity-item {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  padding: 0.5rem 0;
+}
+
+/* Quick action */
+.quick-action {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.625rem 0.75rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-subtle);
+  cursor: pointer;
+  transition: all 0.15s var(--ease-out);
+}
+.quick-action:hover { border-color: var(--color-brand); background: var(--color-brand-surface); }
+.quick-action:hover svg { color: var(--color-brand); }
+.quick-action:hover span { color: var(--color-brand); }
+
+/* Chapter card */
+.chapter-card {
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  transition: all 0.15s var(--ease-out);
+}
+.chapter-card:hover { box-shadow: var(--shadow-md); border-color: var(--color-border); }
+
+/* Chat bubble */
+.chat-bubble {
+  padding: 0.75rem 1rem;
+  max-width: 80%;
+  word-wrap: break-word;
+  font-size: 0.9375rem;
+  line-height: 1.65;
+}
+.chat-bubble-user {
+  background: var(--color-bg-subtle);
+  border-radius: var(--radius-xl) var(--radius-xl) 4px var(--radius-xl);
+  margin-left: auto;
+}
+.chat-bubble-ai {
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 4px var(--radius-xl) var(--radius-xl) var(--radius-xl);
+  font-family: var(--font-serif);
+  line-height: 1.75;
+}
+
+/* Avatar */
+.avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 0.875rem;
+}
+
+/* Loading dots */
+.dot {
+  width: 5px;
+  height: 5px;
+  border-radius: var(--radius-full);
+  background: var(--color-ink-muted);
+  animation: pulse 1.4s infinite ease-in-out;
+}
+.dot:nth-child(1) { animation-delay: 0s; }
+.dot:nth-child(2) { animation-delay: 0.2s; }
+.dot:nth-child(3) { animation-delay: 0.4s; }
+@keyframes pulse {
+  0%, 80%, 100% { opacity: 0.3; transform: scale(0.75); }
+  40% { opacity: 1; transform: scale(1); }
+}
+
+/* Suggestion chip */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.8125rem;
+  color: var(--color-ink-tertiary);
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: all 0.15s var(--ease-out);
+}
+.chip:hover { border-color: var(--color-brand); color: var(--color-brand); background: var(--color-brand-surface); }
+
+/* Header */
+.app-header {
+  height: 56px;
+  background: var(--color-bg-elevated);
+  border-bottom: 1px solid var(--color-border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1.5rem;
+  flex-shrink: 0;
+}
+
+/* Timeline indicator */
+.timeline-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+}
+
+/* Tooltip */
+[data-tip] { position: relative; }
+[data-tip]:hover::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0.25rem 0.5rem;
+  background: var(--color-ink);
+  color: white;
+  font-size: 0.75rem;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* Focus visible */
+:focus-visible { outline: 2px solid var(--color-brand); outline-offset: 2px; }
+
+/* Selection */
+::selection { background: var(--color-brand-light); }
+
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  @theme inline {
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+    --color-card: var(--card);
+    --color-card-foreground: var(--card-foreground);
+    --color-popover: var(--popover);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-secondary: var(--secondary);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-muted: var(--muted);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-accent: var(--accent);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-border: var(--border);
+    --color-input: var(--input);
+    --color-ring: var(--ring);
+    --radius-sm: var(--radius-small);
+    --radius-md: var(--radius-medium);
+    --radius-lg: var(--radius-large);
+  }
+  @layer base {
+    body { background: var(--background); color: var(--foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style id="semantic-token-fallback">
+      .bg-background { background-color: var(--background); }
+      .text-background { color: var(--background); }
+      .border-background { border-color: var(--background); }
+      .ring-background { --tw-ring-color: var(--background); }
+      .bg-foreground { background-color: var(--foreground); }
+      .text-foreground { color: var(--foreground); }
+      .border-foreground { border-color: var(--foreground); }
+      .ring-foreground { --tw-ring-color: var(--foreground); }
+      .bg-card { background-color: var(--card); }
+      .text-card { color: var(--card); }
+      .border-card { border-color: var(--card); }
+      .ring-card { --tw-ring-color: var(--card); }
+      .bg-card-foreground { background-color: var(--card-foreground); }
+      .text-card-foreground { color: var(--card-foreground); }
+      .border-card-foreground { border-color: var(--card-foreground); }
+      .ring-card-foreground { --tw-ring-color: var(--card-foreground); }
+      .bg-popover { background-color: var(--popover); }
+      .text-popover { color: var(--popover); }
+      .border-popover { border-color: var(--popover); }
+      .ring-popover { --tw-ring-color: var(--popover); }
+      .bg-popover-foreground { background-color: var(--popover-foreground); }
+      .text-popover-foreground { color: var(--popover-foreground); }
+      .border-popover-foreground { border-color: var(--popover-foreground); }
+      .ring-popover-foreground { --tw-ring-color: var(--popover-foreground); }
+      .bg-primary { background-color: var(--primary); }
+      .text-primary { color: var(--primary); }
+      .border-primary { border-color: var(--primary); }
+      .ring-primary { --tw-ring-color: var(--primary); }
+      .bg-primary-foreground { background-color: var(--primary-foreground); }
+      .text-primary-foreground { color: var(--primary-foreground); }
+      .border-primary-foreground { border-color: var(--primary-foreground); }
+      .ring-primary-foreground { --tw-ring-color: var(--primary-foreground); }
+      .bg-secondary { background-color: var(--secondary); }
+      .text-secondary { color: var(--secondary); }
+      .border-secondary { border-color: var(--secondary); }
+      .ring-secondary { --tw-ring-color: var(--secondary); }
+      .bg-secondary-foreground { background-color: var(--secondary-foreground); }
+      .text-secondary-foreground { color: var(--secondary-foreground); }
+      .border-secondary-foreground { border-color: var(--secondary-foreground); }
+      .ring-secondary-foreground { --tw-ring-color: var(--secondary-foreground); }
+      .bg-muted { background-color: var(--muted); }
+      .text-muted { color: var(--muted); }
+      .border-muted { border-color: var(--muted); }
+      .ring-muted { --tw-ring-color: var(--muted); }
+      .bg-muted-foreground { background-color: var(--muted-foreground); }
+      .text-muted-foreground { color: var(--muted-foreground); }
+      .border-muted-foreground { border-color: var(--muted-foreground); }
+      .ring-muted-foreground { --tw-ring-color: var(--muted-foreground); }
+      .bg-accent { background-color: var(--accent); }
+      .text-accent { color: var(--accent); }
+      .border-accent { border-color: var(--accent); }
+      .ring-accent { --tw-ring-color: var(--accent); }
+      .bg-accent-foreground { background-color: var(--accent-foreground); }
+      .text-accent-foreground { color: var(--accent-foreground); }
+      .border-accent-foreground { border-color: var(--accent-foreground); }
+      .ring-accent-foreground { --tw-ring-color: var(--accent-foreground); }
+      .bg-border { background-color: var(--border); }
+      .text-border { color: var(--border); }
+      .border-border { border-color: var(--border); }
+      .ring-border { --tw-ring-color: var(--border); }
+      .bg-input { background-color: var(--input); }
+      .text-input { color: var(--input); }
+      .border-input { border-color: var(--input); }
+      .ring-input { --tw-ring-color: var(--input); }
+      .bg-ring { background-color: var(--ring); }
+      .text-ring { color: var(--ring); }
+      .border-ring { border-color: var(--ring); }
+      .ring-ring { --tw-ring-color: var(--ring); }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+</head>
+<body class="h-screen overflow-hidden">
+  <div class="main-area flex h-full">
+    <!-- Sidebar -->
+    <aside class="w-[240px] bg-white border-r border-[var(--color-border-subtle)] flex flex-col shrink-0">
+      <!-- Logo -->
+      <div class="px-5 py-5 flex items-center gap-2.5 border-b border-[var(--color-border-subtle)]">
+        <div class="w-8 h-8 rounded-lg bg-[var(--color-brand)] flex items-center justify-center">
+          <span class="text-white font-bold text-sm">YS</span>
+        </div>
+        <span class="font-semibold text-[var(--color-ink)] text-base tracking-tight">YourStory</span>
+      </div>
+
+      <!-- Navigation -->
+      <nav class="flex-1 px-3 py-4 space-y-1">
+        <a class="nav-link" href="#">
+          <i data-lucide="book-open" class="w-[18px] h-[18px]"></i>
+          <span>我的故事</span>
+        </a>
+        <a class="nav-link" href="#">
+          <i data-lucide="message-circle" class="w-[18px] h-[18px]"></i>
+          <span>对话</span>
+        </a>
+        <a class="nav-link" href="#">
+          <i data-lucide="sparkles" class="w-[18px] h-[18px]"></i>
+          <span>AI 助手</span>
+        </a>
+        <a class="nav-link" href="#">
+          <i data-lucide="bar-chart-3" class="w-[18px] h-[18px]"></i>
+          <span>统计</span>
+        </a>
+        <a class="nav-link active" href="#">
+          <i data-lucide="settings" class="w-[18px] h-[18px]"></i>
+          <span>设置</span>
+        </a>
+      </nav>
+
+      <!-- Version info -->
+      <div class="px-5 py-4 border-t border-[var(--color-border-subtle)]">
+        <p class="text-xs text-[var(--color-ink-faint)]">YourStory v1.2.0</p>
+        <p class="text-xs text-[var(--color-ink-faint)] mt-1">© 2026 YourStory</p>
+      </div>
+    </aside>
+
+    <!-- Main content -->
+    <main class="flex-1 overflow-y-auto bg-[var(--color-bg)]">
+      <div class="max-w-3xl mx-auto px-8 py-8 animate-fade-in">
+        <!-- Header -->
+        <div class="mb-8">
+          <h1 class="text-2xl font-bold text-[var(--color-ink)] font-[var(--font-serif)]">设置</h1>
+          <p class="text-sm text-[var(--color-ink-muted)] mt-1">配置 AI 参数与写作偏好，打造专属创作体验</p>
+        </div>
+
+        <!-- Section 1: AI Configuration -->
+        <section class="mb-6 bg-white border border-[var(--color-border-subtle)] rounded-[var(--radius-lg)] p-6">
+          <div class="flex items-start gap-3 mb-5">
+            <div class="w-10 h-10 rounded-[var(--radius-md)] bg-[var(--color-brand-surface)] flex items-center justify-center shrink-0">
+              <i data-lucide="cpu" class="w-5 h-5 text-[var(--color-brand)]"></i>
+            </div>
+            <div>
+              <h2 class="text-base font-semibold text-[var(--color-ink)]">AI 配置</h2>
+              <p class="text-xs text-[var(--color-ink-muted)] mt-0.5">配置 API 密钥与 AI 模型参数</p>
+            </div>
+          </div>
+
+          <!-- API Key -->
+          <div class="mb-5">
+            <label class="block text-sm font-medium text-[var(--color-ink-secondary)] mb-2">API Key</label>
+            <div class="flex gap-2">
+              <input type="password" class="input flex-1" placeholder="sk-..." value="sk-proj-xxxxxxxxxxxxxxxx">
+              <button class="btn btn-primary shrink-0">
+                <i data-lucide="save" class="w-4 h-4"></i>
+                保存
+              </button>
+            </div>
+            <div class="flex items-center gap-1.5 mt-2 text-xs text-[var(--color-ink-muted)]">
+              <i data-lucide="lock" class="w-3.5 h-3.5"></i>
+              <span>密钥仅存储在本地浏览器，不会上传至任何服务器</span>
+            </div>
+          </div>
+
+          <!-- Model Selection -->
+          <div class="mb-5">
+            <label class="block text-sm font-medium text-[var(--color-ink-secondary)] mb-2">模型选择</label>
+            <div class="grid grid-cols-2 gap-3">
+              <!-- GPT-4 selected -->
+              <div class="model-card selected border border-[var(--color-border)] rounded-[var(--radius-md)] p-3 cursor-pointer transition-all hover:border-[var(--color-brand)] relative">
+                <div class="flex items-center justify-between mb-1">
+                  <span class="text-sm font-medium text-[var(--color-ink)]">GPT-4</span>
+                  <i data-lucide="check-circle-2" class="w-4 h-4 text-[var(--color-brand)] model-check opacity-0 transition-opacity"></i>
+                </div>
+                <p class="text-xs text-[var(--color-ink-muted)]">强大综合能力</p>
+              </div>
+              <div class="model-card border border-[var(--color-border)] rounded-[var(--radius-md)] p-3 cursor-pointer transition-all hover:border-[var(--color-brand)] relative">
+                <div class="flex items-center justify-between mb-1">
+                  <span class="text-sm font-medium text-[var(--color-ink)]">GPT-4o</span>
+                  <i data-lucide="check-circle-2" class="w-4 h-4 text-[var(--color-brand)] model-check opacity-0 transition-opacity"></i>
+                </div>
+                <p class="text-xs text-[var(--color-ink-muted)]">更快更经济</p>
+              </div>
+              <div class="model-card border border-[var(--color-border)] rounded-[var(--radius-md)] p-3 cursor-pointer transition-all hover:border-[var(--color-brand)] relative">
+                <div class="flex items-center justify-between mb-1">
+                  <span class="text-sm font-medium text-[var(--color-ink)]">Claude 3.5</span>
+                  <i data-lucide="check-circle-2" class="w-4 h-4 text-[var(--color-brand)] model-check opacity-0 transition-opacity"></i>
+                </div>
+                <p class="text-xs text-[var(--color-ink-muted)]">深度推理</p>
+              </div>
+              <div class="model-card border border-[var(--color-border)] rounded-[var(--radius-md)] p-3 cursor-pointer transition-all hover:border-[var(--color-brand)] relative">
+                <div class="flex items-center justify-between mb-1">
+                  <span class="text-sm font-medium text-[var(--color-ink)]">DeepSeek</span>
+                  <i data-lucide="check-circle-2" class="w-4 h-4 text-[var(--color-brand)] model-check opacity-0 transition-opacity"></i>
+                </div>
+                <p class="text-xs text-[var(--color-ink-muted)]">中文优化</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Creativity slider -->
+          <div class="mb-5">
+            <div class="flex items-center justify-between mb-2">
+              <label class="text-sm font-medium text-[var(--color-ink-secondary)]">创意程度</label>
+              <span class="text-xs font-medium text-[var(--color-brand)] bg-[var(--color-brand-surface)] px-2 py-0.5 rounded-full">0.7</span>
+            </div>
+            <input type="range" class="range-slider" min="0" max="1" step="0.1" value="0.7">
+            <div class="flex justify-between mt-1.5 text-xs text-[var(--color-ink-faint)]">
+              <span>精确稳定</span>
+              <span>富有创意</span>
+            </div>
+          </div>
+
+          <!-- System prompt -->
+          <div>
+            <label class="block text-sm font-medium text-[var(--color-ink-secondary)] mb-2">系统提示词</label>
+            <textarea class="input resize-none" rows="4" placeholder="自定义系统提示词...">你是一位富有同理心的写作引导者，擅长通过温柔的问题帮助用户回忆和表达生命中的故事。请以耐心、尊重的态度与用户对话。</textarea>
+          </div>
+        </section>
+
+        <!-- Section 2: Writing Preferences -->
+        <section class="mb-6 bg-white border border-[var(--color-border-subtle)] rounded-[var(--radius-lg)] p-6">
+          <div class="flex items-start gap-3 mb-5">
+            <div class="w-10 h-10 rounded-[var(--radius-md)] bg-[var(--color-gold-light)] flex items-center justify-center shrink-0">
+              <i data-lucide="pen-tool" class="w-5 h-5 text-[var(--color-gold)]"></i>
+            </div>
+            <div>
+              <h2 class="text-base font-semibold text-[var(--color-ink)]">写作偏好</h2>
+              <p class="text-xs text-[var(--color-ink-muted)] mt-0.5">自定义写作流程与交互方式</p>
+            </div>
+          </div>
+
+          <div class="divide-y divide-[var(--color-border-subtle)]">
+            <!-- Toggle 1 -->
+            <div class="flex items-center justify-between py-3.5">
+              <div>
+                <p class="text-sm font-medium text-[var(--color-ink)]">自动保存草稿</p>
+                <p class="text-xs text-[var(--color-ink-muted)] mt-0.5">每 30 秒自动保存当前编辑内容</p>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <!-- Toggle 2 -->
+            <div class="flex items-center justify-between py-3.5">
+              <div>
+                <p class="text-sm font-medium text-[var(--color-ink)]">自动提取事件</p>
+                <p class="text-xs text-[var(--color-ink-muted)] mt-0.5">对话中自动识别并记录关键事件</p>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <!-- Toggle 3 -->
+            <div class="flex items-center justify-between py-3.5">
+              <div>
+                <p class="text-sm font-medium text-[var(--color-ink)]">温柔引导模式</p>
+                <p class="text-xs text-[var(--color-ink-muted)] mt-0.5">AI 以温和渐进的方式引导对话</p>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <!-- Toggle 4 -->
+            <div class="flex items-center justify-between py-3.5">
+              <div>
+                <p class="text-sm font-medium text-[var(--color-ink)]">发送通知</p>
+                <p class="text-xs text-[var(--color-ink-muted)] mt-0.5">定时提醒与创作建议推送</p>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+        </section>
+
+        <!-- Section 3: Data & Privacy -->
+        <section class="mb-8 bg-white border border-[var(--color-border-subtle)] rounded-[var(--radius-lg)] p-6">
+          <div class="flex items-start gap-3 mb-5">
+            <div class="w-10 h-10 rounded-[var(--radius-md)] bg-[var(--color-sage-light)] flex items-center justify-center shrink-0">
+              <i data-lucide="shield-check" class="w-5 h-5 text-[var(--color-sage)]"></i>
+            </div>
+            <div>
+              <h2 class="text-base font-semibold text-[var(--color-ink)]">数据与隐私</h2>
+              <p class="text-xs text-[var(--color-ink-muted)] mt-0.5">管理本地数据存储与导出</p>
+            </div>
+          </div>
+
+          <!-- Local storage status -->
+          <div class="bg-[var(--color-success-bg)] border border-[rgba(74,158,92,0.15)] rounded-[var(--radius-md)] p-4 mb-4 flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+              <i data-lucide="hard-drive" class="w-5 h-5 text-[var(--color-success)]"></i>
+              <div>
+                <p class="text-sm font-medium text-[var(--color-ink)]">本地数据存储</p>
+                <p class="text-xs text-[var(--color-ink-muted)]">所有数据均安全保存在您的设备中</p>
+              </div>
+            </div>
+            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-[var(--color-success)] text-white">
+              <i data-lucide="check" class="w-3 h-3"></i>
+              已启用
+            </span>
+          </div>
+
+          <!-- Action buttons -->
+          <div class="flex gap-3">
+            <button class="btn btn-ghost border border-[var(--color-border)]">
+              <i data-lucide="download" class="w-4 h-4"></i>
+              导出所有数据
+            </button>
+            <button class="btn btn-ghost border border-[var(--color-danger)] text-[var(--color-danger)] hover:bg-[var(--color-danger-bg)]">
+              <i data-lucide="trash-2" class="w-4 h-4"></i>
+              清除所有数据
+            </button>
+          </div>
+        </section>
+
+        <!-- Bottom buttons -->
+        <div class="flex items-center justify-end gap-3 pb-8">
+          <button class="btn btn-ghost border border-[var(--color-border)] px-5">取消</button>
+          <button class="btn btn-primary px-6">
+            <i data-lucide="check" class="w-4 h-4"></i>
+            保存设置
+          </button>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    lucide.createIcons();
+  </script>
+
+    <style>
+    body {
+      font-family: var(--font-sans);
+      background: var(--color-bg);
+      color: var(--color-ink);
+      -webkit-font-smoothing: antialiased;
+    }
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: var(--radius-full); }
+
+    /* Toggle - pure CSS */
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 24px;
+      flex-shrink: 0;
+    }
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+      position: absolute;
+    }
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: var(--color-bg-subtle);
+      border-radius: var(--radius-full);
+      border: 1px solid var(--color-border);
+      transition: all 0.2s var(--ease-out, cubic-bezier(0.22, 0.61, 0.36, 1));
+    }
+    .toggle-slider::before {
+      content: '';
+      position: absolute;
+      height: 18px;
+      width: 18px;
+      left: 2px;
+      bottom: 2px;
+      background: white;
+      border-radius: 50%;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+      transition: all 0.2s var(--ease-out, cubic-bezier(0.22, 0.61, 0.36, 1));
+    }
+    .toggle-switch input:checked + .toggle-slider {
+      background: var(--color-brand);
+      border-color: var(--color-brand);
+    }
+    .toggle-switch input:checked + .toggle-slider::before {
+      transform: translateX(20px);
+    }
+
+    /* Range slider */
+    .range-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 4px;
+      border-radius: var(--radius-full);
+      background: var(--color-bg-subtle);
+      outline: none;
+      cursor: pointer;
+    }
+    .range-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--color-brand);
+      border: 3px solid white;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+      cursor: pointer;
+    }
+    .range-slider::-moz-range-thumb {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--color-brand);
+      border: 3px solid white;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+      cursor: pointer;
+    }
+
+    /* Model card selected state */
+    .model-card.selected {
+      border-color: var(--color-brand);
+      background: var(--color-brand-surface);
+    }
+    .model-card.selected .model-check {
+      opacity: 1;
+    }
+
+    /* Nav link */
+    .nav-link {
+      display: flex;
+      align-items: center;
+      gap: 0.625rem;
+      padding: 0.5rem 0.75rem;
+      border-radius: var(--radius-md);
+      font-size: 0.875rem;
+      color: var(--color-ink-muted);
+      transition: all 0.15s ease;
+      cursor: pointer;
+    }
+    .nav-link:hover { background: var(--color-bg-hover); color: var(--color-ink); }
+    .nav-link.active { background: var(--color-brand-surface); color: var(--color-brand); font-weight: 500; }
+
+    /* Animation */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-in { animation: fadeIn 0.35s ease-out; }
+  </style>
+</body>
+</html>

@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的自传 · YourStory</title>
+    <style id="theme-vars">
+@import "tailwindcss";
+
+@theme {
+  /* Brand - Warm Terracotta (暖赤陶) */
+  --color-brand: #da7756;
+  --color-brand-hover: #c4684a;
+  --color-brand-light: rgba(218, 119, 86, 0.1);
+  --color-brand-surface: rgba(218, 119, 86, 0.06);
+  
+  /* Literary Accent Colors (文学感辅助色) */
+  --color-gold: #c9a96e;
+  --color-gold-light: rgba(201, 169, 110, 0.12);
+  --color-sage: #7a9e7e;
+  --color-sage-light: rgba(122, 158, 126, 0.12);
+  
+  /* Neutrals */
+  --color-ink: #1a1a1a;
+  --color-ink-secondary: #4a4a4a;
+  --color-ink-tertiary: #6b6b6b;
+  --color-ink-muted: #8a8a8a;
+  --color-ink-faint: #b0b0b0;
+  
+  /* Backgrounds */
+  --color-bg: #faf8f5;
+  --color-bg-elevated: #ffffff;
+  --color-bg-subtle: #f5f0eb;
+  --color-bg-hover: rgba(0, 0, 0, 0.02);
+  
+  /* Borders */
+  --color-border: rgba(0, 0, 0, 0.1);
+  --color-border-subtle: rgba(0, 0, 0, 0.06);
+  --color-border-emphasis: rgba(0, 0, 0, 0.15);
+  
+  /* Semantic */
+  --color-success: #2d9d4e;
+  --color-success-bg: rgba(45, 157, 78, 0.1);
+  --color-warning: #e5a100;
+  --color-warning-bg: rgba(229, 161, 0, 0.1);
+  --color-danger: #d1242f;
+  --color-danger-bg: rgba(209, 36, 47, 0.1);
+  
+  /* Typography */
+  --font-serif: "Noto Serif SC", Georgia, serif;
+  --font-sans: "Inter", "Noto Sans SC", system-ui, sans-serif;
+  
+  /* Spacing */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+  --radius-full: 9999px;
+  
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.03);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.08);
+  
+  /* Animation */
+  --ease-out: cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+:root {
+  --background: #faf8f5;
+  --foreground: #1a1a1a;
+  --card: #ffffff;
+  --card-foreground: #1a1a1a;
+  --popover: #ffffff;
+  --popover-foreground: #1a1a1a;
+  --primary: #da7756;
+  --primary-foreground: #ffffff;
+  --secondary: #f5f0eb;
+  --secondary-foreground: #1a1a1a;
+  --muted: #f5f0eb;
+  --muted-foreground: #8a8a8a;
+  --accent: rgba(218, 119, 86, 0.06);
+  --accent-foreground: #1a1a1a;
+  --border: rgba(0, 0, 0, 0.1);
+  --input: rgba(0, 0, 0, 0.1);
+  --ring: rgba(218, 119, 86, 0.2);
+  --radius-small: 6px;
+  --radius-medium: 10px;
+  --radius-large: 14px;
+}
+
+.text-serif { font-family: var(--font-serif); }
+.text-sans { font-family: var(--font-sans); }
+
+body {
+  font-family: var(--font-sans);
+  background: var(--color-bg);
+  color: var(--color-ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: var(--radius-full); }
+::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.15); }
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in { animation: fadeIn 0.35s var(--ease-out); }
+.animate-slide-up { animation: slideUp 0.4s var(--ease-out); }
+
+/* Button */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: var(--radius-md);
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s var(--ease-out);
+  white-space: nowrap;
+}
+.btn:active { transform: scale(0.97); }
+.btn-primary {
+  background: var(--color-brand);
+  color: white;
+  box-shadow: 0 1px 2px rgba(218, 119, 86, 0.15);
+}
+.btn-primary:hover { background: var(--color-brand-hover); box-shadow: var(--shadow-md); }
+.btn-ghost {
+  background: transparent;
+  color: var(--color-ink-tertiary);
+}
+.btn-ghost:hover { background: var(--color-bg-hover); color: var(--color-ink); }
+
+/* Input */
+.input {
+  width: 100%;
+  padding: 0.625rem 0.875rem;
+  font-size: 0.875rem;
+  color: var(--color-ink);
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  outline: none;
+  transition: all 0.15s var(--ease-out);
+}
+.input:hover { border-color: var(--color-border-emphasis); }
+.input:focus { border-color: var(--color-brand); box-shadow: 0 0 0 3px var(--color-brand-light); }
+.input::placeholder { color: var(--color-ink-faint); }
+
+/* Tab */
+.tab {
+  padding: 0.5rem 0;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-ink-muted);
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s var(--ease-out);
+}
+.tab:hover { color: var(--color-ink); }
+.tab.active { color: var(--color-brand); border-bottom-color: var(--color-brand); }
+
+/* Card */
+.card {
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+}
+
+/* Badge */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: var(--radius-full);
+  line-height: 1.4;
+}
+
+/* Nav Link */
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  color: var(--color-ink-muted);
+  transition: all 0.15s var(--ease-out);
+  cursor: pointer;
+}
+.nav-link:hover { background: var(--color-bg-hover); color: var(--color-ink); }
+.nav-link.active { background: var(--color-brand-surface); color: var(--color-brand); font-weight: 500; }
+.nav-link svg { width: 18px; height: 18px; stroke-width: 1.5; }
+
+/* Progress Bar */
+.progress-track {
+  height: 4px;
+  border-radius: var(--radius-full);
+  background: var(--color-bg-subtle);
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  background: var(--color-brand);
+  transition: width 0.4s var(--ease-out);
+}
+
+/* Sidebar */
+.sidebar {
+  width: 240px;
+  background: var(--color-bg-elevated);
+  border-right: 1px solid var(--color-border-subtle);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+/* Main content area */
+.main-area {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Content panel */
+.content-panel {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.5rem 2rem;
+}
+
+/* Right panel */
+.right-panel {
+  width: 260px;
+  background: var(--color-bg-elevated);
+  border-left: 1px solid var(--color-border-subtle);
+  overflow-y: auto;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Section heading */
+.section-title {
+  font-family: var(--font-serif);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-ink);
+}
+
+/* Stat item */
+.stat-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.625rem 0;
+}
+.stat-row + .stat-row { border-top: 1px solid var(--color-border-subtle); }
+
+/* Activity item */
+.activity-item {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  padding: 0.5rem 0;
+}
+
+/* Quick action */
+.quick-action {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.625rem 0.75rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-subtle);
+  cursor: pointer;
+  transition: all 0.15s var(--ease-out);
+}
+.quick-action:hover { border-color: var(--color-brand); background: var(--color-brand-surface); }
+.quick-action:hover svg { color: var(--color-brand); }
+.quick-action:hover span { color: var(--color-brand); }
+
+/* Chapter card */
+.chapter-card {
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  transition: all 0.15s var(--ease-out);
+}
+.chapter-card:hover { box-shadow: var(--shadow-md); border-color: var(--color-border); }
+
+/* Chat bubble */
+.chat-bubble {
+  padding: 0.75rem 1rem;
+  max-width: 80%;
+  word-wrap: break-word;
+  font-size: 0.9375rem;
+  line-height: 1.65;
+}
+.chat-bubble-user {
+  background: var(--color-bg-subtle);
+  border-radius: var(--radius-xl) var(--radius-xl) 4px var(--radius-xl);
+  margin-left: auto;
+}
+.chat-bubble-ai {
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 4px var(--radius-xl) var(--radius-xl) var(--radius-xl);
+  font-family: var(--font-serif);
+  line-height: 1.75;
+}
+
+/* Avatar */
+.avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 0.875rem;
+}
+
+/* Loading dots */
+.dot {
+  width: 5px;
+  height: 5px;
+  border-radius: var(--radius-full);
+  background: var(--color-ink-muted);
+  animation: pulse 1.4s infinite ease-in-out;
+}
+.dot:nth-child(1) { animation-delay: 0s; }
+.dot:nth-child(2) { animation-delay: 0.2s; }
+.dot:nth-child(3) { animation-delay: 0.4s; }
+@keyframes pulse {
+  0%, 80%, 100% { opacity: 0.3; transform: scale(0.75); }
+  40% { opacity: 1; transform: scale(1); }
+}
+
+/* Suggestion chip */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.8125rem;
+  color: var(--color-ink-tertiary);
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: all 0.15s var(--ease-out);
+}
+.chip:hover { border-color: var(--color-brand); color: var(--color-brand); background: var(--color-brand-surface); }
+
+/* Header */
+.app-header {
+  height: 56px;
+  background: var(--color-bg-elevated);
+  border-bottom: 1px solid var(--color-border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1.5rem;
+  flex-shrink: 0;
+}
+
+/* Timeline indicator */
+.timeline-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+}
+
+/* Tooltip */
+[data-tip] { position: relative; }
+[data-tip]:hover::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0.25rem 0.5rem;
+  background: var(--color-ink);
+  color: white;
+  font-size: 0.75rem;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* Focus visible */
+:focus-visible { outline: 2px solid var(--color-brand); outline-offset: 2px; }
+
+/* Selection */
+::selection { background: var(--color-brand-light); }
+
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  @theme inline {
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+    --color-card: var(--card);
+    --color-card-foreground: var(--card-foreground);
+    --color-popover: var(--popover);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-secondary: var(--secondary);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-muted: var(--muted);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-accent: var(--accent);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-border: var(--border);
+    --color-input: var(--input);
+    --color-ring: var(--ring);
+    --radius-sm: var(--radius-small);
+    --radius-md: var(--radius-medium);
+    --radius-lg: var(--radius-large);
+  }
+  @layer base {
+    body { background: var(--background); color: var(--foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style id="semantic-token-fallback">
+      .bg-background { background-color: var(--background); }
+      .text-background { color: var(--background); }
+      .border-background { border-color: var(--background); }
+      .ring-background { --tw-ring-color: var(--background); }
+      .bg-foreground { background-color: var(--foreground); }
+      .text-foreground { color: var(--foreground); }
+      .border-foreground { border-color: var(--foreground); }
+      .ring-foreground { --tw-ring-color: var(--foreground); }
+      .bg-card { background-color: var(--card); }
+      .text-card { color: var(--card); }
+      .border-card { border-color: var(--card); }
+      .ring-card { --tw-ring-color: var(--card); }
+      .bg-card-foreground { background-color: var(--card-foreground); }
+      .text-card-foreground { color: var(--card-foreground); }
+      .border-card-foreground { border-color: var(--card-foreground); }
+      .ring-card-foreground { --tw-ring-color: var(--card-foreground); }
+      .bg-popover { background-color: var(--popover); }
+      .text-popover { color: var(--popover); }
+      .border-popover { border-color: var(--popover); }
+      .ring-popover { --tw-ring-color: var(--popover); }
+      .bg-popover-foreground { background-color: var(--popover-foreground); }
+      .text-popover-foreground { color: var(--popover-foreground); }
+      .border-popover-foreground { border-color: var(--popover-foreground); }
+      .ring-popover-foreground { --tw-ring-color: var(--popover-foreground); }
+      .bg-primary { background-color: var(--primary); }
+      .text-primary { color: var(--primary); }
+      .border-primary { border-color: var(--primary); }
+      .ring-primary { --tw-ring-color: var(--primary); }
+      .bg-primary-foreground { background-color: var(--primary-foreground); }
+      .text-primary-foreground { color: var(--primary-foreground); }
+      .border-primary-foreground { border-color: var(--primary-foreground); }
+      .ring-primary-foreground { --tw-ring-color: var(--primary-foreground); }
+      .bg-secondary { background-color: var(--secondary); }
+      .text-secondary { color: var(--secondary); }
+      .border-secondary { border-color: var(--secondary); }
+      .ring-secondary { --tw-ring-color: var(--secondary); }
+      .bg-secondary-foreground { background-color: var(--secondary-foreground); }
+      .text-secondary-foreground { color: var(--secondary-foreground); }
+      .border-secondary-foreground { border-color: var(--secondary-foreground); }
+      .ring-secondary-foreground { --tw-ring-color: var(--secondary-foreground); }
+      .bg-muted { background-color: var(--muted); }
+      .text-muted { color: var(--muted); }
+      .border-muted { border-color: var(--muted); }
+      .ring-muted { --tw-ring-color: var(--muted); }
+      .bg-muted-foreground { background-color: var(--muted-foreground); }
+      .text-muted-foreground { color: var(--muted-foreground); }
+      .border-muted-foreground { border-color: var(--muted-foreground); }
+      .ring-muted-foreground { --tw-ring-color: var(--muted-foreground); }
+      .bg-accent { background-color: var(--accent); }
+      .text-accent { color: var(--accent); }
+      .border-accent { border-color: var(--accent); }
+      .ring-accent { --tw-ring-color: var(--accent); }
+      .bg-accent-foreground { background-color: var(--accent-foreground); }
+      .text-accent-foreground { color: var(--accent-foreground); }
+      .border-accent-foreground { border-color: var(--accent-foreground); }
+      .ring-accent-foreground { --tw-ring-color: var(--accent-foreground); }
+      .bg-border { background-color: var(--border); }
+      .text-border { color: var(--border); }
+      .border-border { border-color: var(--border); }
+      .ring-border { --tw-ring-color: var(--border); }
+      .bg-input { background-color: var(--input); }
+      .text-input { color: var(--input); }
+      .border-input { border-color: var(--input); }
+      .ring-input { --tw-ring-color: var(--input); }
+      .bg-ring { background-color: var(--ring); }
+      .text-ring { color: var(--ring); }
+      .border-ring { border-color: var(--ring); }
+      .ring-ring { --tw-ring-color: var(--ring); }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+</head>
+<body class="h-screen overflow-hidden">
+  <div class="main-area">
+
+    <!-- ============ SIDEBAR ============ -->
+    <aside class="sidebar">
+      <!-- Logo -->
+      <div class="px-5 pt-6 pb-4">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background: var(--color-brand);">
+            <span class="text-white font-bold text-sm">Y</span>
+          </div>
+          <span class="font-semibold text-[15px]" style="color: var(--color-ink);">YourStory</span>
+        </div>
+      </div>
+
+      <!-- Navigation -->
+      <nav class="flex-1 px-3 py-2 space-y-0.5">
+        <a class="nav-link" href="home.html">
+          <i data-lucide="home"></i>
+          <span>首页</span>
+        </a>
+        <a class="nav-link" href="dialogue.html">
+          <i data-lucide="message-circle"></i>
+          <span>对话创作</span>
+        </a>
+        <a class="nav-link active" href="autobiography.html">
+          <i data-lucide="book-open"></i>
+          <span>我的自传</span>
+        </a>
+        <a class="nav-link" href="settings.html">
+          <i data-lucide="settings"></i>
+          <span>设置</span>
+        </a>
+      </nav>
+
+      <!-- Overall Progress -->
+      <div class="px-5 py-5 border-t" style="border-color: var(--color-border-subtle);">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs font-medium" style="color: var(--color-ink-muted);">整体进度</span>
+          <span class="text-xs font-semibold" style="color: var(--color-brand);">38%</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" style="width: 38%;"></div>
+        </div>
+        <p class="text-[11px] mt-2" style="color: var(--color-ink-faint);">3/8 章节已完成 · 继续加油</p>
+      </div>
+    </aside>
+
+    <!-- ============ MAIN CONTENT ============ -->
+    <main class="content-panel">
+
+      <!-- Title Bar -->
+      <div class="flex items-center justify-between mb-5 animate-fade-in">
+        <h1 class="text-2xl font-bold" style="font-family: var(--font-serif); color: var(--color-ink);">我的自传</h1>
+        <div class="flex items-center gap-2.5">
+          <button class="btn btn-outline">
+            <i data-lucide="download" style="width: 15px; height: 15px;"></i>
+            <span>导出</span>
+          </button>
+          <button class="btn btn-primary">
+            <i data-lucide="plus" style="width: 15px; height: 15px;"></i>
+            <span>新建章节</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Tabs -->
+      <div class="flex items-center gap-6 border-b mb-5 animate-fade-in" style="border-color: var(--color-border-subtle); animation-delay: 0.05s;">
+        <div class="tab active">全部章节 <span class="text-xs ml-1" style="color: var(--color-ink-faint);">8</span></div>
+        <div class="tab">草稿 <span class="text-xs ml-1" style="color: var(--color-ink-faint);">2</span></div>
+        <div class="tab">已开始 <span class="text-xs ml-1" style="color: var(--color-ink-faint);">3</span></div>
+        <div class="tab">已完成 <span class="text-xs ml-1" style="color: var(--color-ink-faint);">3</span></div>
+      </div>
+
+      <!-- Statistics Row -->
+      <div class="grid grid-cols-4 gap-3.5 mb-6 animate-fade-in" style="animation-delay: 0.1s;">
+        <!-- Total Chapters -->
+        <div class="stat-card">
+          <div class="flex items-center gap-2 mb-2">
+            <div class="w-7 h-7 rounded-md flex items-center justify-center" style="background: var(--color-brand-surface);">
+              <i data-lucide="book-open" style="width: 14px; height: 14px; color: var(--color-brand);"></i>
+            </div>
+            <span class="text-xs" style="color: var(--color-ink-muted);">总章节</span>
+          </div>
+          <p class="text-2xl font-bold" style="color: var(--color-ink);">8</p>
+        </div>
+        <!-- Completed -->
+        <div class="stat-card">
+          <div class="flex items-center gap-2 mb-2">
+            <div class="w-7 h-7 rounded-md flex items-center justify-center" style="background: var(--color-success-bg);">
+              <i data-lucide="check-circle-2" style="width: 14px; height: 14px; color: var(--color-success);"></i>
+            </div>
+            <span class="text-xs" style="color: var(--color-ink-muted);">已完成</span>
+          </div>
+          <p class="text-2xl font-bold" style="color: var(--color-ink);">3</p>
+        </div>
+        <!-- Total Words -->
+        <div class="stat-card">
+          <div class="flex items-center gap-2 mb-2">
+            <div class="w-7 h-7 rounded-md flex items-center justify-center" style="background: var(--color-warning-bg);">
+              <i data-lucide="file-text" style="width: 14px; height: 14px; color: var(--color-warning);"></i>
+            </div>
+            <span class="text-xs" style="color: var(--color-ink-muted);">总字数</span>
+          </div>
+          <p class="text-2xl font-bold" style="color: var(--color-ink);">2,450</p>
+        </div>
+        <!-- Dialogue Turns -->
+        <div class="stat-card">
+          <div class="flex items-center gap-2 mb-2">
+            <div class="w-7 h-7 rounded-md flex items-center justify-center" style="background: rgba(106, 155, 194, 0.08);">
+              <i data-lucide="messages-square" style="width: 14px; height: 14px; color: var(--color-sky);"></i>
+            </div>
+            <span class="text-xs" style="color: var(--color-ink-muted);">对话轮次</span>
+          </div>
+          <p class="text-2xl font-bold" style="color: var(--color-ink);">128</p>
+        </div>
+      </div>
+
+      <!-- Chapter List -->
+      <div class="space-y-3 animate-slide-up" style="animation-delay: 0.15s;">
+
+        <!-- Chapter 1: Completed -->
+        <div class="chapter-card">
+          <div class="flex items-start gap-3">
+            <div class="w-9 h-9 rounded-lg flex items-center justify-center mt-0.5 flex-shrink-0" style="background: var(--color-success-bg);">
+              <i data-lucide="check-circle-2" style="width: 18px; height: 18px; color: var(--color-success);"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center justify-between mb-1">
+                <h3 class="font-semibold text-[15px]" style="color: var(--color-ink);">第一章 · 童年时光</h3>
+                <span class="text-xs px-2 py-0.5 rounded-full font-medium" style="background: var(--color-success-bg); color: var(--color-success);">已完成</span>
+              </div>
+              <p class="text-sm leading-relaxed mb-2.5" style="color: var(--color-ink-tertiary);">那些在乡间小路上奔跑的日子，阳光穿过梧桐树叶洒落，外婆的故事和蝉鸣一起编织成最温柔的夏天。</p>
+              <div class="flex items-center gap-4 mb-2.5">
+                <span class="text-xs flex items-center gap-1" style="color: var(--color-ink-muted);">
+                  <i data-lucide="file-text" style="width: 12px; height: 12px;"></i> 680字
+                </span>
+                <span class="text-xs flex items-center gap-1" style="color: var(--color-ink-muted);">
+                  <i data-lucide="messages-square" style="width: 12px; height: 12px;"></i> 32轮
+                </span>
+                <span class="text-xs flex items-center gap-1" style="color: var(--color-ink-muted);">
+                  <i data-lucide="calendar" style="width: 12px; height: 12px;"></i> 1990-1996
+                </span>
+              </div>
+              <div class="progress-track">
+                <div class="progress-fill" style="width: 100%; background: var(--color-success);"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Chapter 2: Completed -->
+        <div class="chapter-card">
+          <div class="flex items-start gap-3">
+            <div class="w-9 h-9 rounded-lg flex items-center justify-center mt-0.5 flex-shrink-0" style="background: var(--color-success-bg);">
+              <i data-lucide="check-circle-2" style="width: 18px; height: 18px; color: var(--color-success);"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center justify-between mb-1">
+                <h3 class="font-semibold text-[15px]" style="color: var(--color-ink);">第二章 · 少年求学</h3>
+                <span class="text-xs px-2 py-0.5 rounded-full font-medium" style="background: var(--color-success-bg); color: var(--color-success);">已完成</span>
+              </div>
+              <p class="text-sm leading-relaxed mb-2.5" style="color: var(--color-ink-tertiary);">第一次离开家乡，踏上驶向城市的列车。窗外的风景飞速后退，前方是未知的世界和满怀期待的自己。</p>
+              <div class="flex items-center gap-4 mb-2.5">
+                <span class="text-xs flex items-center gap-1" style="color: var(--color-ink-muted);">
+                  <i data-lucide="file-text" style="width: 12px; height: 12px;"></i> 850字
+                </span>
+                <span class="text-xs flex items-center gap-1" style="color: var(--color-ink-muted);">
+                  <i data-lucide="messages-square" style="width: 12px; height: 12px;"></i> 45轮
+                </span>
+                <span class="text-xs flex items-center gap-1" style="color: var(--color-ink-muted);">
+                  <i data-lucide="calendar" style="width: 12px; height: 12px;"></i> 1996-2002
+                </span>
+              </div>
+              <div class="progress-track">
+                <div class="progress-fill" style="width: 100%; background: var(--color-success);"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Chapter 3: In Progress -->
+        <div class="chapter-card" style="border-color: rgba(200, 117, 90, 0.15);">
+          <div class="flex items-start gap-3">
+            <div class="w-9 h-9 rounded-lg flex items-center justify-center mt-0.5 flex-shrink-0" style="background: var(--color-brand-surface);">
+              <i data-lucide="pen-line" style="width: 18px; height: 18px; color: var(--color-brand);"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center justify-between mb-1">
+                <h3 class="font-semibold text-[15px]" style="color: var(--color-ink);">第三章 · 初入职场</h3>
+                <span class="text-xs px-2 py-0.5 rounded-full font-medium" style="background: var(--color-brand-surface); color: var(--color-brand);">进行中</span>
+              </div>
+              <div class="quote-preview mb-2.5">
+                那是我第一次站在写字楼的落地窗前，看着脚下川流不息的人群，心里默念着："这就是我将要打拼的世界啊。"
+              </div>
+              <div class="flex items-center gap-4 mb-2.5">
+                <span class="text-xs flex items-center gap-1" style="color: var(--color-ink-muted);">
+                  <i data-lucide="file-text" style="width: 12px; height: 12px;"></i> 520字
+                </span>
+                <span class="text-xs flex items-center gap-1" style="color: var(--color-ink-muted);">
+                  <i data-lucide="messages-square" style="width: 12px; height: 12px;"></i> 28轮
+                </span>
+                <span class="text-xs flex items-center gap-1" style="color: var(--color-ink-muted);">
+                  <i data-lucide="calendar" style="width: 12px; height: 12px;"></i> 2002-2005
+                </span>
+              </div>
+              <div class="progress-track">
+                <div class="progress-fill" style="width: 65%;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Chapter 4: Completed -->
+        <div class="chapter-card">
+          <div class="flex items-start gap-3">
+            <div class="w-9 h-9 rounded-lg flex items-center justify-center mt-0.5 flex-shrink-0" style="background: var(--color-success-bg);">
+              <i data-lucide="check-circle-2" style="width: 18px; height: 18px; color: var(--color-success);"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center justify-between mb-1">
+                <h3 class="font-semibold text-[15px]" style="color: var(--color-ink);">第四章 · 遇见爱情</h3>
+                <span class="text-xs px-2 py-0.5 rounded-full font-medium" style="background: var(--color-success-bg); color: var(--color-success);">已完成</span>
+              </div>
+              <p class="text-sm leading-relaxed mb-2.5" style="color: var(--color-ink-tertiary);">那年春天的樱花树下，她穿着白色连衣裙走过来。那一刻，时间仿佛慢了下来，我知道这是命运的安排。</p>
+              <div class="flex items-center gap-4 mb-2.5">
+                <span class="text-xs flex items-center gap-1" style="color: var(--color-ink-muted);">
+                  <i data-lucide="file-text" style="width: 12px; height: 12px;"></i> 400字
+                </span>
+                <span class="text-xs flex items-center gap-1" style="color: var(--color-ink-muted);">
+                  <i data-lucide="messages-square" style="width: 12px; height: 12px;"></i> 23轮
+                </span>
+                <span class="text-xs flex items-center gap-1" style="color: var(--color-ink-muted);">
+                  <i data-lucide="calendar" style="width: 12px; height: 12px;"></i> 2005-2008
+                </span>
+              </div>
+              <div class="progress-track">
+                <div class="progress-fill" style="width: 100%; background: var(--color-success);"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Chapter 5: In Progress -->
+        <div class="chapter-card" style="border-color: rgba(200, 117, 90, 0.15);">
+          <div class="flex items-start gap-3">
+            <div class="w-9 h-9 rounded-lg flex items-center justify-center mt-0.5 flex-shrink-0" style="background: var(--color-brand-surface);">
+              <i data-lucide="pen-line" style="width: 18px; height: 18px; color: var(--color-brand);"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center justify-between mb-1">
+                <h3 class="font-semibold text-[15px]" style="color: var(--color-ink);">第五章 · 成长与蜕变</h3>
+                <span class="text-xs px-2 py-0.5 rounded-full font-medium" style="background: var(--color-brand-surface); color: var(--color-brand);">进行中</span>
+              </div>
+              <div class="quote-preview mb-2.5">
+                生活不会总是如意，但每一次跌倒都让我学会如何更坚定地站起来。那些困难的时光，反而成了最宝贵的财富。
+              </div>
+              <div class="flex items-center gap-4 mb-2.5">
+                <span class="text-xs flex items-center gap-1" style="color: var(--color-ink-muted);">
+                  <i data-lucide="file-text" style="width: 12px; height: 12px;"></i> 0字
+                </span>
+                <span class="text-xs flex items-center gap-1" style="color: var(--color-ink-muted);">
+                  <i data-lucide="messages-square" style="width: 12px; height: 12px;"></i> 0轮
+                </span>
+                <span class="text-xs flex items-center gap-1" style="color: var(--color-ink-muted);">
+                  <i data-lucide="calendar" style="width: 12px; height: 12px;"></i> 2008-2015
+                </span>
+              </div>
+              <div class="progress-track">
+                <div class="progress-fill" style="width: 20%;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Chapter 6: In Progress -->
+        <div class="chapter-card" style="border-color: rgba(200, 117, 90, 0.15);">
+          <div class="flex items-start gap-3">
+            <div class="w-9 h-9 rounded-lg flex items-center justify-center mt-0.5 flex-shrink-0" style="background: var(--color-brand-surface);">
+              <i data-lucide="pen-line" style="width: 18px; height: 18px; color: var(--color-brand);"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center justify-between mb-1">
+                <h3 class="font-semibold text-[15px]" style="color: var(--color-ink);">第六章 · 为人父母</h3>
+                <span class="text-xs px-2 py-0.5 rounded-full font-medium" style="background: var(--color-brand-surface); color: var(--color-brand);">进行中</span>
+              </div>
+              <div class="quote-preview mb-2.5">
+                当护士把那个小小的生命放到我怀里时，我的眼泪不自觉地流了下来。那一刻我才真正理解了"责任"两个字的重量。
+              </div>
+              <div class="flex items-center gap-4 mb-2.5">
+                <span class="text-xs flex items-center gap-1" style="color: var(--color-ink-muted);">
+                  <i data-lucide="file-text" style="width: 12px; height: 12px;"></i> 0字
+                </span>
+                <span class="text-xs flex items-center gap-1" style="color: var(--color-ink-muted);">
+                  <i data-lucide="messages-square" style="width: 12px; height: 12px;"></i> 0轮
+                </span>
+                <span class="text-xs flex items-center gap-1" style="color: var(--color-ink-muted);">
+                  <i data-lucide="calendar" style="width: 12px; height: 12px;"></i> 2015-2018
+                </span>
+              </div>
+              <div class="progress-track">
+                <div class="progress-fill" style="width: 35%;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Chapter 7: Draft -->
+        <div class="chapter-card">
+          <div class="flex items-start gap-3">
+            <div class="w-9 h-9 rounded-lg flex items-center justify-center mt-0.5 flex-shrink-0" style="background: var(--color-bg-subtle);">
+              <i data-lucide="circle" style="width: 18px; height: 18px; color: var(--color-ink-faint);"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center justify-between mb-1">
+                <h3 class="font-semibold text-[15px]" style="color: var(--color-ink-faint);">第七章 · 人生的转折</h3>
+                <span class="text-xs px-2 py-0.5 rounded-full font-medium" style="background: var(--color-bg-subtle); color: var(--color-ink-faint);">草稿</span>
+              </div>
+              <p class="text-sm leading-relaxed mb-2.5" style="color: var(--color-ink-faint); opacity: 0.7;">尚未开始记录这个章节...</p>
+              <div class="flex items-center gap-4 mb-2.5">
+                <span class="text-xs flex items-center gap-1" style="color: var(--color-ink-faint);">
+                  <i data-lucide="file-text" style="width: 12px; height: 12px;"></i> 0字
+                </span>
+                <span class="text-xs flex items-center gap-1" style="color: var(--color-ink-faint);">
+                  <i data-lucide="messages-square" style="width: 12px; height: 12px;"></i> 0轮
+                </span>
+                <span class="text-xs flex items-center gap-1" style="color: var(--color-ink-faint);">
+                  <i data-lucide="calendar" style="width: 12px; height: 12px;"></i> 2018-2022
+                </span>
+              </div>
+              <div class="progress-track">
+                <div class="progress-fill" style="width: 0%;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Chapter 8: 给未来的信 (special) -->
+        <div class="chapter-card" style="border-style: dashed; border-color: rgba(200, 117, 90, 0.25); background: linear-gradient(135deg, var(--color-bg-elevated) 0%, var(--color-brand-surface) 100%);">
+          <div class="flex items-start gap-3">
+            <div class="w-9 h-9 rounded-lg flex items-center justify-center mt-0.5 flex-shrink-0" style="background: linear-gradient(135deg, var(--color-brand) 0%, var(--color-gold) 100%);">
+              <i data-lucide="mail-heart" style="width: 18px; height: 18px; color: white;"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center justify-between mb-1">
+                <h3 class="font-semibold text-[15px]" style="color: var(--color-ink);">尾声 · 给未来的信</h3>
+                <span class="text-xs px-2 py-0.5 rounded-full font-medium" style="background: linear-gradient(135deg, rgba(200, 117, 90, 0.1) 0%, rgba(184, 154, 106, 0.1) 100%); color: var(--color-brand);">草稿</span>
+              </div>
+              <p class="text-sm leading-relaxed mb-3" style="color: var(--color-ink-tertiary);">写一封信给未来的自己，记录此刻的心境、期待和寄语。当岁月流逝后再回望，这将是珍贵的时间胶囊。</p>
+              <div class="flex items-center gap-4 mb-3">
+                <span class="text-xs flex items-center gap-1" style="color: var(--color-ink-muted);">
+                  <i data-lucide="file-text" style="width: 12px; height: 12px;"></i> 0字
+                </span>
+                <span class="text-xs flex items-center gap-1" style="color: var(--color-ink-muted);">
+                  <i data-lucide="messages-square" style="width: 12px; height: 12px;"></i> 0轮
+                </span>
+              </div>
+              <button class="btn btn-primary" style="padding: 0.45rem 1.1rem; font-size: 0.8125rem;">
+                <i data-lucide="pencil" style="width: 14px; height: 14px;"></i>
+                <span>开始写作</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Footer space -->
+      <div class="h-8"></div>
+
+    </main>
+  </div>
+
+  <!-- Initialize Lucide Icons -->
+  <script>
+    lucide.createIcons();
+  </script>
+
+    <style>
+    body {
+      font-family: var(--font-sans);
+      background: var(--color-bg);
+      color: var(--color-ink);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: var(--radius-full); }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.15); }
+
+    /* Animations */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-in { animation: fadeIn 0.35s var(--ease-out); }
+    .animate-slide-up { animation: slideUp 0.4s var(--ease-out); }
+
+    /* Sidebar */
+    .sidebar {
+      width: 240px;
+      background: var(--color-bg-elevated);
+      border-right: 1px solid var(--color-border-subtle);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+    }
+
+    /* Main area */
+    .main-area {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* Content panel */
+    .content-panel {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1.5rem 2rem;
+    }
+
+    /* Nav Link */
+    .nav-link {
+      display: flex;
+      align-items: center;
+      gap: 0.625rem;
+      padding: 0.5rem 0.75rem;
+      border-radius: var(--radius-md);
+      font-size: 0.875rem;
+      color: var(--color-ink-muted);
+      transition: all 0.15s var(--ease-out);
+      cursor: pointer;
+      text-decoration: none;
+    }
+    .nav-link:hover { background: var(--color-bg-hover); color: var(--color-ink); }
+    .nav-link.active { background: var(--color-brand-surface); color: var(--color-brand); font-weight: 500; }
+    .nav-link svg { width: 18px; height: 18px; stroke-width: 1.5; }
+
+    /* Tab */
+    .tab {
+      padding: 0.5rem 0;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--color-ink-muted);
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+      transition: all 0.15s var(--ease-out);
+    }
+    .tab:hover { color: var(--color-ink); }
+    .tab.active { color: var(--color-brand); border-bottom-color: var(--color-brand); }
+
+    /* Progress Bar */
+    .progress-track {
+      height: 4px;
+      border-radius: var(--radius-full);
+      background: var(--color-bg-subtle);
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      border-radius: var(--radius-full);
+      background: var(--color-brand);
+      transition: width 0.4s var(--ease-out);
+    }
+
+    /* Chapter Card */
+    .chapter-card {
+      background: var(--color-bg-elevated);
+      border: 1px solid var(--color-border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 1.25rem;
+      transition: all 0.15s var(--ease-out);
+    }
+    .chapter-card:hover { box-shadow: var(--shadow-md); border-color: var(--color-border); }
+
+    /* Stat Card */
+    .stat-card {
+      background: var(--color-bg-elevated);
+      border: 1px solid var(--color-border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 1rem 1.25rem;
+      transition: all 0.15s var(--ease-out);
+    }
+    .stat-card:hover { box-shadow: var(--shadow-sm); }
+
+    /* Button */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      padding: 0.5rem 1rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      border-radius: var(--radius-md);
+      border: none;
+      cursor: pointer;
+      transition: all 0.15s var(--ease-out);
+      white-space: nowrap;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary {
+      background: var(--color-brand);
+      color: white;
+      box-shadow: 0 1px 2px rgba(200, 117, 90, 0.15);
+    }
+    .btn-primary:hover { background: var(--color-brand-hover); box-shadow: var(--shadow-md); }
+    .btn-outline {
+      background: transparent;
+      color: var(--color-ink-tertiary);
+      border: 1px solid var(--color-border);
+    }
+    .btn-outline:hover { border-color: var(--color-brand); color: var(--color-brand); background: var(--color-brand-surface); }
+
+    /* Quote preview border */
+    .quote-preview {
+      border-left: 3px solid var(--color-brand);
+      padding-left: 0.875rem;
+      background: var(--color-brand-surface);
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+      padding: 0.75rem 0.875rem 0.75rem 1rem;
+      font-family: var(--font-serif);
+      font-size: 0.875rem;
+      line-height: 1.75;
+      color: var(--color-ink-secondary);
+    }
+  </style>
+</body>
+</html>

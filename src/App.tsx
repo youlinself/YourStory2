@@ -15,15 +15,41 @@ function App() {
   return (
     <Router>
       <ToastProvider>
-        <MainLayout>
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/dialogue" element={<DialogueAgent />} />
-            <Route path="/dialogue/:chapterId" element={<DialogueAgent />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/autobiography" element={<Autobiography />} />
-          </Routes>
-        </MainLayout>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route
+            path="/dialogue"
+            element={
+              <MainLayout>
+                <DialogueAgent />
+              </MainLayout>
+            }
+          />
+          <Route
+            path="/dialogue/:chapterId"
+            element={
+              <MainLayout>
+                <DialogueAgent />
+              </MainLayout>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <MainLayout>
+                <Settings />
+              </MainLayout>
+            }
+          />
+          <Route
+            path="/autobiography"
+            element={
+              <MainLayout>
+                <Autobiography />
+              </MainLayout>
+            }
+          />
+        </Routes>
       </ToastProvider>
     </Router>
   );

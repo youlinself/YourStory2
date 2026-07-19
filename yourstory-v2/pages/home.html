@@ -1,0 +1,1140 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>首页 · YourStory</title>
+    <style id="theme-vars">
+@import "tailwindcss";
+
+@theme {
+  /* Brand - Warm Terracotta (暖赤陶) */
+  --color-brand: #da7756;
+  --color-brand-hover: #c4684a;
+  --color-brand-light: rgba(218, 119, 86, 0.1);
+  --color-brand-surface: rgba(218, 119, 86, 0.06);
+  
+  /* Literary Accent Colors (文学感辅助色) */
+  --color-gold: #c9a96e;
+  --color-gold-light: rgba(201, 169, 110, 0.12);
+  --color-sage: #7a9e7e;
+  --color-sage-light: rgba(122, 158, 126, 0.12);
+  
+  /* Neutrals */
+  --color-ink: #1a1a1a;
+  --color-ink-secondary: #4a4a4a;
+  --color-ink-tertiary: #6b6b6b;
+  --color-ink-muted: #8a8a8a;
+  --color-ink-faint: #b0b0b0;
+  
+  /* Backgrounds */
+  --color-bg: #faf8f5;
+  --color-bg-elevated: #ffffff;
+  --color-bg-subtle: #f5f0eb;
+  --color-bg-hover: rgba(0, 0, 0, 0.02);
+  
+  /* Borders */
+  --color-border: rgba(0, 0, 0, 0.1);
+  --color-border-subtle: rgba(0, 0, 0, 0.06);
+  --color-border-emphasis: rgba(0, 0, 0, 0.15);
+  
+  /* Semantic */
+  --color-success: #2d9d4e;
+  --color-success-bg: rgba(45, 157, 78, 0.1);
+  --color-warning: #e5a100;
+  --color-warning-bg: rgba(229, 161, 0, 0.1);
+  --color-danger: #d1242f;
+  --color-danger-bg: rgba(209, 36, 47, 0.1);
+  
+  /* Typography */
+  --font-serif: "Noto Serif SC", Georgia, serif;
+  --font-sans: "Inter", "Noto Sans SC", system-ui, sans-serif;
+  
+  /* Spacing */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+  --radius-full: 9999px;
+  
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.03);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.08);
+  
+  /* Animation */
+  --ease-out: cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+:root {
+  --background: #faf8f5;
+  --foreground: #1a1a1a;
+  --card: #ffffff;
+  --card-foreground: #1a1a1a;
+  --popover: #ffffff;
+  --popover-foreground: #1a1a1a;
+  --primary: #da7756;
+  --primary-foreground: #ffffff;
+  --secondary: #f5f0eb;
+  --secondary-foreground: #1a1a1a;
+  --muted: #f5f0eb;
+  --muted-foreground: #8a8a8a;
+  --accent: rgba(218, 119, 86, 0.06);
+  --accent-foreground: #1a1a1a;
+  --border: rgba(0, 0, 0, 0.1);
+  --input: rgba(0, 0, 0, 0.1);
+  --ring: rgba(218, 119, 86, 0.2);
+  --radius-small: 6px;
+  --radius-medium: 10px;
+  --radius-large: 14px;
+}
+
+.text-serif { font-family: var(--font-serif); }
+.text-sans { font-family: var(--font-sans); }
+
+body {
+  font-family: var(--font-sans);
+  background: var(--color-bg);
+  color: var(--color-ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: var(--radius-full); }
+::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.15); }
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in { animation: fadeIn 0.35s var(--ease-out); }
+.animate-slide-up { animation: slideUp 0.4s var(--ease-out); }
+
+/* Button */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: var(--radius-md);
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s var(--ease-out);
+  white-space: nowrap;
+}
+.btn:active { transform: scale(0.97); }
+.btn-primary {
+  background: var(--color-brand);
+  color: white;
+  box-shadow: 0 1px 2px rgba(218, 119, 86, 0.15);
+}
+.btn-primary:hover { background: var(--color-brand-hover); box-shadow: var(--shadow-md); }
+.btn-ghost {
+  background: transparent;
+  color: var(--color-ink-tertiary);
+}
+.btn-ghost:hover { background: var(--color-bg-hover); color: var(--color-ink); }
+
+/* Input */
+.input {
+  width: 100%;
+  padding: 0.625rem 0.875rem;
+  font-size: 0.875rem;
+  color: var(--color-ink);
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  outline: none;
+  transition: all 0.15s var(--ease-out);
+}
+.input:hover { border-color: var(--color-border-emphasis); }
+.input:focus { border-color: var(--color-brand); box-shadow: 0 0 0 3px var(--color-brand-light); }
+.input::placeholder { color: var(--color-ink-faint); }
+
+/* Tab */
+.tab {
+  padding: 0.5rem 0;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-ink-muted);
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s var(--ease-out);
+}
+.tab:hover { color: var(--color-ink); }
+.tab.active { color: var(--color-brand); border-bottom-color: var(--color-brand); }
+
+/* Card */
+.card {
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+}
+
+/* Badge */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: var(--radius-full);
+  line-height: 1.4;
+}
+
+/* Nav Link */
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  color: var(--color-ink-muted);
+  transition: all 0.15s var(--ease-out);
+  cursor: pointer;
+}
+.nav-link:hover { background: var(--color-bg-hover); color: var(--color-ink); }
+.nav-link.active { background: var(--color-brand-surface); color: var(--color-brand); font-weight: 500; }
+.nav-link svg { width: 18px; height: 18px; stroke-width: 1.5; }
+
+/* Progress Bar */
+.progress-track {
+  height: 4px;
+  border-radius: var(--radius-full);
+  background: var(--color-bg-subtle);
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  background: var(--color-brand);
+  transition: width 0.4s var(--ease-out);
+}
+
+/* Sidebar */
+.sidebar {
+  width: 240px;
+  background: var(--color-bg-elevated);
+  border-right: 1px solid var(--color-border-subtle);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+/* Main content area */
+.main-area {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Content panel */
+.content-panel {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.5rem 2rem;
+}
+
+/* Right panel */
+.right-panel {
+  width: 260px;
+  background: var(--color-bg-elevated);
+  border-left: 1px solid var(--color-border-subtle);
+  overflow-y: auto;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Section heading */
+.section-title {
+  font-family: var(--font-serif);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-ink);
+}
+
+/* Stat item */
+.stat-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.625rem 0;
+}
+.stat-row + .stat-row { border-top: 1px solid var(--color-border-subtle); }
+
+/* Activity item */
+.activity-item {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  padding: 0.5rem 0;
+}
+
+/* Quick action */
+.quick-action {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.625rem 0.75rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-subtle);
+  cursor: pointer;
+  transition: all 0.15s var(--ease-out);
+}
+.quick-action:hover { border-color: var(--color-brand); background: var(--color-brand-surface); }
+.quick-action:hover svg { color: var(--color-brand); }
+.quick-action:hover span { color: var(--color-brand); }
+
+/* Chapter card */
+.chapter-card {
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  transition: all 0.15s var(--ease-out);
+}
+.chapter-card:hover { box-shadow: var(--shadow-md); border-color: var(--color-border); }
+
+/* Chat bubble */
+.chat-bubble {
+  padding: 0.75rem 1rem;
+  max-width: 80%;
+  word-wrap: break-word;
+  font-size: 0.9375rem;
+  line-height: 1.65;
+}
+.chat-bubble-user {
+  background: var(--color-bg-subtle);
+  border-radius: var(--radius-xl) var(--radius-xl) 4px var(--radius-xl);
+  margin-left: auto;
+}
+.chat-bubble-ai {
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 4px var(--radius-xl) var(--radius-xl) var(--radius-xl);
+  font-family: var(--font-serif);
+  line-height: 1.75;
+}
+
+/* Avatar */
+.avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 0.875rem;
+}
+
+/* Loading dots */
+.dot {
+  width: 5px;
+  height: 5px;
+  border-radius: var(--radius-full);
+  background: var(--color-ink-muted);
+  animation: pulse 1.4s infinite ease-in-out;
+}
+.dot:nth-child(1) { animation-delay: 0s; }
+.dot:nth-child(2) { animation-delay: 0.2s; }
+.dot:nth-child(3) { animation-delay: 0.4s; }
+@keyframes pulse {
+  0%, 80%, 100% { opacity: 0.3; transform: scale(0.75); }
+  40% { opacity: 1; transform: scale(1); }
+}
+
+/* Suggestion chip */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.8125rem;
+  color: var(--color-ink-tertiary);
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: all 0.15s var(--ease-out);
+}
+.chip:hover { border-color: var(--color-brand); color: var(--color-brand); background: var(--color-brand-surface); }
+
+/* Header */
+.app-header {
+  height: 56px;
+  background: var(--color-bg-elevated);
+  border-bottom: 1px solid var(--color-border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1.5rem;
+  flex-shrink: 0;
+}
+
+/* Timeline indicator */
+.timeline-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+}
+
+/* Tooltip */
+[data-tip] { position: relative; }
+[data-tip]:hover::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0.25rem 0.5rem;
+  background: var(--color-ink);
+  color: white;
+  font-size: 0.75rem;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* Focus visible */
+:focus-visible { outline: 2px solid var(--color-brand); outline-offset: 2px; }
+
+/* Selection */
+::selection { background: var(--color-brand-light); }
+
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  @theme inline {
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+    --color-card: var(--card);
+    --color-card-foreground: var(--card-foreground);
+    --color-popover: var(--popover);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-secondary: var(--secondary);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-muted: var(--muted);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-accent: var(--accent);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-border: var(--border);
+    --color-input: var(--input);
+    --color-ring: var(--ring);
+    --radius-sm: var(--radius-small);
+    --radius-md: var(--radius-medium);
+    --radius-lg: var(--radius-large);
+  }
+  @layer base {
+    body { background: var(--background); color: var(--foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style id="semantic-token-fallback">
+      .bg-background { background-color: var(--background); }
+      .text-background { color: var(--background); }
+      .border-background { border-color: var(--background); }
+      .ring-background { --tw-ring-color: var(--background); }
+      .bg-foreground { background-color: var(--foreground); }
+      .text-foreground { color: var(--foreground); }
+      .border-foreground { border-color: var(--foreground); }
+      .ring-foreground { --tw-ring-color: var(--foreground); }
+      .bg-card { background-color: var(--card); }
+      .text-card { color: var(--card); }
+      .border-card { border-color: var(--card); }
+      .ring-card { --tw-ring-color: var(--card); }
+      .bg-card-foreground { background-color: var(--card-foreground); }
+      .text-card-foreground { color: var(--card-foreground); }
+      .border-card-foreground { border-color: var(--card-foreground); }
+      .ring-card-foreground { --tw-ring-color: var(--card-foreground); }
+      .bg-popover { background-color: var(--popover); }
+      .text-popover { color: var(--popover); }
+      .border-popover { border-color: var(--popover); }
+      .ring-popover { --tw-ring-color: var(--popover); }
+      .bg-popover-foreground { background-color: var(--popover-foreground); }
+      .text-popover-foreground { color: var(--popover-foreground); }
+      .border-popover-foreground { border-color: var(--popover-foreground); }
+      .ring-popover-foreground { --tw-ring-color: var(--popover-foreground); }
+      .bg-primary { background-color: var(--primary); }
+      .text-primary { color: var(--primary); }
+      .border-primary { border-color: var(--primary); }
+      .ring-primary { --tw-ring-color: var(--primary); }
+      .bg-primary-foreground { background-color: var(--primary-foreground); }
+      .text-primary-foreground { color: var(--primary-foreground); }
+      .border-primary-foreground { border-color: var(--primary-foreground); }
+      .ring-primary-foreground { --tw-ring-color: var(--primary-foreground); }
+      .bg-secondary { background-color: var(--secondary); }
+      .text-secondary { color: var(--secondary); }
+      .border-secondary { border-color: var(--secondary); }
+      .ring-secondary { --tw-ring-color: var(--secondary); }
+      .bg-secondary-foreground { background-color: var(--secondary-foreground); }
+      .text-secondary-foreground { color: var(--secondary-foreground); }
+      .border-secondary-foreground { border-color: var(--secondary-foreground); }
+      .ring-secondary-foreground { --tw-ring-color: var(--secondary-foreground); }
+      .bg-muted { background-color: var(--muted); }
+      .text-muted { color: var(--muted); }
+      .border-muted { border-color: var(--muted); }
+      .ring-muted { --tw-ring-color: var(--muted); }
+      .bg-muted-foreground { background-color: var(--muted-foreground); }
+      .text-muted-foreground { color: var(--muted-foreground); }
+      .border-muted-foreground { border-color: var(--muted-foreground); }
+      .ring-muted-foreground { --tw-ring-color: var(--muted-foreground); }
+      .bg-accent { background-color: var(--accent); }
+      .text-accent { color: var(--accent); }
+      .border-accent { border-color: var(--accent); }
+      .ring-accent { --tw-ring-color: var(--accent); }
+      .bg-accent-foreground { background-color: var(--accent-foreground); }
+      .text-accent-foreground { color: var(--accent-foreground); }
+      .border-accent-foreground { border-color: var(--accent-foreground); }
+      .ring-accent-foreground { --tw-ring-color: var(--accent-foreground); }
+      .bg-border { background-color: var(--border); }
+      .text-border { color: var(--border); }
+      .border-border { border-color: var(--border); }
+      .ring-border { --tw-ring-color: var(--border); }
+      .bg-input { background-color: var(--input); }
+      .text-input { color: var(--input); }
+      .border-input { border-color: var(--input); }
+      .ring-input { --tw-ring-color: var(--input); }
+      .bg-ring { background-color: var(--ring); }
+      .text-ring { color: var(--ring); }
+      .border-ring { border-color: var(--ring); }
+      .ring-ring { --tw-ring-color: var(--ring); }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+</head>
+<body class="h-screen overflow-hidden">
+  <div class="main-area">
+
+    <!-- ===================== SIDEBAR ===================== -->
+    <aside class="sidebar">
+      <!-- Logo -->
+      <div class="px-5 pt-6 pb-4">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background: var(--color-brand);">
+            <i data-lucide="book-open" class="text-white" style="width: 16px; height: 16px; stroke-width: 2;"></i>
+          </div>
+          <span class="font-semibold text-[15px] tracking-tight" style="color: var(--color-ink);">YourStory</span>
+        </div>
+      </div>
+
+      <!-- Navigation -->
+      <nav class="flex-1 px-3 py-2 space-y-0.5">
+        <a class="nav-link active" href="home.html" data-dom-id="nav-home">
+          <i data-lucide="home"></i>
+          <span>首页</span>
+        </a>
+        <a class="nav-link" href="dialogue.html" data-dom-id="nav-dialogue">
+          <i data-lucide="message-circle"></i>
+          <span>对话创作</span>
+        </a>
+        <a class="nav-link" href="autobiography.html" data-dom-id="nav-autobiography">
+          <i data-lucide="book-text"></i>
+          <span>我的自传</span>
+        </a>
+        <a class="nav-link" href="settings.html" data-dom-id="nav-settings">
+          <i data-lucide="settings"></i>
+          <span>设置</span>
+        </a>
+      </nav>
+
+      <!-- Bottom Progress Summary -->
+      <div class="px-5 py-5 border-t" style="border-color: var(--color-border-subtle);">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs font-medium" style="color: var(--color-ink-muted);">整体进度</span>
+          <span class="text-xs font-semibold" style="color: var(--color-brand);">38%</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" style="width: 38%;"></div>
+        </div>
+        <p class="text-[11px] mt-2" style="color: var(--color-ink-faint);">3/8 章节已完成 · 继续加油</p>
+      </div>
+    </aside>
+
+    <!-- ===================== MAIN CONTENT ===================== -->
+    <main class="content-panel">
+
+      <!-- Welcome Title -->
+      <div class="mb-6 animate-fade-in">
+        <h1 class="heading-serif text-2xl font-semibold" style="color: var(--color-ink);">
+          欢迎回来
+        </h1>
+        <p class="mt-1.5 text-sm" style="color: var(--color-ink-muted);">
+          今天，继续书写属于你的篇章吧。
+        </p>
+      </div>
+
+      <!-- Tabs -->
+      <div class="flex items-center gap-6 mb-6 pb-0 border-b" style="border-color: var(--color-border-subtle);">
+        <button class="tab active" data-dom-id="tab-overview">概览</button>
+        <button class="tab" data-dom-id="tab-create">创作</button>
+        <button class="tab" data-dom-id="tab-stats">统计</button>
+      </div>
+
+      <!-- Section: 章节进度 -->
+      <section class="mb-8">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="section-title">章节进度</h2>
+          <button class="btn-ghost text-xs flex items-center gap-1" style="color: var(--color-ink-muted); background: transparent; border: none; cursor: pointer;" data-dom-id="btn-view-all-chapters">
+            查看全部
+            <i data-lucide="chevron-right" style="width: 14px; height: 14px;"></i>
+          </button>
+        </div>
+
+        <!-- Chapter Cards Grid -->
+        <div class="grid grid-cols-3 gap-4">
+
+          <!-- Chapter 1: Completed -->
+          <div class="chapter-card" data-dom-id="chapter-card-1">
+            <div class="flex items-center justify-between mb-3">
+              <span class="badge badge-success">
+                <i data-lucide="check-circle" style="width: 11px; height: 11px;"></i>
+                已完成
+              </span>
+              <span class="text-[11px]" style="color: var(--color-ink-faint);">第一章</span>
+            </div>
+            <h3 class="text-[15px] font-medium mb-1.5" style="color: var(--color-ink);">童年时光</h3>
+            <p class="text-xs mb-3 line-clamp-2" style="color: var(--color-ink-muted);">记忆深处的故乡小路，外婆家的那棵大枣树……</p>
+            <div class="flex items-center justify-between text-[11px] mb-1.5" style="color: var(--color-ink-faint);">
+              <span>1,240 字</span>
+              <span>100%</span>
+            </div>
+            <div class="progress-track">
+              <div class="progress-fill complete" style="width: 100%;"></div>
+            </div>
+          </div>
+
+          <!-- Chapter 2: Completed -->
+          <div class="chapter-card" data-dom-id="chapter-card-2">
+            <div class="flex items-center justify-between mb-3">
+              <span class="badge badge-success">
+                <i data-lucide="check-circle" style="width: 11px; height: 11px;"></i>
+                已完成
+              </span>
+              <span class="text-[11px]" style="color: var(--color-ink-faint);">第二章</span>
+            </div>
+            <h3 class="text-[15px] font-medium mb-1.5" style="color: var(--color-ink);">求学岁月</h3>
+            <p class="text-xs mb-3 line-clamp-2" style="color: var(--color-ink-muted);">校园里那些充满梦想的日子，与同窗的故事……</p>
+            <div class="flex items-center justify-between text-[11px] mb-1.5" style="color: var(--color-ink-faint);">
+              <span>2,180 字</span>
+              <span>100%</span>
+            </div>
+            <div class="progress-track">
+              <div class="progress-fill complete" style="width: 100%;"></div>
+            </div>
+          </div>
+
+          <!-- Chapter 3: In Progress -->
+          <div class="chapter-card" data-dom-id="chapter-card-3">
+            <div class="flex items-center justify-between mb-3">
+              <span class="badge badge-brand">
+                <i data-lucide="loader" style="width: 11px; height: 11px;"></i>
+                进行中
+              </span>
+              <span class="text-[11px]" style="color: var(--color-ink-faint);">第三章</span>
+            </div>
+            <h3 class="text-[15px] font-medium mb-1.5" style="color: var(--color-ink);">初入职场的日子</h3>
+            <p class="text-xs mb-3 line-clamp-2" style="color: var(--color-ink-muted);">第一次踏入职场，面对陌生的一切既紧张又兴奋……</p>
+            <div class="flex items-center justify-between text-[11px] mb-1.5" style="color: var(--color-ink-faint);">
+              <span>860 字</span>
+              <span>60%</span>
+            </div>
+            <div class="progress-track">
+              <div class="progress-fill" style="width: 60%;"></div>
+            </div>
+          </div>
+
+          <!-- Chapter 4: Draft -->
+          <div class="chapter-card" data-dom-id="chapter-card-4">
+            <div class="flex items-center justify-between mb-3">
+              <span class="badge badge-muted">
+                <i data-lucide="pencil" style="width: 11px; height: 11px;"></i>
+                草稿
+              </span>
+              <span class="text-[11px]" style="color: var(--color-ink-faint);">第四章</span>
+            </div>
+            <h3 class="text-[15px] font-medium mb-1.5" style="color: var(--color-ink);">重要的人</h3>
+            <p class="text-xs mb-3 line-clamp-2" style="color: var(--color-ink-muted);">那些在你的生命里留下印记的人，等待诉说……</p>
+            <div class="flex items-center justify-between text-[11px] mt-6" style="color: var(--color-ink-faint);">
+              <span>尚未开始</span>
+            </div>
+          </div>
+
+          <!-- Add Chapter Card (dashed border) -->
+          <div class="add-chapter-card" data-dom-id="add-chapter-card">
+            <div class="w-10 h-10 rounded-full flex items-center justify-center" style="background: var(--color-bg-subtle);">
+              <i data-lucide="plus" style="width: 20px; height: 20px; color: var(--color-ink-muted);"></i>
+            </div>
+            <span class="text-sm font-medium mt-1" style="color: var(--color-ink-muted);">开始下一章</span>
+            <span class="text-[11px]" style="color: var(--color-ink-faint);">点击添加新章节</span>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- Section: 快速开始指南 -->
+      <section>
+        <h2 class="section-title mb-4">快速开始指南</h2>
+
+        <div class="flex items-stretch gap-4">
+
+          <!-- Step 1: 配置AI -->
+          <div class="step-card" data-dom-id="step-card-1">
+            <div class="step-number">1</div>
+            <div class="flex items-center justify-center w-full py-2">
+              <i data-lucide="bot" style="width: 28px; height: 28px; color: var(--color-brand); stroke-width: 1.5;"></i>
+            </div>
+            <h3 class="text-[15px] font-medium" style="color: var(--color-ink);">配置 AI 助手</h3>
+            <p class="text-xs leading-relaxed" style="color: var(--color-ink-muted);">选择你喜欢的叙事风格，让 AI 更懂你的故事基调。</p>
+            <div class="flex items-center gap-1 text-[11px] mt-auto pt-2" style="color: var(--color-ink-faint);">
+              <i data-lucide="arrow-right" style="width: 12px; height: 12px;"></i>
+              <span>下一步: 开始对话</span>
+            </div>
+          </div>
+
+          <!-- Step 2: 开始对话 -->
+          <div class="step-card" data-dom-id="step-card-2">
+            <div class="step-number">2</div>
+            <div class="flex items-center justify-center w-full py-2">
+              <i data-lucide="message-square-dotted" style="width: 28px; height: 28px; color: var(--color-brand); stroke-width: 1.5;"></i>
+            </div>
+            <h3 class="text-[15px] font-medium" style="color: var(--color-ink);">开始对话</h3>
+            <p class="text-xs leading-relaxed" style="color: var(--color-ink-muted);">与 AI 自由对话，挖掘记忆深处的珍贵片段。</p>
+            <div class="flex items-center gap-1 text-[11px] mt-auto pt-2" style="color: var(--color-ink-faint);">
+              <i data-lucide="arrow-right" style="width: 12px; height: 12px;"></i>
+              <span>下一步: 审阅导出</span>
+            </div>
+          </div>
+
+          <!-- Step 3: 审阅导出 -->
+          <div class="step-card" data-dom-id="step-card-3">
+            <div class="step-number">3</div>
+            <div class="flex items-center justify-center w-full py-2">
+              <i data-lucide="file-check" style="width: 28px; height: 28px; color: var(--color-brand); stroke-width: 1.5;"></i>
+            </div>
+            <h3 class="text-[15px] font-medium" style="color: var(--color-ink);">审阅与导出</h3>
+            <p class="text-xs leading-relaxed" style="color: var(--color-ink-muted);">整理润色你的故事，导出为精美的自传文稿。</p>
+            <div class="flex items-center gap-1 text-[11px] mt-auto pt-2" style="color: var(--color-success);">
+              <i data-lucide="sparkles" style="width: 12px; height: 12px;"></i>
+              <span>完成创作流程</span>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- Footer spacing -->
+      <div class="h-8"></div>
+
+    </main>
+
+    <!-- ===================== RIGHT PANEL ===================== -->
+    <aside class="right-panel">
+
+      <!-- 今日数据 -->
+      <section>
+        <h2 class="section-title mb-2">今日数据</h2>
+        <div class="card p-1">
+          <div class="stat-row px-3">
+            <div class="flex items-center gap-2">
+              <i data-lucide="pencil-line" style="width: 15px; height: 15px; color: var(--color-brand); stroke-width: 1.5;"></i>
+              <span class="text-xs" style="color: var(--color-ink-secondary);">新增字数</span>
+            </div>
+            <span class="stat-value">456</span>
+          </div>
+          <div class="stat-row px-3">
+            <div class="flex items-center gap-2">
+              <i data-lucide="clock" style="width: 15px; height: 15px; color: var(--color-sky); stroke-width: 1.5;"></i>
+              <span class="text-xs" style="color: var(--color-ink-secondary);">创作时长</span>
+            </div>
+            <span class="stat-value">12 分钟</span>
+          </div>
+          <div class="stat-row px-3">
+            <div class="flex items-center gap-2">
+              <i data-lucide="messages-square" style="width: 15px; height: 15px; color: var(--color-sage); stroke-width: 1.5;"></i>
+              <span class="text-xs" style="color: var(--color-ink-secondary);">对话轮次</span>
+            </div>
+            <span class="stat-value">8</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 最近活动 -->
+      <section>
+        <h2 class="section-title mb-2">最近活动</h2>
+        <div class="space-y-0.5">
+
+          <div class="activity-item">
+            <div class="timeline-dot" style="background: var(--color-success);"></div>
+            <div class="flex-1 min-w-0">
+              <p class="text-xs" style="color: var(--color-ink);">完成了「第三章 · 入职故事」</p>
+              <p class="text-[11px] mt-0.5" style="color: var(--color-ink-faint);">10 分钟前</p>
+            </div>
+          </div>
+
+          <div class="activity-item">
+            <div class="timeline-dot" style="background: var(--color-brand);"></div>
+            <div class="flex-1 min-w-0">
+              <p class="text-xs" style="color: var(--color-ink);">保存了一段新对话</p>
+              <p class="text-[11px] mt-0.5" style="color: var(--color-ink-faint);">今天 14:32</p>
+            </div>
+          </div>
+
+          <div class="activity-item">
+            <div class="timeline-dot" style="background: var(--color-gold);"></div>
+            <div class="flex-1 min-w-0">
+              <p class="text-xs" style="color: var(--color-ink);">导出自传草稿（PDF）</p>
+              <p class="text-[11px] mt-0.5" style="color: var(--color-ink-faint);">昨天 20:15</p>
+            </div>
+          </div>
+
+          <div class="activity-item">
+            <div class="timeline-dot" style="background: var(--color-sky);"></div>
+            <div class="flex-1 min-w-0">
+              <p class="text-xs" style="color: var(--color-ink);">更新了 AI 助手设定</p>
+              <p class="text-[11px] mt-0.5" style="color: var(--color-ink-faint);">2 天前</p>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- 快捷操作 -->
+      <section>
+        <h2 class="section-title mb-2">快捷操作</h2>
+        <div class="space-y-2">
+
+          <button class="quick-action" data-dom-id="quick-action-new-chat">
+            <i data-lucide="plus-circle" style="width: 16px; height: 16px; color: var(--color-ink-muted); stroke-width: 1.5;"></i>
+            <span class="text-xs font-medium" style="color: var(--color-ink-secondary);">新建对话</span>
+          </button>
+
+          <button class="quick-action" data-dom-id="quick-action-view-draft">
+            <i data-lucide="file-text" style="width: 16px; height: 16px; color: var(--color-ink-muted); stroke-width: 1.5;"></i>
+            <span class="text-xs font-medium" style="color: var(--color-ink-secondary);">查看草稿</span>
+          </button>
+
+          <button class="quick-action" data-dom-id="quick-action-export">
+            <i data-lucide="download" style="width: 16px; height: 16px; color: var(--color-ink-muted); stroke-width: 1.5;"></i>
+            <span class="text-xs font-medium" style="color: var(--color-ink-secondary);">导出自传</span>
+          </button>
+
+        </div>
+      </section>
+
+    </aside>
+
+  </div>
+
+  <!-- Initialize Lucide Icons -->
+  <script>
+    lucide.createIcons();
+  </script>
+
+    <style>
+    body {
+      font-family: var(--font-sans);
+      background: var(--color-bg);
+      color: var(--color-ink);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: var(--radius-full); }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.15); }
+
+    /* Sidebar */
+    .sidebar {
+      width: 240px;
+      background: var(--color-bg-elevated);
+      border-right: 1px solid var(--color-border-subtle);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+    }
+
+    /* Main Area */
+    .main-area {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* Content Panel */
+    .content-panel {
+      flex: 1;
+      overflow-y: auto;
+      padding: 2rem 2.5rem;
+    }
+
+    /* Right Panel */
+    .right-panel {
+      width: 260px;
+      background: var(--color-bg-elevated);
+      border-left: 1px solid var(--color-border-subtle);
+      overflow-y: auto;
+      padding: 1.5rem 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.75rem;
+      flex-shrink: 0;
+    }
+
+    /* Nav Link */
+    .nav-link {
+      display: flex;
+      align-items: center;
+      gap: 0.625rem;
+      padding: 0.5rem 0.75rem;
+      border-radius: var(--radius-md);
+      font-size: 0.875rem;
+      color: var(--color-ink-muted);
+      transition: all 0.15s var(--ease-out);
+      cursor: pointer;
+      text-decoration: none;
+    }
+    .nav-link:hover { background: var(--color-bg-hover); color: var(--color-ink); }
+    .nav-link.active {
+      background: transparent;
+      color: var(--color-brand);
+      font-weight: 500;
+    }
+    .nav-link svg { width: 18px; height: 18px; stroke-width: 1.5; }
+
+    /* Tab */
+    .tab {
+      padding: 0.5rem 0;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--color-ink-muted);
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+      transition: all 0.15s var(--ease-out);
+      background: none;
+      border-top: none;
+      border-left: none;
+      border-right: none;
+    }
+    .tab:hover { color: var(--color-ink); }
+    .tab.active { color: var(--color-brand); border-bottom-color: var(--color-brand); }
+
+    /* Card */
+    .card {
+      background: var(--color-bg-elevated);
+      border: 1px solid var(--color-border-subtle);
+      border-radius: var(--radius-lg);
+      transition: all 0.15s var(--ease-out);
+    }
+
+    /* Chapter Card */
+    .chapter-card {
+      background: var(--color-bg-elevated);
+      border: 1px solid var(--color-border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 1.25rem;
+      transition: all 0.2s var(--ease-out);
+      cursor: pointer;
+    }
+    .chapter-card:hover {
+      box-shadow: var(--shadow-md);
+      border-color: var(--color-border);
+      transform: translateY(-1px);
+    }
+
+    /* Add Chapter Card (dashed) */
+    .add-chapter-card {
+      background: transparent;
+      border: 1.5px dashed var(--color-border-emphasis);
+      border-radius: var(--radius-lg);
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      cursor: pointer;
+      transition: all 0.2s var(--ease-out);
+      min-height: 160px;
+    }
+    .add-chapter-card:hover {
+      border-color: var(--color-brand);
+      background: var(--color-brand-surface);
+    }
+    .add-chapter-card:hover svg { color: var(--color-brand); }
+    .add-chapter-card:hover span { color: var(--color-brand); }
+
+    /* Progress Bar */
+    .progress-track {
+      height: 4px;
+      border-radius: var(--radius-full);
+      background: var(--color-bg-subtle);
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      border-radius: var(--radius-full);
+      background: var(--color-brand);
+      transition: width 0.4s var(--ease-out);
+    }
+    .progress-fill.complete { background: var(--color-success); }
+
+    /* Badge */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.2rem 0.6rem;
+      font-size: 0.7rem;
+      font-weight: 500;
+      border-radius: var(--radius-full);
+      line-height: 1.4;
+      white-space: nowrap;
+    }
+    .badge-success { background: var(--color-success-bg); color: var(--color-success); }
+    .badge-brand { background: var(--color-brand-light); color: var(--color-brand); }
+    .badge-muted { background: var(--color-bg-subtle); color: var(--color-ink-muted); }
+
+    /* Section Title */
+    .section-title {
+      font-family: var(--font-serif);
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: var(--color-ink);
+    }
+
+    /* Stat Row */
+    .stat-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.625rem 0;
+    }
+    .stat-row + .stat-row { border-top: 1px solid var(--color-border-subtle); }
+
+    /* Stat Value */
+    .stat-value {
+      font-family: var(--font-serif);
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--color-ink);
+    }
+
+    /* Activity Item */
+    .activity-item {
+      display: flex;
+      gap: 0.75rem;
+      align-items: flex-start;
+      padding: 0.5rem 0;
+    }
+
+    /* Timeline Dot */
+    .timeline-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: var(--radius-full);
+      flex-shrink: 0;
+      margin-top: 0.4rem;
+    }
+
+    /* Quick Action */
+    .quick-action {
+      display: flex;
+      align-items: center;
+      gap: 0.625rem;
+      padding: 0.625rem 0.75rem;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--color-border-subtle);
+      cursor: pointer;
+      transition: all 0.15s var(--ease-out);
+      background: transparent;
+      width: 100%;
+      text-align: left;
+    }
+    .quick-action:hover { border-color: var(--color-brand); background: var(--color-brand-surface); }
+    .quick-action:hover svg { color: var(--color-brand); }
+    .quick-action:hover span { color: var(--color-brand); }
+
+    /* Step Card */
+    .step-card {
+      background: var(--color-bg-elevated);
+      border: 1px solid var(--color-border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 1.5rem 1.25rem;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.875rem;
+      transition: all 0.2s var(--ease-out);
+      position: relative;
+    }
+    .step-card:hover {
+      box-shadow: var(--shadow-md);
+      border-color: var(--color-border);
+    }
+
+    /* Step Number */
+    .step-number {
+      width: 28px;
+      height: 28px;
+      border-radius: var(--radius-full);
+      background: var(--color-brand-light);
+      color: var(--color-brand);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      font-weight: 600;
+      font-family: var(--font-serif);
+    }
+
+    /* Section Heading */
+    .heading-serif {
+      font-family: var(--font-serif);
+    }
+
+    /* Focus */
+    :focus-visible { outline: 2px solid var(--color-brand); outline-offset: 2px; }
+
+    /* Animation */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-in { animation: fadeIn 0.35s var(--ease-out); }
+  </style>
+</body>
+</html>
