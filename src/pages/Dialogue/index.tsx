@@ -1,369 +1,227 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { useAIStore, useDialogueStore } from '../../stores';
-import { AIService } from '../../services';
-import { useToast } from '../../components';
+import React, { useState } from 'react';
+import { useDialogueStore } from '../../store/dialogueStore';
 
-interface Message {
-  id: string;
-  content: string;
-  isUser: boolean;
-  timestamp: Date;
-}
-
-const Dialogue: React.FC = () => {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [inputValue, setInputValue] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const { apiKey, model, baseUrl, vendor, temperature, maxOutputTokens, loadSettings } = useAIStore();
+const DialoguePage: React.FC = () => {
   useDialogueStore();
-  const { addToast } = useToast();
+  const [inputValue, setInputValue] = useState('');
 
-  const [activeNav, setActiveNav] = useState('dialogue');
-
-  const navItems = [
-    { id: 'home', label: '首页', path: '/' },
-    { id: 'dialogue', label: '对话创作', path: '/dialogue' },
-    { id: 'autobiography', label: '我的自传', path: '/autobiography' },
-    { id: 'settings', label: '设置', path: '/settings' },
+  const suggestions = [
+    { color: 'bg-brand', text: '聊聊童年' },
+    { color: 'bg-gold', text: '校园时光' },
+    { color: 'bg-sage', text: '工作经历' },
+    { color: 'bg-info', text: '人生感悟' },
   ];
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  useEffect(() => {
-    loadSettings();
-  }, [loadSettings]);
-
-  useEffect(() => {
-    if (messages.length === 0) {
-      setMessages([
-        {
-          id: '1',
-          content: '你好！我是你的故事创作助手。让我们一起走进你的童年记忆，把那些珍贵的片段一一记录下来。\n\n你想先从哪个方面开始聊起呢？这里有几个方向供你参考：',
-          isUser: false,
-          timestamp: new Date(),
-        },
-      ]);
-    }
-  }, []);
-
-  const handleSendMessage = async (text?: string) => {
-    const content = text || inputValue.trim();
-    if (!content || isLoading) return;
-
-    if (!apiKey) {
-      addToast({
-        type: 'warning',
-        message: '请先在设置页面配置AI API Key',
-        duration: 4000,
-      });
-      return;
-    }
-
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      content,
-      isUser: true,
-      timestamp: new Date(),
-    };
-
-    setMessages((prev) => [...prev, userMessage]);
-    setInputValue('');
-    setIsLoading(true);
-
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-    }
-
-    try {
-      const aiService = new AIService({ apiKey, model, baseUrl, vendor, temperature, maxOutputTokens });
-      const response = await aiService.generateResponse(content, messages);
-
-      const aiMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        content: response,
-        isUser: false,
-        timestamp: new Date(),
-      };
-
-      setMessages((prev) => [...prev, aiMessage]);
-    } catch (error) {
-      console.error('AI响应错误:', error);
-      const errorMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        content: '抱歉，处理您的消息时出现错误。请检查您的API配置或稍后再试。',
-        isUser: false,
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, errorMessage]);
-      addToast({
-        type: 'error',
-        message: '发送失败，请检查网络连接',
-        duration: 5000,
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
-    }
-  };
-
-  const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setInputValue(e.target.value);
-    const textarea = e.target;
-    textarea.style.height = 'auto';
-    textarea.style.height = Math.min(textarea.scrollHeight, 160) + 'px';
-  };
-
-  const suggestionChips = [
-    { color: 'before:bg-sage', label: '聊聊老家的环境' },
-    { color: 'before:bg-gold', label: '童年的玩伴们' },
-    { color: 'before:bg-brand', label: '难忘的生日' },
+  const topicItems = [
+    { icon: 'sun', label: '童年趣事' },
+    { icon: 'graduation-cap', label: '学生时代' },
+    { icon: 'briefcase', label: '工作生涯' },
+    { icon: 'heart', label: '婚姻家庭' },
   ];
+
+  const followupItems = [
+    '童年最难忘的一件事是什么？',
+    '小时候的家庭环境如何？',
+    '童年时期对你影响最大的人是谁？',
+  ];
+
+  const topicIcons: Record<string, React.ReactNode> = {
+    sun: (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
+      </svg>
+    ),
+    'graduation-cap': (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M4.26 10.147a60.436 60.436 0 00-.491 6.347A48.627 48.627 0 0112 20.904a48.627 48.627 0 018.232-4.41 60.46 60.46 0 00-.491-6.347m-15.482 0a50.57 50.57 0 00-2.658-.813A59.905 59.905 0 0112 3.493a59.902 59.902 0 0110.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.697 50.697 0 0112 13.489a50.702 50.702 0 017.74-3.342M6.75 15a.75.75 0 100-1.5.75.75 0 000 1.5zm0 0v-3.675A55.378 55.378 0 0112 8.443m-7.007 11.55A5.981 5.981 0 006.75 15.75v-1.5" />
+      </svg>
+    ),
+    briefcase: (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 14.15v4.25c0 1.094-.787 2.036-1.872 2.18-2.087.277-4.216.42-6.378.42s-4.291-.143-6.378-.42c-1.085-.144-1.872-1.086-1.872-2.18v-4.25m16.5 0a2.18 2.18 0 00.75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 00-3.413-.387m4.5 8.006c-.194.165-.42.295-.673.38A23.978 23.978 0 0112 15.75c-2.648 0-5.195-.429-7.577-1.22a2.016 2.016 0 01-.673-.38m0 0A2.18 2.18 0 013 12.489V8.706c0-1.081.768-2.015 1.837-2.175a48.111 48.111 0 013.413-.387m7.5 0V5.25A2.25 2.25 0 0013.5 3h-3a2.25 2.25 0 00-2.25 2.25v.894m7.5 0a48.667 48.667 0 00-7.5 0M12 12.75h.008v.008H12v-.008z" />
+      </svg>
+    ),
+    heart: (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
+      </svg>
+    ),
+  };
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      <aside className="w-[240px] bg-bg-elevated border-r border-border-subtle flex flex-col shrink-0">
-        <div className="p-5 flex items-center gap-3 border-b border-border-subtle">
-          <div className="w-9 h-9 rounded-md flex items-center justify-center bg-brand">
-            <span className="text-white font-bold text-sm">YS</span>
+    <div className="main-area">
+      <aside className="sidebar h-full">
+        <div className="px-5 pt-6 pb-4">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg brand-gradient flex items-center justify-center">
+              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+              </svg>
+            </div>
+            <span className="font-semibold text-[15px] tracking-tight text-ink">YourStory</span>
           </div>
-          <span className="font-semibold text-ink text-[0.9375rem] text-serif">YourStory</span>
         </div>
 
-        <nav className="px-3 py-4 flex-1">
-          <div className="mb-2 px-2">
-            <span className="text-[0.6875rem] font-medium uppercase text-ink-faint" style={{ letterSpacing: '0.05em' }}>创作</span>
-          </div>
-          <ul className="space-y-1">
-            {navItems.slice(0, 3).map((item) => (
-              <li key={item.id}>
-                <Link
-                  to={item.path}
-                  className={`nav-link ${item.id === activeNav ? 'active' : ''}`}
-                  onClick={() => setActiveNav(item.id)}
-                >
-                  {item.label}
-                </Link>
-              </li>
-            ))}
-          </ul>
+        <nav className="flex-1 px-3 py-2 space-y-0.5">
+          <p className="px-3 pt-2 pb-1.5 text-[11px] font-medium text-ink-faint uppercase tracking-wider">创作</p>
+          <a className="nav-link active">
+            <span className="text-brand">
+              <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 01-.825-.242m9.345-8.334a2.126 2.126 0 00-.476-.095 48.64 48.64 0 00-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0011.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155" />
+              </svg>
+            </span>
+            <span>对话创作</span>
+          </a>
+          <a className="nav-link">
+            <span>
+              <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+              </svg>
+            </span>
+            <span>章节管理</span>
+          </a>
+          <a className="nav-link">
+            <span>
+              <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+              </svg>
+            </span>
+            <span>角色档案</span>
+          </a>
 
-          <div className="mt-6 mb-2 px-2">
-            <span className="text-[0.6875rem] font-medium uppercase text-ink-faint" style={{ letterSpacing: '0.05em' }}>设置</span>
-          </div>
-          <ul className="space-y-1">
-            <li>
-              <Link
-                to="/settings"
-                className="nav-link"
-              >
-                设置
-              </Link>
-            </li>
-          </ul>
+          <p className="px-3 pt-5 pb-1.5 text-[11px] font-medium text-ink-faint uppercase tracking-wider">设置</p>
+          <a className="nav-link">
+            <span>
+              <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </span>
+            <span>设置</span>
+          </a>
         </nav>
 
-        <div className="mx-3 mb-3 p-3 rounded-md bg-brand-surface border border-border-subtle">
-          <div className="flex items-center gap-2 mb-2">
-            <svg className="w-3.5 h-3.5 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z" />
-            </svg>
-            <span className="text-[0.8125rem] font-medium text-brand">当前章节</span>
+        <div className="px-3 py-4">
+          <div className="card p-3">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-7 h-7 rounded-md bg-brand flex items-center justify-center">
+                <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+                </svg>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-ink truncate">童年趣事</p>
+                <p className="text-[10px] text-ink-faint">当前章节</p>
+              </div>
+            </div>
+            <div className="progress-track">
+              <div className="progress-fill complete" style={{ width: '100%' }} />
+            </div>
+            <p className="text-[10px] text-ink-faint mt-1.5">已完成</p>
           </div>
-          <p className="text-[0.875rem] font-medium text-ink">第一章 · 童年记忆</p>
-          <div className="mt-2 h-1 rounded-full bg-bg-subtle overflow-hidden">
-            <div className="h-full rounded-full bg-brand" style={{ width: '35%' }} />
-          </div>
-          <p className="text-[0.6875rem] mt-1.5 text-ink-muted">进度 35% · 已完成 4 个话题</p>
         </div>
 
-        <div className="mx-3 mb-4 p-3 rounded-md border border-border-subtle">
-          <p className="text-[0.6875rem] font-medium uppercase text-ink-faint mb-2" style={{ letterSpacing: '0.05em' }}>会话统计</p>
-          <div className="flex items-center justify-between py-2">
-            <span className="text-[0.8125rem] text-ink-secondary">消息数量</span>
-            <span className="text-[0.8125rem] font-medium text-ink">28</span>
+        <div className="px-5 py-4 border-t border-border-subtle">
+          <p className="text-xs font-medium text-ink-muted mb-2">本次会话</p>
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-xs text-ink-faint">对话轮次</span>
+            <span className="text-xs font-medium text-ink">12</span>
           </div>
-          <div className="flex items-center justify-between py-2 border-t border-border-subtle">
-            <span className="text-[0.8125rem] text-ink-secondary">已记录字数</span>
-            <span className="text-[0.8125rem] font-medium text-ink">1,842</span>
-          </div>
-          <div className="flex items-center justify-between py-2 border-t border-border-subtle">
-            <span className="text-[0.8125rem] text-ink-secondary">本次时长</span>
-            <span className="text-[0.8125rem] font-medium text-ink">12 分钟</span>
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-ink-faint">生成字数</span>
+            <span className="text-xs font-medium text-ink">2,580</span>
           </div>
         </div>
       </aside>
 
-      <div className="flex flex-col flex-1 overflow-hidden bg-bg">
+      <main className="flex-1 flex flex-col overflow-hidden">
         <header className="app-header">
           <div className="flex items-center gap-3">
-            <div className="relative">
-              <div className="w-9 h-9 rounded-md flex items-center justify-center bg-brand shadow-sm">
-                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
-                </svg>
-              </div>
-              <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white bg-success" />
+            <div className="avatar brand-gradient text-white">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+              </svg>
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <span className="text-[0.9375rem] font-medium text-ink">Story 助手</span>
-                <span className="badge bg-success-bg text-success">在线</span>
-              </div>
-              <p className="text-[0.75rem] text-ink-muted">正在引导你完成第一章 · 童年记忆</p>
+              <h2 className="text-sm font-semibold text-ink">童年趣事</h2>
+              <p className="text-xs text-ink-muted">第 1 章 · 已完成</p>
             </div>
           </div>
-
-          <div className="flex items-center gap-1">
-            <button className="w-9 h-9 flex items-center justify-center rounded-md text-ink-muted hover:bg-bg-hover hover:text-ink transition-colors bg-transparent border-none cursor-pointer" title="大纲">
-              <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zM3.75 12h.007v.008H3.75V12zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm-.375 5.25h.007v.008H3.75v.008zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+          <div className="flex items-center gap-2">
+            <button className="btn btn-ghost text-xs">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
               </svg>
             </button>
-            <button className="w-9 h-9 flex items-center justify-center rounded-md text-ink-muted hover:bg-bg-hover hover:text-ink transition-colors bg-transparent border-none cursor-pointer" title="信息">
-              <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
-              </svg>
-            </button>
-            <button className="w-9 h-9 flex items-center justify-center rounded-md text-ink-muted hover:bg-bg-hover hover:text-ink transition-colors bg-transparent border-none cursor-pointer" title="更多">
-              <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 12a.75.75 0 11-1.5 0 .75.75 0 011.5 0zM12.75 12a.75.75 0 11-1.5 0 .75.75 0 011.5 0zM18.75 12a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
+            <button className="btn btn-ghost text-xs">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
               </svg>
             </button>
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto px-8 py-6">
-          {messages.map((message, index) => (
-            <div key={message.id} className={`flex ${message.isUser ? 'justify-end' : 'justify-start'} animate-fade-in ${index > 0 ? 'mt-6' : ''}`}>
-              {message.isUser ? (
-                <div className="flex flex-col items-end gap-1.5 max-w-[75%]">
-                  <div className="flex items-center gap-3 flex-row-reverse">
-                    <div className="avatar bg-bg-subtle">
-                      <svg className="w-4 h-4 text-ink-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
-                      </svg>
-                    </div>
-                    <div className="chat-bubble chat-bubble-user text-[0.9375rem] text-ink">
-                      {message.content}
-                    </div>
-                  </div>
-                  <span className="text-[0.6875rem] text-ink-faint px-1">
-                    {message.timestamp.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}
-                  </span>
-                </div>
-              ) : (
-                <div className="flex gap-3 max-w-[80%]">
-                  <div className="avatar bg-brand">
-                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
-                    </svg>
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <div className="chat-bubble chat-bubble-ai text-ink">
-                      {message.content}
-                    </div>
-                    <span className="text-[0.6875rem] text-ink-faint px-1">
-                      {message.timestamp.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                  </div>
-                </div>
-              )}
+        <div className="message-list">
+          <div className="flex gap-3 mb-6">
+            <div className="avatar brand-gradient text-white">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
+              </svg>
             </div>
-          ))}
-
-          {isLoading && (
-            <div className="flex justify-start animate-fade-in mt-6">
-              <div className="flex gap-3">
-                <div className="avatar bg-brand">
-                  <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
-                  </svg>
-                </div>
-                <div className="chat-bubble bg-bg-elevated border border-border-subtle flex items-center gap-1 py-3">
-                  <span className="dot" />
-                  <span className="dot" style={{ animationDelay: '0.2s' }} />
-                  <span className="dot" style={{ animationDelay: '0.4s' }} />
-                </div>
+            <div className="flex-1 max-w-[80%]">
+              <p className="text-sm font-medium text-ink mb-2">AI 创作助手</p>
+              <div className="chat-bubble chat-bubble-ai">
+                <p>你好李华！我是你的 AI 创作助手。今天我们来聊聊你的人生故事。</p>
+                <p className="mt-2">你想从哪个话题开始呢？可以选择下方的话题，也可以直接告诉我你想聊的内容。</p>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {topicItems.map((topic, index) => (
+                  <button key={index} className="topic-item">
+                    <span className="topic-icon text-ink-muted">{topicIcons[topic.icon]}</span>
+                    <span>{topic.label}</span>
+                  </button>
+                ))}
+              </div>
+              <div className="mt-4">
+                <p className="text-xs text-ink-faint mb-2">你可以这样问我：</p>
+                {followupItems.map((item, index) => (
+                  <div key={index} className="followup-item">
+                    <span className="followup-mark">Q:</span>
+                    <span>{item}</span>
+                  </div>
+                ))}
               </div>
             </div>
-          )}
-
-          <div ref={messagesEndRef} />
-        </div>
-
-        <div className="px-8 pb-3">
-          <div className="flex flex-wrap gap-2">
-            {suggestionChips.map((chip, index) => (
-              <button
-                key={index}
-                onClick={() => handleSendMessage(chip.label)}
-                className={`chip bg-bg-elevated text-ink-tertiary ${chip.color} pl-6 relative before:content-[''] before:absolute before:left-2.5 before:top-1/2 before:-translate-y-1/2 before:w-1.5 before:h-1.5 before:rounded-full`}
-              >
-                {chip.label}
-              </button>
-            ))}
           </div>
         </div>
 
-        <div className="px-8 pb-5">
-          <div className="flex gap-3 items-end">
-            <button
-              className="w-11 h-11 flex items-center justify-center rounded-lg border border-border text-ink-muted shrink-0 transition-all hover:bg-bg-subtle hover:text-brand hover:border-brand bg-transparent cursor-pointer"
-              title="创作提示"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 001.5-.189m-1.5.189a6.01 6.01 0 01-1.5-.189m3.75 7.478a12.06 12.06 0 01-4.5 0m3.75 2.383a14.406 14.406 0 01-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 10-7.517 0c.85.493 1.509 1.333 1.509 2.316V18" />
-              </svg>
-            </button>
-
+        <div className="px-6 pb-5">
+          <div className="flex flex-wrap gap-2 mb-3">
+            {suggestions.map((chip, index) => (
+              <button key={index} className="chip">
+                <span className={`w-1.5 h-1.5 rounded-full ${chip.color}`} />
+                {chip.text}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-end gap-3">
             <textarea
-              ref={textareaRef}
+              className="chat-textarea flex-1"
+              placeholder="聊聊你想记录的人生故事..."
               value={inputValue}
-              onChange={handleTextareaChange}
-              onKeyPress={handleKeyPress}
-              placeholder="关于这个问题，你还想补充些什么呢？"
-              disabled={isLoading}
+              onChange={(e) => setInputValue(e.target.value)}
               rows={1}
-              className="flex-1 px-4 py-3 text-[0.9375rem] leading-relaxed text-ink bg-bg border border-border rounded-xl outline-none resize-none min-h-[44px] max-h-[160px] transition-all duration-200 placeholder:text-ink-faint focus:border-brand focus:shadow-[0_0_0_3px_var(--color-brand-light)] focus:bg-bg-elevated"
             />
-
-            <button
-              onClick={() => handleSendMessage()}
-              disabled={!inputValue.trim() || isLoading}
-              className="w-11 h-11 flex items-center justify-center rounded-lg text-white shrink-0 transition-all disabled:opacity-40 disabled:cursor-not-allowed bg-brand hover:bg-brand-hover border-none cursor-pointer"
-              title="发送"
-            >
-              <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+            <button className="btn btn-primary h-11 w-11 !p-0 rounded-xl">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
               </svg>
             </button>
           </div>
-
-          <div className="flex items-center justify-between mt-2 px-1">
-            <p className="text-[0.75rem] text-ink-faint">
-              按 <kbd className="px-1.5 py-0.5 bg-bg-subtle rounded text-[0.6875rem] border border-border">Enter</kbd> 发送，<kbd className="px-1.5 py-0.5 bg-bg-subtle rounded text-[0.6875rem] border border-border">Shift + Enter</kbd> 换行
-            </p>
-            <span className="text-[0.75rem] text-ink-faint">已记录 1,842 字 · 本章 620 字</span>
-          </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 };
 
-export default Dialogue;
+export default DialoguePage;

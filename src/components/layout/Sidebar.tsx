@@ -37,14 +37,18 @@ const Sidebar: React.FC = () => {
 
   return (
     <aside className="sidebar h-full">
-      <div className="px-5 py-5 flex items-center gap-2.5 border-b border-border-subtle">
-        <div className="w-8 h-8 rounded-md bg-brand flex items-center justify-center">
-          <span className="text-white font-bold text-sm">YS</span>
+      <div className="px-5 pt-6 pb-4">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-brand flex items-center justify-center">
+            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+            </svg>
+          </div>
+          <span className="font-semibold text-[15px] tracking-tight text-ink">YourStory</span>
         </div>
-        <span className="font-semibold text-ink text-base tracking-tight">YourStory</span>
       </div>
 
-      <nav className="flex-1 px-3 py-4 space-y-1">
+      <nav className="flex-1 px-3 py-2 space-y-0.5">
         {menuItems.map((item) => {
           const isActive = location.pathname === item.path;
           return (
@@ -60,7 +64,7 @@ const Sidebar: React.FC = () => {
         })}
       </nav>
 
-      <div className="px-5 py-4 border-t border-border-subtle">
+      <div className="px-5 py-5 border-t border-border-subtle">
         <div className="flex items-center justify-between mb-2">
           <span className="text-xs font-medium text-ink-muted">整体进度</span>
           <span className="text-xs font-semibold text-brand">38%</span>

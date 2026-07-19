@@ -8,15 +8,13 @@ interface HomeLayoutProps {
 
 const HomeLayout: React.FC<HomeLayoutProps> = ({ children, rightPanel }) => {
   return (
-    <div className="flex flex-1 h-screen overflow-hidden">
+    <div className="main-area">
       <Sidebar />
-
       <main className="content-panel">
         {children}
       </main>
-
       {rightPanel && (
-        <aside className="right-panel shrink-0 flex flex-col gap-6">
+        <aside className="right-panel">
           {rightPanel}
         </aside>
       )}
