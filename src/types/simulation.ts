@@ -54,6 +54,8 @@ export interface CardEffect {
   duration?: number;
 }
 
+export type AgeRange = [number, number] | null; // null 表示全年龄段可用
+
 export interface LifeCard {
   id: string;
   name: string;
@@ -67,6 +69,8 @@ export interface LifeCard {
   expires?: number;
   tags: string[];
   icon: string;
+  ageRange?: AgeRange; // 年龄段限制，如 [0, 18] 表示0-18岁可用
+  isCultivation?: boolean; // 是否为修仙专属
 }
 
 export type RelicRarity = 'common' | 'uncommon' | 'rare' | 'boss' | 'legendary';
@@ -125,6 +129,8 @@ export interface Enemy {
   goldReward: [number, number];
   description: string;
   mechanics: EnemyMechanic[];
+  ageRange?: AgeRange; // 年龄段限制
+  isCultivation?: boolean; // 是否为修仙专属
 }
 
 export type OptionType =
@@ -244,6 +250,7 @@ export interface GameEvent {
   options: EventOption[];
   triggerCondition?: (state: GameState) => boolean;
   isMilestone?: boolean;
+  ageRange?: AgeRange; // 年龄段限制
 }
 
 export interface NPC {
