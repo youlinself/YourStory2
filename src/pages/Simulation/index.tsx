@@ -307,7 +307,10 @@ const MacroMapModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             }`}>
               <div className="w-16 text-sm font-medium text-ink text-right flex-shrink-0">{year.year}年</div>
               <div className="flex gap-2 flex-1">
-                {year.options.map((opt) => (
+                {(year.isCompleted && year.selectedOptionId
+                  ? year.options.filter((opt) => opt.id === year.selectedOptionId)
+                  : year.options
+                ).map((opt) => (
                   <div key={opt.id} className={`flex-1 h-14 rounded-lg border text-xs flex flex-col items-center justify-center p-1 ${
                     year.isCompleted ? 'bg-gray-100 border-gray-200 text-gray-400' :
                     year.selectedOptionId === opt.id ? 'bg-brand/10 border-brand text-brand font-bold' :
