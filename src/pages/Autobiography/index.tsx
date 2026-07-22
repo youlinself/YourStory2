@@ -21,7 +21,7 @@ const AutobiographyPage: React.FC = () => {
   const navigate = useNavigate();
   const { autobiography, load, getCompletionStats } = useAutobiographyStore();
   const { initSession } = useDialogueStore();
-  const { apiKey, model, baseUrl, vendor, temperature } = useAIStore();
+  const { apiKey, model, baseUrl, vendor, temperature, customModelName } = useAIStore();
 
   const [activeTab, setActiveTab] = useState('all');
   const [searchValue, setSearchValue] = useState('');
@@ -311,7 +311,7 @@ const AutobiographyPage: React.FC = () => {
     setStyleCheckResult(null);
 
     try {
-      const aiService = new AIService({ apiKey, model, baseUrl, vendor, temperature });
+      const aiService = new AIService({ apiKey, model, baseUrl, vendor, temperature, customModelName });
       const result = await aiService.checkStyleConsistency(
         chaptersWithContent.map((ch) => ({
           title: ch.title,
@@ -343,7 +343,7 @@ const AutobiographyPage: React.FC = () => {
     setTimelineResult(null);
 
     try {
-      const aiService = new AIService({ apiKey, model, baseUrl, vendor, temperature });
+      const aiService = new AIService({ apiKey, model, baseUrl, vendor, temperature, customModelName });
       const result = await aiService.organizeTimeline(
         autobiography.chapters.map((ch) => ({
           id: ch.id,

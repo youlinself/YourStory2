@@ -8,6 +8,8 @@ export interface AIServiceConfig {
   vendor?: string;
   temperature?: number;
   maxOutputTokens?: number;
+  customModelName?: string;
+  testUrl?: string;
 }
 
 export interface StreamChunk {
@@ -35,6 +37,8 @@ class AIService {
   private vendor: string;
   private temperature: number;
   private maxOutputTokens: number;
+  private customModelName: string;
+  private testUrl: string;
 
   constructor(config: AIServiceConfig) {
     this.apiKey = config.apiKey;
@@ -43,6 +47,94 @@ class AIService {
     this.vendor = config.vendor || 'openai';
     this.temperature = config.temperature ?? DEFAULT_CONFIG.temperature!;
     this.maxOutputTokens = config.maxOutputTokens ?? DEFAULT_CONFIG.maxOutputTokens!;
+    this.customModelName = config.customModelName || '';
+    this.testUrl = config.testUrl || '';
+  }
+
+  /**
+   * 测试连接
+   * @param testUrl 可选的测试URL，如果不提供则使用默认的测试端点
+   * @returns 测试结果 { success: boolean, message: string, models?: string[] }
+   */
+  async testConnection(testUrl?: string): Promise<{ success: boolean; message: string; models?: string[] }> {
+    const url = testUrl || this.testUrl || this.getDefaultTestUrl();
+    
+    try {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      
+      // 只有非 Ollama 供应商才需要 API Key
+      if (this.vendor !== 'ollama' && this.apiKey) {
+        headers['Authorization'] = `Bearer ${this.apiKey}`;
+      }
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => '');
+        return {
+          success: false,
+          message: `连接失败: HTTP ${response.status}${errorText ? ` - ${errorText.slice(0, 100)}` : ''}`,
+        };
+      }
+
+      // 尝试解析模型列表
+      try {
+        const data = await response.json();
+        const models = this.extractModels(data);
+        return {
+          success: true,
+          message: models.length > 0 ? `连接成功！发现 ${models.length} 个模型` : '连接成功！',
+          models: models.length > 0 ? models : undefined,
+        };
+      } catch {
+        // 解析失败但响应成功
+        return {
+          success: true,
+          message: '连接成功！',
+        };
+      }
+    } catch (error) {
+      return {
+        success: false,
+        message: `网络错误: ${error instanceof Error ? error.message : '未知错误'}`,
+      };
+    }
+  }
+
+  /** 获取默认测试 URL */
+  private getDefaultTestUrl(): string {
+    if (this.vendor === 'ollama') {
+      // Ollama 使用原生 API 端点，不需要认证
+      return `${this.baseUrl.replace(/\/v1$/, '')}/api/tags`;
+    }
+    // 默认使用 /models 端点
+    return `${this.baseUrl}/models`;
+  }
+
+  /** 从响应数据中提取模型列表 */
+  private extractModels(data: unknown): string[] {
+    if (!data || typeof data !== 'object') return [];
+    
+    // OpenAI 格式: { data: [{ id: 'model-name' }, ...] }
+    if ('data' in data && Array.isArray((data as { data: unknown[] }).data)) {
+      return (data as { data: Array<{ id?: string }> }).data
+        .map((item) => item.id)
+        .filter((id): id is string => !!id);
+    }
+    
+    // Ollama 格式: { models: [{ name: 'model-name' }, ...] }
+    if ('models' in data && Array.isArray((data as { models: unknown[] }).models)) {
+      return (data as { models: Array<{ name?: string; model?: string }> }).models
+        .map((item) => item.name || item.model)
+        .filter((name): name is string => !!name);
+    }
+    
+    return [];
   }
 
   async generateResponse(
@@ -257,6 +349,7 @@ class AIService {
     // 根据供应商限制 clamp max_tokens，防止 API 返回 400
     const vendorLimit = getMaxOutputTokens(this.vendor);
     const maxTokens = Math.min(this.maxOutputTokens, vendorLimit);
+    const activeModel = this.customModelName || this.model;
 
     try {
       const response = await fetch(`${this.baseUrl}/chat/completions`, {
@@ -266,7 +359,7 @@ class AIService {
           Authorization: `Bearer ${this.apiKey}`,
         },
         body: JSON.stringify({
-          model: this.model,
+          model: activeModel,
           messages,
           max_tokens: maxTokens,
           temperature: this.temperature,
@@ -310,6 +403,7 @@ class AIService {
     const messages = PromptComposer.buildMessages(userInput, historyForPrompt, chapterContext);
     const vendorLimit = getMaxOutputTokens(this.vendor);
     const maxTokens = Math.min(this.maxOutputTokens, vendorLimit);
+    const activeModel = this.customModelName || this.model;
 
     try {
       const response = await fetch(`${this.baseUrl}/chat/completions`, {
@@ -319,7 +413,7 @@ class AIService {
           Authorization: `Bearer ${this.apiKey}`,
         },
         body: JSON.stringify({
-          model: this.model,
+          model: activeModel,
           messages,
           max_tokens: maxTokens,
           temperature: this.temperature,

@@ -9,6 +9,7 @@ import BackupService from '../../services/backup/BackupService';
 import { isTauriEnvironment, migrateToTauriStorage } from '../../services/storage/tauriStorage';
 import { useToast } from '../../components';
 import { AI_VENDORS, getVendorById, getVendorModels } from '../../ai_config/vendors';
+import AIService from '../../services/ai/AIService';
 
 const SettingsPage: React.FC = () => {
   const {
@@ -17,11 +18,15 @@ const SettingsPage: React.FC = () => {
     baseUrl,
     vendor,
     temperature,
+    customModelName,
+    testUrl,
     setApiKey,
     setModel,
     setBaseUrl,
     setVendor,
     setTemperature,
+    setCustomModelName,
+    setTestUrl,
     loadSettings,
     saveSettings,
   } = useAIStore();
@@ -66,6 +71,16 @@ const SettingsPage: React.FC = () => {
 
   const handleModelChange = async (newModel: string) => {
     setModel(newModel);
+    await saveSettings();
+  };
+
+  const handleCustomModelNameChange = async (newName: string) => {
+    setCustomModelName(newName);
+    await saveSettings();
+  };
+
+  const handleTestUrlChange = async (newUrl: string) => {
+    setTestUrl(newUrl);
     await saveSettings();
   };
 
@@ -196,51 +211,35 @@ const SettingsPage: React.FC = () => {
   };
 
   const handleValidateApiKey = async () => {
-    if (!apiKey.trim()) {
-      setValidationResult('error');
-      setValidationMessage('请先输入 API Key');
-      return;
-    }
-
     setIsValidating(true);
     setValidationResult(null);
     setValidationMessage('');
 
     try {
-      const headers: Record<string, string> = {};
-      const vendorInfo = getVendorById(vendor);
-      if (vendorInfo) {
-        headers[vendorInfo.authHeader] = `${vendorInfo.authPrefix}${apiKey}`;
-      } else {
-        headers['Authorization'] = `Bearer ${apiKey}`;
-      }
-
-      const response = await fetch(`${baseUrl}/models`, {
-        method: 'GET',
-        headers,
+      const aiService = new AIService({
+        apiKey,
+        model: customModelName || model,
+        baseUrl,
+        vendor,
+        customModelName,
+        testUrl,
       });
 
-      if (response.ok) {
-        setValidationResult('success');
-        setValidationMessage('API Key 验证成功！');
+      const result = await aiService.testConnection();
 
-        try {
-          const data = await response.json();
-          const models = data.data?.map((m: { id: string }) => m.id).filter(Boolean) || [];
-          if (models.length > 0) {
-            setAvailableModels(models);
-          }
-        } catch {
-          // 忽略解析错误
+      if (result.success) {
+        setValidationResult('success');
+        setValidationMessage(result.message);
+        if (result.models && result.models.length > 0) {
+          setAvailableModels(result.models);
         }
       } else {
-        const errorText = await response.text().catch(() => '');
         setValidationResult('error');
-        setValidationMessage(`验证失败: ${response.status} ${errorText.slice(0, 100)}`);
+        setValidationMessage(result.message);
       }
     } catch (error) {
       setValidationResult('error');
-      setValidationMessage(`网络错误: ${error instanceof Error ? error.message : '未知错误'}`);
+      setValidationMessage(`测试失败: ${error instanceof Error ? error.message : '未知错误'}`);
     } finally {
       setIsValidating(false);
     }
@@ -260,7 +259,7 @@ const SettingsPage: React.FC = () => {
               <div>
                 <label className="text-sm font-medium text-ink mb-2 block">AI 供应商</label>
                 <div className="grid grid-cols-2 gap-3">
-                  {AI_VENDORS.filter((v) => v.id !== 'custom').map((v) => (
+                  {AI_VENDORS.map((v) => (
                     <div
                       key={v.id}
                       className={`model-card ${vendor === v.id ? 'selected' : ''}`}
@@ -274,36 +273,59 @@ const SettingsPage: React.FC = () => {
                           </svg>
                         )}
                       </div>
-                      <p className="text-xs text-ink-faint">{v.defaultModel}</p>
+                      <p className="text-xs text-ink-faint">{v.defaultModel || '自定义模型'}</p>
                     </div>
                   ))}
                 </div>
               </div>
 
-              <div>
-                <label className="text-sm font-medium text-ink mb-2 block">模型选择</label>
-                <select
-                  className="input w-full"
-                  value={model}
-                  onChange={(e) => handleModelChange(e.target.value)}
-                >
-                  {availableModels.length > 0 ? (
-                    availableModels.map((m) => (
-                      <option key={m} value={m}>{m}</option>
-                    ))
-                  ) : (
-                    <option value={model}>{model}</option>
-                  )}
-                </select>
-              </div>
+              {vendor !== 'ollama' && vendor !== 'custom' && (
+                <div>
+                  <label className="text-sm font-medium text-ink mb-2 block">模型选择</label>
+                  <select
+                    className="input w-full"
+                    value={model}
+                    onChange={(e) => handleModelChange(e.target.value)}
+                  >
+                    {availableModels.length > 0 ? (
+                      availableModels.map((m) => (
+                        <option key={m} value={m}>{m}</option>
+                      ))
+                    ) : (
+                      <option value={model}>{model}</option>
+                    )}
+                  </select>
+                </div>
+              )}
+              {(vendor === 'ollama' || vendor === 'custom') && (
+                <div>
+                  <label className="text-sm font-medium text-ink mb-2 block">模型名称</label>
+                  <input
+                    className="input w-full"
+                    placeholder={vendor === 'ollama' ? '例如: llama3.2:1b, codellama' : '输入模型名称'}
+                    value={customModelName}
+                    onChange={(e) => handleCustomModelNameChange(e.target.value)}
+                  />
+                  <p className="text-xs text-ink-faint mt-1">
+                    {vendor === 'ollama'
+                      ? '填写本地已拉取的模型名称（执行 ollama list 查看）'
+                      : '填写自定义 API 的模型名称'}
+                  </p>
+                </div>
+              )}
 
               <div>
-                <label className="text-sm font-medium text-ink mb-2 block">API Key</label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-medium text-ink">API Key</label>
+                  {(vendor === 'ollama' || vendor === 'custom') && (
+                    <span className="text-xs text-ink-faint">选填</span>
+                  )}
+                </div>
                 <div className="flex gap-2">
                   <input
                     className="input flex-1"
                     type="password"
-                    placeholder="输入你的 API Key"
+                    placeholder={vendor === 'ollama' ? 'Ollama 默认无需 API Key' : '输入你的 API Key'}
                     value={apiKey}
                     onChange={(e) => handleApiKeyChange(e.target.value)}
                     onBlur={handleApiKeyBlur}
@@ -311,9 +333,9 @@ const SettingsPage: React.FC = () => {
                   <button
                     className="btn btn-outline"
                     onClick={handleValidateApiKey}
-                    disabled={isValidating || !apiKey.trim()}
+                    disabled={isValidating}
                   >
-                    {isValidating ? '验证中...' : '验证'}
+                    {isValidating ? '测试中...' : '测试连接'}
                   </button>
                 </div>
                 {validationResult && (
@@ -321,7 +343,7 @@ const SettingsPage: React.FC = () => {
                     {validationMessage}
                   </p>
                 )}
-                {currentVendor && (
+                {currentVendor && vendor !== 'ollama' && vendor !== 'custom' && (
                   <p className="text-xs text-ink-faint mt-1">
                     当前使用 {currentVendor.name} 的 {currentVendor.authHeader} 认证方式
                   </p>
@@ -348,16 +370,38 @@ const SettingsPage: React.FC = () => {
                 </div>
               </div>
 
-              {vendor === 'custom' && (
+              {(vendor === 'custom' || vendor === 'ollama') && (
                 <div>
-                  <label className="text-sm font-medium text-ink mb-2 block">自定义 Base URL</label>
+                  <label className="text-sm font-medium text-ink mb-2 block">
+                    {vendor === 'ollama' ? 'Ollama Base URL' : '自定义 Base URL'}
+                  </label>
                   <input
                     className="input w-full"
-                    placeholder="https://api.example.com/v1"
+                    placeholder={vendor === 'ollama' ? 'http://localhost:11434' : 'https://api.example.com/v1'}
                     value={baseUrl}
                     onChange={(e) => setBaseUrl(e.target.value)}
                     onBlur={saveSettings}
                   />
+                  {vendor === 'ollama' && (
+                    <p className="text-xs text-ink-faint mt-1">
+                      Ollama 默认地址为 http://localhost:11434，如使用远程服务器请修改
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {vendor === 'custom' && (
+                <div>
+                  <label className="text-sm font-medium text-ink mb-2 block">测试 URL（可选）</label>
+                  <input
+                    className="input w-full"
+                    placeholder="https://api.example.com/v1/models（用于测试连接）"
+                    value={testUrl}
+                    onChange={(e) => handleTestUrlChange(e.target.value)}
+                  />
+                  <p className="text-xs text-ink-faint mt-1">
+                    自定义测试端点，留空则使用 Base URL + /models 进行测试
+                  </p>
                 </div>
               )}
             </div>

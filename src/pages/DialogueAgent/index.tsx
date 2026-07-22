@@ -22,7 +22,7 @@ const DialogueAgent: React.FC = () => {
   const [messagesContainerHeight, setMessagesContainerHeight] = useState(600);
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
 
-  const { apiKey, model, baseUrl, vendor, temperature, maxOutputTokens, loadSettings } = useAIStore();
+  const { apiKey, model, baseUrl, vendor, temperature, maxOutputTokens, customModelName, loadSettings } = useAIStore();
 
   const {
     activeSession,
@@ -118,7 +118,7 @@ const DialogueAgent: React.FC = () => {
 
     setIsGenerating(true);
     try {
-      const aiService = new AIService({ apiKey, model, baseUrl, vendor, temperature, maxOutputTokens });
+      const aiService = new AIService({ apiKey, model, baseUrl, vendor, temperature, maxOutputTokens, customModelName });
       const guide = await aiService.generateWelcomeGuide(autobiography, chapterId || null);
 
       if (guide) {
@@ -198,7 +198,7 @@ const DialogueAgent: React.FC = () => {
     addMessage(aiMessage);
 
     try {
-      const aiService = new AIService({ apiKey, model, baseUrl, vendor, temperature, maxOutputTokens });
+      const aiService = new AIService({ apiKey, model, baseUrl, vendor, temperature, maxOutputTokens, customModelName });
 
       // 构建章节上下文
       let chapterContext: ChapterContext | undefined;
@@ -419,7 +419,7 @@ const DialogueAgent: React.FC = () => {
     if (!apiKey || !chapterId || !currentChapter) return;
     setIsGenerating(true);
     try {
-      const aiService = new AIService({ apiKey, model, baseUrl, vendor, temperature, maxOutputTokens });
+      const aiService = new AIService({ apiKey, model, baseUrl, vendor, temperature, maxOutputTokens, customModelName });
       const dialogueContent = messages
         .map((m) => `${m.isUser ? '用户' : 'AI'}: ${m.content}`)
         .join('\n');

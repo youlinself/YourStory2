@@ -127,6 +127,17 @@ export const AI_VENDORS: AIVendor[] = [
     maxOutputTokens: 8192,
   },
   {
+    id: 'ollama',
+    name: 'Ollama (本地)',
+    baseUrl: 'http://localhost:11434/v1',
+    modelsUrl: 'http://localhost:11434/v1/models',
+    authHeader: 'Authorization',
+    authPrefix: 'Bearer ',
+    models: ['llama3.2', 'llama3.1', 'qwen2.5', 'mistral', 'gemma2', 'phi3'],
+    defaultModel: 'llama3.2',
+    maxOutputTokens: 8192,
+  },
+  {
     id: 'custom',
     name: '自定义',
     baseUrl: '',
