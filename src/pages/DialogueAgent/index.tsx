@@ -481,7 +481,7 @@ const DialogueAgent: React.FC = () => {
     : '与AI对话，逐步构建您的个人自传';
 
   return (
-    <div className="flex h-[calc(100vh-9rem)] animate-fade-in">
+    <div className="flex h-[calc(100vh-9rem)] animate-fade-in" style={{ padding: '10px' }}>
       {/* 左侧聊天区域 */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Page Header */}
