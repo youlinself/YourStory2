@@ -7,6 +7,10 @@ import {
   ATTRIBUTE_ICONS,
   ATTRIBUTE_COLORS,
   ATTRIBUTE_DESCRIPTIONS,
+  TAG_NAMES,
+  CARD_TYPE_NAMES,
+  CULTIVATION_REALM_NAMES,
+  RARITY_NAMES,
 } from '../../data/simulationData';
 import Tooltip from '../../components/common/Tooltip';
 import FloatingDamage from '../../components/ui/FloatingDamage';
@@ -609,7 +613,7 @@ const CombatPhaseView: React.FC = () => {
                     >
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-[10px] font-bold px-1.5 py-0.5 rounded text-brand bg-brand-light">{card.cost}</span>
-                        <span className={`text-[9px] uppercase tracking-wide ${colors.label}`}>{card.type}</span>
+                        <span className={`text-[9px] uppercase tracking-wide ${colors.label}`}>{CARD_TYPE_NAMES[card.type] || card.type}</span>
                       </div>
                       <div className="text-2xl mb-1.5 text-center">{card.icon}</div>
                       <div className="text-xs font-medium mb-0.5 text-center text-ink">{card.name}</div>
@@ -627,8 +631,8 @@ const CombatPhaseView: React.FC = () => {
                                 block: '格挡',
                                 heal: '回复',
                                 draw: '抽',
-                                gain_energy: '+能量',
-                                gain_max_energy: '+最大能量',
+                                gain_energy: '+精力',
+                                gain_max_energy: '+最大精力',
                                 gain_attribute: '+属性',
                                 lose_attribute: '-属性',
                                 vulnerable: '脆弱',
@@ -979,7 +983,7 @@ const RewardPhase: React.FC = () => {
           <div className="bg-white rounded-xl border border-border-subtle p-5">
             <div className="flex items-center gap-3 mb-3">
               <span className="text-3xl">{combat.rewards.relic!.icon}</span>
-              <div><h3 className="font-semibold text-ink">{combat.rewards.relic!.name}</h3><span className="text-xs text-ink-muted">{combat.rewards.relic!.rarity}</span></div>
+              <div><h3 className="font-semibold text-ink">{combat.rewards.relic!.name}</h3><span className="text-xs text-ink-muted">{RARITY_NAMES[combat.rewards.relic!.rarity] || combat.rewards.relic!.rarity}</span></div>
             </div>
             <p className="text-sm text-ink-muted mb-3">{combat.rewards.relic!.description}</p>
             <button onClick={completeOption} className="w-full px-6 py-3 bg-brand text-white rounded-lg font-medium hover:bg-brand/90 transition-colors">收取遗物</button>
@@ -1086,7 +1090,7 @@ const SimulationPage: React.FC = () => {
             <h2 className="text-2xl font-bold text-ink mb-2">🕯️ 游戏结束</h2>
             <p className="text-ink-muted mb-4">你活了 {age} 岁</p>
             <p className="text-sm text-ink-muted mb-6">卡牌数: {deck.length} | 遗物数: {relics.length}</p>
-            {cultivation && <p className="text-sm text-brand">境界: {cultivation.realm}</p>}
+            {cultivation && <p className="text-sm text-brand">境界: {CULTIVATION_REALM_NAMES[cultivation.realm] || cultivation.realm}</p>}
           </div>
         )}
       </div>
@@ -1100,7 +1104,7 @@ const SimulationPage: React.FC = () => {
               <div className="flex justify-between"><span className="text-ink-muted">年龄</span><span className="font-medium">{age}岁</span></div>
               <div className="flex justify-between"><span className="text-ink-muted">寿命上限</span><span className="font-medium">{Math.round(remainingLife)}年</span></div>
               <div className="flex justify-between"><span className="text-ink-muted">金币</span><span className="font-medium">💰 {gold}</span></div>
-              {cultivation && <div className="flex justify-between"><span className="text-ink-muted">境界</span><span className="font-medium text-brand">{cultivation.realm}</span></div>}
+              {cultivation && <div className="flex justify-between"><span className="text-ink-muted">境界</span><span className="font-medium text-brand">{CULTIVATION_REALM_NAMES[cultivation.realm] || cultivation.realm}</span></div>}
             </div>
           </div>
           <div className="bg-white rounded-xl border border-border-subtle p-4 mb-4">
@@ -1138,7 +1142,7 @@ const SimulationPage: React.FC = () => {
               <h3 className="font-semibold text-ink mb-3">🏷️ 标签</h3>
               <div className="flex flex-wrap gap-1">
                 {hiddenTags.map((tag) => (
-                  <span key={tag} className="px-2 py-1 rounded-full bg-amber-100 text-amber-700 text-xs">{tag}</span>
+                  <span key={tag} className="px-2 py-1 rounded-full bg-amber-100 text-amber-700 text-xs">{TAG_NAMES[tag] || tag}</span>
                 ))}
               </div>
             </div>

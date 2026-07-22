@@ -1140,6 +1140,59 @@ export const ATTRIBUTE_DESCRIPTIONS: Record<string, string> = {
 };
 
 // ==========================================
+// 隐藏标签中文名
+// ==========================================
+export const TAG_NAMES: Record<string, string> = {
+  trendsetter: '弄潮儿',
+  steady_walker: '守望者',
+  wisdom_seeker: '求道者',
+  social_master: '人脉之王',
+  hidden_dragon: '潜龙',
+  life_enjoyer: '生活家',
+  era_shaper: '时代塑造者',
+  collector: '收藏家',
+  minimalist: '极简主义者',
+  cultivator: '修真者',
+};
+
+// ==========================================
+// 卡牌类型中文名
+// ==========================================
+export const CARD_TYPE_NAMES: Record<string, string> = {
+  attack: '攻击',
+  skill: '技能',
+  power: '能力',
+  curse: '诅咒',
+};
+
+// ==========================================
+// 修真境界中文名
+// ==========================================
+export const CULTIVATION_REALM_NAMES: Record<string, string> = {
+  mortal: '凡人',
+  qi_refining: '炼气',
+  foundation: '筑基',
+  golden_core: '金丹',
+  nascent: '元婴',
+  spirit: '化神',
+  void: '炼虚',
+  integration: '合体',
+  mahayana: '大乘',
+  tribulation: '渡劫',
+};
+
+// ==========================================
+// 稀有度中文名
+// ==========================================
+export const RARITY_NAMES: Record<string, string> = {
+  common: '普通',
+  uncommon: '优秀',
+  rare: '稀有',
+  legendary: '传说',
+  boss: 'Boss',
+};
+
+// ==========================================
 // 1950年代事件（兼容旧系统）
 // ==========================================
 export const SCRIPT_1950_EVENTS: GameEvent[] = [

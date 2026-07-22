@@ -399,11 +399,6 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
     c.player.hand.splice(idx, 1);
     c.player.energy -= card.cost;
 
-    if (c.player.drawPile.length < c.player.hand.length + 5) {
-      c.player.drawPile = shuffle([...c.player.drawPile, ...c.player.discardPile]);
-      c.player.discardPile = [];
-    }
-
     const beforeHealth = c.enemies.map(e => e.currentHealth);
     const beforeBlock = c.player.block;
     const enemyBlocksBefore = c.enemies.map(e => e.block);
