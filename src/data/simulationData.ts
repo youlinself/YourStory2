@@ -7,6 +7,7 @@ import type {
   CultivationRealm,
   GameEvent,
   StatusEffect,
+  EnemyMechanic,
 } from '../types/simulation';
 
 // ==========================================
@@ -843,6 +844,7 @@ export const COMMON_ENEMIES: Enemy[] = [
     cardRewards: [COMMON_ATTACK_CARDS[1], COMMON_SKILL_CARDS[2], COMMON_ATTACK_CARDS[2]],
     goldReward: [5, 15],
     description: '拖延是时间最大的小偷',
+    mechanics: [] as EnemyMechanic[],
   },
   {
     id: 'anxiety_ghost',
@@ -862,6 +864,7 @@ export const COMMON_ENEMIES: Enemy[] = [
     cardRewards: [COMMON_SKILL_CARDS[0], COMMON_SKILL_CARDS[1], RARE_CARDS[0]],
     goldReward: [8, 20],
     description: '焦虑让你无法集中注意力',
+    mechanics: [] as EnemyMechanic[],
   },
   {
     id: 'obligation_golem',
@@ -881,6 +884,7 @@ export const COMMON_ENEMIES: Enemy[] = [
     cardRewards: [COMMON_ATTACK_CARDS[0], COMMON_ATTACK_CARDS[1], RARE_CARDS[1]],
     goldReward: [10, 25],
     description: '家庭、工作、社会责任...你无法逃避',
+    mechanics: [] as EnemyMechanic[],
   },
   {
     id: 'self_doubt_wraith',
@@ -900,6 +904,7 @@ export const COMMON_ENEMIES: Enemy[] = [
     cardRewards: [COMMON_SKILL_CARDS[0], COMMON_SKILL_CARDS[1], COMMON_SKILL_CARDS[2]],
     goldReward: [5, 15],
     description: '内心的声音在质疑你的一切',
+    mechanics: [] as EnemyMechanic[],
   },
 ];
 
@@ -924,6 +929,7 @@ export const ELITE_ENEMIES: Enemy[] = [
     cardRewards: [RARE_CARDS[0], RARE_CARDS[1], RARE_CARDS[2]],
     goldReward: [25, 50],
     description: '上有老下有小，左右为难',
+    mechanics: ['double_attack'] as EnemyMechanic[],
   },
   {
     id: 'burnout_demon',
@@ -944,6 +950,7 @@ export const ELITE_ENEMIES: Enemy[] = [
     cardRewards: [RARE_CARDS[1], RARE_CARDS[2], LEGENDARY_CARDS[0]],
     goldReward: [30, 60],
     description: '996的阴影笼罩着你',
+    mechanics: ['shield'] as EnemyMechanic[],
   },
 ];
 
@@ -969,6 +976,7 @@ export const BOSS_ENEMIES: Enemy[] = [
     relicReward: BOSS_RELICS[0],
     goldReward: [50, 100],
     description: '作为社会的一员，你别无选择',
+    mechanics: ['double_attack', 'shield'] as EnemyMechanic[],
   },
   {
     id: 'final_exam_boss',
@@ -990,6 +998,7 @@ export const BOSS_ENEMIES: Enemy[] = [
     relicReward: BOSS_RELICS[1],
     goldReward: [80, 150],
     description: '回顾你的一生，你满意吗？',
+    mechanics: ['double_attack', 'regen'] as EnemyMechanic[],
   },
   {
     id: 'infinite_doubt',
@@ -1014,6 +1023,7 @@ export const BOSS_ENEMIES: Enemy[] = [
     relicReward: BOSS_RELICS[1],
     goldReward: [100, 200],
     description: '你内心最深处的恐惧',
+    mechanics: ['double_attack', 'shield', 'rage'] as EnemyMechanic[],
   },
 ];
 
@@ -1037,6 +1047,7 @@ export const CULTIVATION_BOSSES: Enemy[] = [
     cardRewards: [CULTIVATION_CARDS[1], CULTIVATION_CARDS[2], LEGENDARY_CARDS[1]],
     goldReward: [100, 200],
     description: '一念之差，走火入魔',
+    mechanics: ['rage', 'regen'] as EnemyMechanic[],
   },
   {
     id: 'heavenly_tribulation',
@@ -1058,6 +1069,7 @@ export const CULTIVATION_BOSSES: Enemy[] = [
     relicReward: CULTIVATION_RELICS[3],
     goldReward: [500, 1000],
     description: '天道不容，降下九重天劫',
+    mechanics: ['double_attack', 'shield', 'rage', 'summon'] as EnemyMechanic[],
   },
 ];
 
@@ -1114,6 +1126,17 @@ export const ATTRIBUTE_COLORS: Record<string, string> = {
   wealth: '#F97316',
   network: '#06B6D4',
   fame: '#EC4899',
+};
+
+export const ATTRIBUTE_DESCRIPTIONS: Record<string, string> = {
+  energy: '决定行动力与精力上限，影响每回合可出牌数量及事件成功率',
+  physique: '身体素质与力量，影响战斗伤害、体力活动成功率及寿命',
+  health: '身体健康状况，影响生命值上限、恢复速度及疾病抵抗力',
+  iq: '智力与学识，影响技能卡效果、事件判断成功率及卡牌奖励',
+  eq: '情商与社交智慧，影响人脉拓展、NPC关系建立及事件成功率',
+  wealth: '金钱与物质资源，影响商店购买力、初始资产及投资回报',
+  network: '人脉与社会关系，影响随机事件质量、NPC互动及信息获取',
+  fame: '名声与社会影响力，影响事件卡奖励、特殊选项解锁及结局评价',
 };
 
 // ==========================================

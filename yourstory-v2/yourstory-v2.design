@@ -63,6 +63,22 @@
         "htmlSrc": "pages/settings.html",
         "interactions": []
       }
+    },
+    {
+      "id": "page-simulation",
+      "title": "模拟人生 · 战斗场景",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1712476800000,
+      "canvasData": {
+        "x": 2480,
+        "y": 0,
+        "group": 0
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/simulation.html",
+        "interactions": []
+      }
     }
   ],
   "config": {

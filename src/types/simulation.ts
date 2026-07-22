@@ -1,10 +1,19 @@
 // ==========================================
-// 模拟人生 - 核心类型定义（杀戮尖塔风格）
+// 模拟人生 - 核心类型定义（年度决策版）
 // ==========================================
 
-// ------------------------------------------
-// 8维属性系统
-// ------------------------------------------
+export type BirthYear = 1950 | 1960 | 1970 | 1980 | 1990 | 2000 | 2010 | 2020 | 2030 | 2040 | 2050 | 2060 | 2070;
+
+export interface EraDefinition {
+  year: BirthYear;
+  name: string;
+  baseLifeExpectancy: number;
+  description: string;
+  initialWealthRange: [number, number];
+  initialNetworkRange: [number, number];
+  attributePoints: number;
+}
+
 export interface PlayerAttributes {
   energy: number;
   physique: number;
@@ -31,31 +40,12 @@ export interface HiddenTag {
   condition: (state: GameState) => boolean;
 }
 
-// ------------------------------------------
-// 时代与出生年
-// ------------------------------------------
-export type BirthYear = 1950 | 1960 | 1970 | 1980 | 1990 | 2000 | 2010 | 2020 | 2030 | 2040 | 2050 | 2060 | 2070;
-
-export interface EraDefinition {
-  year: BirthYear;
-  name: string;
-  baseLifeExpectancy: number;
-  description: string;
-  initialWealthRange: [number, number];
-  initialNetworkRange: [number, number];
-  attributePoints: number;
-}
-
-// ==========================================
-// 卡牌系统
-// ==========================================
 export type CardType = 'attack' | 'skill' | 'power' | 'curse';
 export type CardRarity = 'common' | 'uncommon' | 'rare' | 'legendary';
 export type CardTarget = 'enemy' | 'self' | 'all' | 'none';
 
 export interface CardEffect {
-  type:
-    | 'damage' | 'block' | 'heal' | 'draw' | 'gain_energy' | 'gain_max_energy'
+  type: 'damage' | 'block' | 'heal' | 'draw' | 'gain_energy' | 'gain_max_energy'
     | 'gain_attribute' | 'lose_attribute' | 'vulnerable' | 'weak' | 'poison'
     | 'cure' | 'shield' | 'thorns' | 'rage' | 'stealth' | 'lifedrain' | 'lifesteal'
     | 'regen' | 'strength' | 'dexterity';
@@ -75,20 +65,14 @@ export interface LifeCard {
   description: string;
   skinRule?: (state: GameState) => string;
   expires?: number;
-  isUpgraded?: boolean;
-  upgrade?: Partial<LifeCard>;
   tags: string[];
   icon: string;
 }
 
-// ==========================================
-// 遗物系统
-// ==========================================
 export type RelicRarity = 'common' | 'uncommon' | 'rare' | 'boss' | 'legendary';
 
 export interface RelicEffect {
-  type:
-    | 'max_health_bonus' | 'energy_bonus' | 'card_draw_bonus' | 'discount'
+  type: 'max_health_bonus' | 'energy_bonus' | 'card_draw_bonus' | 'discount'
     | 'double_damage' | 'heal_on_rest' | 'extra_card_reward' | 'card_type_bonus'
     | 'attribute_scaling' | 'lifespan_extend' | 'retention_bonus';
   value: number;
@@ -108,9 +92,6 @@ export interface LifeRelic {
   eraLimited?: number;
 }
 
-// ==========================================
-// 敌人和Boss系统
-// ==========================================
 export type EnemyIntent =
   | { type: 'attack'; damage: number; hits?: number }
   | { type: 'defend'; block: number }
@@ -118,6 +99,15 @@ export type EnemyIntent =
   | { type: 'debuff'; effect: string; value: number }
   | { type: 'special'; name: string; description: string }
   | { type: 'idle' };
+
+export interface StatusEffect {
+  type: 'vulnerable' | 'weak' | 'poison' | 'block' | 'strength' | 'dexterity'
+    | 'shields' | 'thorns' | 'rage' | 'regen' | 'artifact' | 'intangible';
+  value: number;
+  duration: number;
+}
+
+export type EnemyMechanic = 'double_attack' | 'shield' | 'regen' | 'rage' | 'summon';
 
 export interface Enemy {
   id: string;
@@ -134,19 +124,46 @@ export interface Enemy {
   relicReward?: LifeRelic;
   goldReward: [number, number];
   description: string;
+  mechanics: EnemyMechanic[];
 }
 
-export interface StatusEffect {
-  type:
-    | 'vulnerable' | 'weak' | 'poison' | 'block' | 'strength' | 'dexterity'
-    | 'shields' | 'thorns' | 'rage' | 'regen' | 'artifact' | 'intangible';
-  value: number;
-  duration: number;
+export type OptionType =
+  | 'combat'
+  | 'elite'
+  | 'event'
+  | 'wonder'
+  | 'rest'
+  | 'shop'
+  | 'boss';
+
+export interface YearOption {
+  id: string;
+  type: OptionType;
+  data?: {
+    eventId?: string;
+    enemyIds?: string[];
+    relicId?: string;
+    goldRange?: [number, number];
+  };
 }
 
-// ==========================================
-// 战斗状态机
-// ==========================================
+export interface YearNode {
+  year: number;
+  eraIndex: number;
+  isBossYear: boolean;
+  options: YearOption[];
+  selectedOptionId: string | null;
+  isCompleted: boolean;
+}
+
+export interface EraMap {
+  era: number;
+  birthYear: number;
+  years: YearNode[];
+  currentYearIndex: number;
+  completed: boolean;
+}
+
 export type CombatPhase = 'player_turn' | 'enemy_turn' | 'victory' | 'defeat';
 
 export interface CombatState {
@@ -168,11 +185,21 @@ export interface CombatState {
   enemies: Enemy[];
   currentEnemyIndex: number;
   rewards: {
+    attribute?: Partial<PlayerAttributes>;
     cards: LifeCard[];
-    gold: number;
     relic?: LifeRelic;
   };
+  availableBonuses: CombatBonus[];
   log: CombatLogEntry[];
+}
+
+export interface CombatBonus {
+  id: string;
+  name: string;
+  description: string;
+  lifeCost: number;
+  effect: 'draw' | 'damage_boost' | 'heal' | 'skip_enemy' | 'extra_energy';
+  value: number;
 }
 
 export interface CombatLogEntry {
@@ -182,44 +209,6 @@ export interface CombatLogEntry {
   timestamp: number;
 }
 
-// ==========================================
-// 地图节点系统
-// ==========================================
-export type NodeType =
-  | 'start' | 'event' | 'combat' | 'elite' | 'boss'
-  | 'rest' | 'shop' | 'treasure' | 'mystery';
-
-export interface MapNode {
-  id: string;
-  type: NodeType;
-  x: number;              // 深度位置 (0-9, 对应每年)
-  y: number;              // 分支 (0-2, 3条路径)
-  connections: string[];  // 连接的节点id
-  isVisited: boolean;
-  isAccessible: boolean;
-  isCurrent: boolean;     // 是否为当前选中节点
-  data?: MapNodeData;
-}
-
-export interface MapNodeData {
-  eventId?: string;
-  enemyIds?: string[];
-  relicId?: string;
-  goldRange?: [number, number];
-}
-
-export interface EraMap {
-  era: number;
-  nodes: MapNode[];
-  currentNodeId: string;
-  currentLayer: number;       // 当前层数
-  maxAccessibleLayer: number; // 最高可达层数
-  completed: boolean;
-}
-
-// ------------------------------------------
-// 事件系统
-// ------------------------------------------
 export type EventType = 'fixed' | 'random' | 'npc_triggered' | 'world_event' | 'map_event';
 
 export interface EventOption {
@@ -256,9 +245,6 @@ export interface GameEvent {
   isMilestone?: boolean;
 }
 
-// ------------------------------------------
-// NPC系统
-// ------------------------------------------
 export interface NPC {
   id: string;
   name: string;
@@ -270,9 +256,6 @@ export interface NPC {
   eventTriggerChance: number;
 }
 
-// ------------------------------------------
-// 商城系统
-// ------------------------------------------
 export interface ShopItem {
   card?: LifeCard;
   relic?: LifeRelic;
@@ -287,11 +270,8 @@ export interface ShopState {
   era: number;
 }
 
-// ------------------------------------------
-// 游戏状态
-// ------------------------------------------
 export type GamePhase =
-  | 'setup' | 'allocating' | 'map_view' | 'event' | 'combat'
+  | 'setup' | 'allocating' | 'year_view' | 'event' | 'combat'
   | 'shop' | 'rest' | 'reward' | 'era_transition' | 'ended' | 'loading';
 
 export type GameMode = 'normal' | 'endless';
@@ -327,6 +307,16 @@ export interface LifeRecord {
   timestamp: number;
 }
 
+export interface AttributeThresholdBonus {
+  attribute: keyof PlayerAttributes;
+  threshold: number;
+  name: string;
+  description: string;
+  effect: 'damage_boost' | 'extra_draw' | 'debuff_reduction' | 'max_health_bonus'
+    | 'energy_bonus' | 'shop_discount' | 'start_block' | 'interrupt_chance';
+  value: number;
+}
+
 export interface GameState {
   phase: GamePhase;
   mode: GameMode;
@@ -342,28 +332,14 @@ export interface GameState {
   npcs: NPC[];
   choiceHistory: ChoiceRecord[];
   lifeRecords: LifeRecord[];
-
-  // 卡牌/遗物
   deck: LifeCard[];
   relics: LifeRelic[];
   gold: number;
-
-  // 战斗
   combat: CombatState;
-
-  // 地图
   currentMap: EraMap | null;
-
-  // 商店
   shop: ShopState | null;
-
-  // 修仙
   cultivation: CultivationState | null;
-
-  // 世界状态
   worldState: WorldState;
-
-  // 随机种子
   seed: number;
 }
 
@@ -374,9 +350,6 @@ export interface WorldState {
   customEvents: string[];
 }
 
-// ------------------------------------------
-// 存档系统
-// ------------------------------------------
 export interface SaveMetadata {
   id: string;
   birthYear: number;
@@ -387,32 +360,6 @@ export interface SaveMetadata {
   isDead: boolean;
   createdAt: string;
   updatedAt: string;
-}
-
-// ------------------------------------------
-// 小说导出
-// ------------------------------------------
-export interface NovelExport {
-  title: string;
-  birthYear: number;
-  deathYear: number;
-  mode: GameMode;
-  chapters: {
-    era: string;
-    title: string;
-    content: string;
-    highlights: string[];
-  }[];
-  stats: {
-    maxAttributes: Partial<PlayerAttributes>;
-    totalChoices: number;
-    successRate: number;
-    npcRelationships: { name: string; finalRelation: number }[];
-    finalTags: string[];
-    relics: string[];
-    deckSize: number;
-    cultivationRealm?: CultivationRealm;
-  };
 }
 
 export {};

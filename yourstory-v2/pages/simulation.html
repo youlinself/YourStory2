@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>战斗场景 · 模拟人生</title>
+    <style id="theme-vars">
+@import "tailwindcss";
+
+@theme {
+  --color-brand: #da7756;
+  --color-brand-hover: #c4684a;
+  --color-brand-light: rgba(218, 119, 86, 0.1);
+  --color-brand-surface: rgba(218, 119, 86, 0.06);
+  
+  --color-gold: #c9a96e;
+  --color-gold-light: rgba(201, 169, 110, 0.12);
+  --color-sage: #7a9e7e;
+  --color-sage-light: rgba(122, 158, 126, 0.12);
+  
+  --color-ink: #1a1a1a;
+  --color-ink-secondary: #4a4a4a;
+  --color-ink-tertiary: #6b6b6b;
+  --color-ink-muted: #8a8a8a;
+  --color-ink-faint: #b0b0b0;
+  
+  --color-bg: #faf8f5;
+  --color-bg-elevated: #ffffff;
+  --color-bg-subtle: #f5f0eb;
+  --color-bg-hover: rgba(0, 0, 0, 0.02);
+  
+  --color-border: rgba(0, 0, 0, 0.1);
+  --color-border-subtle: rgba(0, 0, 0, 0.06);
+  --color-border-emphasis: rgba(0, 0, 0, 0.15);
+  
+  --color-success: #2d9d4e;
+  --color-success-bg: rgba(45, 157, 78, 0.1);
+  --color-warning: #e5a100;
+  --color-warning-bg: rgba(229, 161, 0, 0.1);
+  --color-danger: #d1242f;
+  --color-danger-bg: rgba(209, 36, 47, 0.1);
+  
+  --font-serif: "Noto Serif SC", Georgia, serif;
+  --font-sans: "Inter", "Noto Sans SC", system-ui, sans-serif;
+  
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+  --radius-full: 9999px;
+  
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.03);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.08);
+  
+  --ease-out: cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+:root {
+  --background: #faf8f5;
+  --foreground: #1a1a1a;
+  --card: #ffffff;
+  --card-foreground: #1a1a1a;
+  --popover: #ffffff;
+  --popover-foreground: #1a1a1a;
+  --primary: #da7756;
+  --primary-foreground: #ffffff;
+  --secondary: #f5f0eb;
+  --secondary-foreground: #1a1a1a;
+  --muted: #f5f0eb;
+  --muted-foreground: #8a8a8a;
+  --accent: rgba(218, 119, 86, 0.06);
+  --accent-foreground: #1a1a1a;
+  --border: rgba(0, 0, 0, 0.1);
+  --input: rgba(0, 0, 0, 0.1);
+  --ring: rgba(218, 119, 86, 0.2);
+  --radius-small: 6px;
+  --radius-medium: 10px;
+  --radius-large: 14px;
+}
+
+.text-serif { font-family: var(--font-serif); }
+.text-sans { font-family: var(--font-sans); }
+
+body {
+  font-family: var(--font-sans);
+  background: var(--color-bg);
+  color: var(--color-ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: var(--radius-full); }
+::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.15); }
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in { animation: fadeIn 0.35s var(--ease-out); }
+.animate-slide-up { animation: slideUp 0.4s var(--ease-out); }
+
+/* Button */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: var(--radius-md);
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s var(--ease-out);
+  white-space: nowrap;
+}
+.btn:active { transform: scale(0.97); }
+.btn-primary {
+  background: var(--color-brand);
+  color: white;
+  box-shadow: 0 1px 2px rgba(218, 119, 86, 0.15);
+}
+.btn-primary:hover { background: var(--color-brand-hover); box-shadow: var(--shadow-md); }
+.btn-ghost {
+  background: transparent;
+  color: var(--color-ink-tertiary);
+}
+.btn-ghost:hover { background: var(--color-bg-hover); color: var(--color-ink); }
+
+/* Input */
+.input {
+  width: 100%;
+  padding: 0.625rem 0.875rem;
+  font-size: 0.875rem;
+  color: var(--color-ink);
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  outline: none;
+  transition: all 0.15s var(--ease-out);
+}
+.input:hover { border-color: var(--color-border-emphasis); }
+.input:focus { border-color: var(--color-brand); box-shadow: 0 0 0 3px var(--color-brand-light); }
+.input::placeholder { color: var(--color-ink-faint); }
+
+/* Tab */
+.tab {
+  padding: 0.5rem 0;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-ink-muted);
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s var(--ease-out);
+}
+.tab:hover { color: var(--color-ink); }
+.tab.active { color: var(--color-brand); border-bottom-color: var(--color-brand); }
+
+/* Card */
+.card {
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+}
+
+/* Badge */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: var(--radius-full);
+  line-height: 1.4;
+}
+
+/* Nav Link */
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  color: var(--color-ink-muted);
+  transition: all 0.15s var(--ease-out);
+  cursor: pointer;
+}
+.nav-link:hover { background: var(--color-bg-hover); color: var(--color-ink); }
+.nav-link.active { background: var(--color-brand-surface); color: var(--color-brand); font-weight: 500; }
+.nav-link svg { width: 18px; height: 18px; stroke-width: 1.5; }
+
+/* Progress Bar */
+.progress-track {
+  height: 4px;
+  border-radius: var(--radius-full);
+  background: var(--color-bg-subtle);
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  background: var(--color-brand);
+  transition: width 0.4s var(--ease-out);
+}
+
+/* Sidebar */
+.sidebar {
+  width: 240px;
+  background: var(--color-bg-elevated);
+  border-right: 1px solid var(--color-border-subtle);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+/* Main content area */
+.main-area {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Content panel */
+.content-panel {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.5rem 2rem;
+}
+
+/* Right panel */
+.right-panel {
+  width: 260px;
+  background: var(--color-bg-elevated);
+  border-left: 1px solid var(--color-border-subtle);
+  overflow-y: auto;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Section heading */
+.section-title {
+  font-family: var(--font-serif);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-ink);
+}
+
+/* Stat item */
+.stat-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.625rem 0;
+}
+.stat-row + .stat-row { border-top: 1px solid var(--color-border-subtle); }
+
+/* Activity item */
+.activity-item {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  padding: 0.5rem 0;
+}
+
+/* Quick action */
+.quick-action {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.625rem 0.75rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-subtle);
+  cursor: pointer;
+  transition: all 0.15s var(--ease-out);
+}
+.quick-action:hover { border-color: var(--color-brand); background: var(--color-brand-surface); }
+.quick-action:hover svg { color: var(--color-brand); }
+.quick-action:hover span { color: var(--color-brand); }
+
+/* Chapter card */
+.chapter-card {
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  transition: all 0.15s var(--ease-out);
+}
+.chapter-card:hover { box-shadow: var(--shadow-md); border-color: var(--color-border); }
+
+/* Chat bubble */
+.chat-bubble {
+  padding: 0.75rem 1rem;
+  max-width: 80%;
+  word-wrap: break-word;
+  font-size: 0.9375rem;
+  line-height: 1.65;
+}
+.chat-bubble-user {
+  background: var(--color-bg-subtle);
+  border-radius: var(--radius-xl) var(--radius-xl) 4px var(--radius-xl);
+  margin-left: auto;
+}
+.chat-bubble-ai {
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 4px var(--radius-xl) var(--radius-xl) var(--radius-xl);
+  font-family: var(--font-serif);
+  line-height: 1.75;
+}
+
+/* Avatar */
+.avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 0.875rem;
+}
+
+/* Loading dots */
+.dot {
+  width: 5px;
+  height: 5px;
+  border-radius: var(--radius-full);
+  background: var(--color-ink-muted);
+  animation: pulse 1.4s infinite ease-in-out;
+}
+.dot:nth-child(1) { animation-delay: 0s; }
+.dot:nth-child(2) { animation-delay: 0.2s; }
+.dot:nth-child(3) { animation-delay: 0.4s; }
+@keyframes pulse {
+  0%, 80%, 100% { opacity: 0.3; transform: scale(0.75); }
+  40% { opacity: 1; transform: scale(1); }
+}
+
+/* Suggestion chip */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.8125rem;
+  color: var(--color-ink-tertiary);
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: all 0.15s var(--ease-out);
+}
+.chip:hover { border-color: var(--color-brand); color: var(--color-brand); background: var(--color-brand-surface); }
+
+/* Header */
+.app-header {
+  height: 56px;
+  background: var(--color-bg-elevated);
+  border-bottom: 1px solid var(--color-border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1.5rem;
+  flex-shrink: 0;
+}
+
+/* Timeline indicator */
+.timeline-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+}
+
+/* Tooltip */
+[data-tip] { position: relative; }
+[data-tip]:hover::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0.25rem 0.5rem;
+  background: var(--color-ink);
+  color: white;
+  font-size: 0.75rem;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* Focus visible */
+:focus-visible { outline: 2px solid var(--color-brand); outline-offset: 2px; }
+
+/* Selection */
+::selection { background: var(--color-brand-light); }
+
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  @theme inline {
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+    --color-card: var(--card);
+    --color-card-foreground: var(--card-foreground);
+    --color-popover: var(--popover);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-secondary: var(--secondary);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-muted: var(--muted);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-accent: var(--accent);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-border: var(--border);
+    --color-input: var(--input);
+    --color-ring: var(--ring);
+    --radius-sm: var(--radius-small);
+    --radius-md: var(--radius-medium);
+    --radius-lg: var(--radius-large);
+  }
+  @layer base {
+    body { background: var(--background); color: var(--foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style id="semantic-token-fallback">
+      .bg-background { background-color: var(--background); }
+      .text-background { color: var(--background); }
+      .border-background { border-color: var(--background); }
+      .ring-background { --tw-ring-color: var(--background); }
+      .bg-foreground { background-color: var(--foreground); }
+      .text-foreground { color: var(--foreground); }
+      .border-foreground { border-color: var(--foreground); }
+      .ring-foreground { --tw-ring-color: var(--foreground); }
+      .bg-card { background-color: var(--card); }
+      .text-card { color: var(--card); }
+      .border-card { border-color: var(--card); }
+      .ring-card { --tw-ring-color: var(--card); }
+      .bg-card-foreground { background-color: var(--card-foreground); }
+      .text-card-foreground { color: var(--card-foreground); }
+      .border-card-foreground { border-color: var(--card-foreground); }
+      .ring-card-foreground { --tw-ring-color: var(--card-foreground); }
+      .bg-popover { background-color: var(--popover); }
+      .text-popover { color: var(--popover); }
+      .border-popover { border-color: var(--popover); }
+      .ring-popover { --tw-ring-color: var(--popover); }
+      .bg-popover-foreground { background-color: var(--popover-foreground); }
+      .text-popover-foreground { color: var(--popover-foreground); }
+      .border-popover-foreground { border-color: var(--popover-foreground); }
+      .ring-popover-foreground { --tw-ring-color: var(--popover-foreground); }
+      .bg-primary { background-color: var(--primary); }
+      .text-primary { color: var(--primary); }
+      .border-primary { border-color: var(--primary); }
+      .ring-primary { --tw-ring-color: var(--primary); }
+      .bg-primary-foreground { background-color: var(--primary-foreground); }
+      .text-primary-foreground { color: var(--primary-foreground); }
+      .border-primary-foreground { border-color: var(--primary-foreground); }
+      .ring-primary-foreground { --tw-ring-color: var(--primary-foreground); }
+      .bg-secondary { background-color: var(--secondary); }
+      .text-secondary { color: var(--secondary); }
+      .border-secondary { border-color: var(--secondary); }
+      .ring-secondary { --tw-ring-color: var(--secondary); }
+      .bg-secondary-foreground { background-color: var(--secondary-foreground); }
+      .text-secondary-foreground { color: var(--secondary-foreground); }
+      .border-secondary-foreground { border-color: var(--secondary-foreground); }
+      .ring-secondary-foreground { --tw-ring-color: var(--secondary-foreground); }
+      .bg-muted { background-color: var(--muted); }
+      .text-muted { color: var(--muted); }
+      .border-muted { border-color: var(--muted); }
+      .ring-muted { --tw-ring-color: var(--muted); }
+      .bg-muted-foreground { background-color: var(--muted-foreground); }
+      .text-muted-foreground { color: var(--muted-foreground); }
+      .border-muted-foreground { border-color: var(--muted-foreground); }
+      .ring-muted-foreground { --tw-ring-color: var(--muted-foreground); }
+      .bg-accent { background-color: var(--accent); }
+      .text-accent { color: var(--accent); }
+      .border-accent { border-color: var(--accent); }
+      .ring-accent { --tw-ring-color: var(--accent); }
+      .bg-accent-foreground { background-color: var(--accent-foreground); }
+      .text-accent-foreground { color: var(--accent-foreground); }
+      .border-accent-foreground { border-color: var(--accent-foreground); }
+      .ring-accent-foreground { --tw-ring-color: var(--accent-foreground); }
+      .bg-border { background-color: var(--border); }
+      .text-border { color: var(--border); }
+      .border-border { border-color: var(--border); }
+      .ring-border { --tw-ring-color: var(--border); }
+      .bg-input { background-color: var(--input); }
+      .text-input { color: var(--input); }
+      .border-input { border-color: var(--input); }
+      .ring-input { --tw-ring-color: var(--input); }
+      .bg-ring { background-color: var(--ring); }
+      .text-ring { color: var(--ring); }
+      .border-ring { border-color: var(--ring); }
+      .ring-ring { --tw-ring-color: var(--ring); }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+</head>
+<body class="min-h-screen overflow-x-hidden" style="background: #0f0e0c; color: #e8e4df;">
+
+<!-- 自定义动画样式 -->
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap');
+    body { font-family: "Inter", "Noto Sans SC", system-ui, sans-serif; background: #0f0e0c; color: #e8e4df; }
+    .text-serif { font-family: "Noto Serif SC", Georgia, serif; }
+    @keyframes pulse-glow { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
+    @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+    .animate-pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
+    .animate-float { animation: float 3s ease-in-out infinite; }
+    .card-glow { box-shadow: 0 0 12px rgba(218, 119, 86, 0.12), inset 0 1px 0 rgba(255,255,255,0.04); }
+    .enemy-glow { box-shadow: 0 0 16px rgba(248, 113, 113, 0.15), inset 0 1px 0 rgba(255,255,255,0.04); }
+</style>
+
+<main class="max-w-6xl mx-auto p-4 md:p-5 space-y-4">
+
+    <!-- 顶部状态栏 -->
+    <header class="flex items-center justify-between bg-[#1a1815] border border-[rgba(255,255,255,0.06)] rounded-xl px-5 py-3">
+        <div class="flex items-center gap-3">
+            <span class="text-base">⚔️</span>
+            <span class="text-serif font-semibold text-[#e8e4df] text-sm">战斗回合</span>
+            <span class="text-xs text-[#787268] bg-[#242019] px-2 py-0.5 rounded">第 3 回合</span>
+        </div>
+        <div class="flex items-center gap-4">
+            <div class="text-xs text-[#787268]">
+                <span class="text-[#c9a96e]">2025年</span> · 第2年/共10年
+            </div>
+            <button class="text-xs px-3 py-1.5 rounded-lg border border-[rgba(255,255,255,0.08)] text-[#787268] hover:border-[#da7756] hover:text-[#da7756] transition-colors">
+                🗺️ 宏观地图
+            </button>
+        </div>
+    </header>
+
+    <!-- 主体：左侧敌人区 + 右侧玩家状态 -->
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
+
+        <!-- 左侧：敌人区域 (占3列) -->
+        <div class="lg:col-span-3 space-y-4">
+            <!-- 敌人区 -->
+            <section class="bg-[#1a1815] border border-[rgba(255,255,255,0.06)] rounded-xl p-5">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-xs font-medium uppercase tracking-wider text-[#787268]">敌方</h2>
+                    <div class="flex gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-[#f87171] animate-pulse-glow"></span>
+                        <span class="w-2 h-2 rounded-full bg-[#f87171] animate-pulse-glow" style="animation-delay:0.3s"></span>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- 敌人1 -->
+                    <div class="enemy-glow relative bg-gradient-to-b from-[#2a1515] to-[#181212] border border-[rgba(248,113,113,0.18)] rounded-xl p-4 transition-all cursor-pointer hover:border-[rgba(248,113,113,0.35)]">
+                        <div class="absolute top-2 right-2">
+                            <span class="text-[10px] px-1.5 py-0.5 rounded bg-[rgba(248,113,113,0.15)] text-[#f87171] border border-[rgba(248,113,113,0.2)]">目标</span>
+                        </div>
+                        <div class="flex items-start gap-3 mb-3">
+                            <div class="text-4xl animate-float">🟢</div>
+                            <div class="flex-1 min-w-0">
+                                <h3 class="text-serif font-semibold text-[#e8e4df] text-sm">拖延史莱姆</h3>
+                                <p class="text-[11px] text-[#787268] mt-0.5">拖延是时间最大的小偷</p>
+                            </div>
+                        </div>
+                        <!-- HP -->
+                        <div class="mb-3">
+                            <div class="flex items-center justify-between mb-1">
+                                <div class="flex items-center gap-1.5">
+                                    <span class="text-xs">❤️</span>
+                                    <span class="text-xs font-mono text-[#f87171]">14/20</span>
+                                </div>
+                            </div>
+                            <div class="h-2 bg-[#242019] rounded-full overflow-hidden">
+                                <div class="h-full bg-gradient-to-r from-[#dc2626] to-[#f87171] rounded-full transition-all duration-500" style="width:70%"></div>
+                            </div>
+                        </div>
+                        <!-- 意图 -->
+                        <div class="bg-[rgba(0,0,0,0.3)] rounded-lg px-3 py-2 border border-[rgba(255,255,255,0.04)]">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm">⚔️</span>
+                                <div>
+                                    <div class="text-[10px] text-[#787268]">下回合</div>
+                                    <div class="text-xs font-medium text-[#f87171]">攻击 6 伤害</div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- 状态 -->
+                        <div class="flex gap-1.5 mt-2">
+                            <span class="text-[10px] px-1.5 py-0.5 rounded bg-[#242019] border border-[rgba(255,255,255,0.06)] text-[#9a9489]">格挡+3</span>
+                        </div>
+                    </div>
+                    <!-- 敌人2 -->
+                    <div class="relative bg-gradient-to-b from-[#1a1510] to-[#141210] border border-[rgba(255,255,255,0.06)] rounded-xl p-4 opacity-75 hover:opacity-100 transition-all cursor-pointer hover:border-[rgba(248,113,113,0.18)]">
+                        <div class="flex items-start gap-3 mb-3">
+                            <div class="text-4xl animate-float" style="animation-delay:1s">👻</div>
+                            <div class="flex-1 min-w-0">
+                                <h3 class="text-serif font-semibold text-[#e8e4df] text-sm">焦虑幽灵</h3>
+                                <p class="text-[11px] text-[#787268] mt-0.5">焦虑让你无法集中注意力</p>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="flex items-center justify-between mb-1">
+                                <div class="flex items-center gap-1.5">
+                                    <span class="text-xs">❤️</span>
+                                    <span class="text-xs font-mono text-[#f87171]">25/25</span>
+                                </div>
+                            </div>
+                            <div class="h-2 bg-[#242019] rounded-full overflow-hidden">
+                                <div class="h-full bg-gradient-to-r from-[#dc2626] to-[#f87171] rounded-full transition-all duration-500" style="width:100%"></div>
+                            </div>
+                        </div>
+                        <div class="bg-[rgba(0,0,0,0.3)] rounded-lg px-3 py-2 border border-[rgba(255,255,255,0.04)]">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm">🔮</span>
+                                <div>
+                                    <div class="text-[10px] text-[#787268]">下回合</div>
+                                    <div class="text-xs font-medium text-[#fbbf24]">强化 +1力量</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 手牌区 -->
+            <section class="bg-[#1a1815] border border-[rgba(255,255,255,0.06)] rounded-xl p-5">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-xs font-medium uppercase tracking-wider text-[#787268]">手牌 <span class="text-[#5a544a]">(5)</span></h2>
+                </div>
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                    <!-- 攻击卡 -->
+                    <button class="card-glow group relative bg-gradient-to-b from-[#1f1812] to-[#161210] border border-[rgba(218,119,86,0.18)] rounded-xl p-3 hover:border-[rgba(218,119,86,0.35)] hover:scale-[1.03] transition-all cursor-pointer">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-[10px] font-bold text-[#da7756] bg-[rgba(218,119,86,0.12)] px-1.5 py-0.5 rounded">1</span>
+                            <span class="text-[9px] uppercase tracking-wide text-[#f87171]">攻击</span>
+                        </div>
+                        <div class="text-2xl mb-1.5 text-center">👊</div>
+                        <div class="text-xs font-medium text-[#e8e4df] mb-0.5 text-center">日常努力</div>
+                        <p class="text-[10px] text-[#787268] text-center leading-relaxed mb-2">持之以恒亦有力量</p>
+                        <div class="text-center">
+                            <span class="text-[10px] font-mono text-[#f87171] bg-[rgba(248,113,113,0.1)] px-1.5 py-0.5 rounded">6伤害</span>
+                        </div>
+                    </button>
+                    <!-- 攻击卡2 -->
+                    <button class="card-glow group relative bg-gradient-to-b from-[#1f1812] to-[#161210] border border-[rgba(218,119,86,0.18)] rounded-xl p-3 hover:border-[rgba(218,119,86,0.35)] hover:scale-[1.03] transition-all cursor-pointer">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-[10px] font-bold text-[#da7756] bg-[rgba(218,119,86,0.12)] px-1.5 py-0.5 rounded">1</span>
+                            <span class="text-[9px] uppercase tracking-wide text-[#f87171]">攻击</span>
+                        </div>
+                        <div class="text-2xl mb-1.5 text-center">🎯</div>
+                        <div class="text-xs font-medium text-[#e8e4df] mb-0.5 text-center">专注打击</div>
+                        <p class="text-[10px] text-[#787268] text-center leading-relaxed mb-2">集中精力一击必中</p>
+                        <div class="text-center">
+                            <span class="text-[10px] font-mono text-[#f87171] bg-[rgba(248,113,113,0.1)] px-1.5 py-0.5 rounded">8伤害</span>
+                        </div>
+                    </button>
+                    <!-- 技能卡 -->
+                    <button class="card-glow group relative bg-gradient-to-b from-[#141815] to-[#101412] border border-[rgba(96,165,250,0.12)] rounded-xl p-3 hover:border-[rgba(96,165,250,0.3)] hover:scale-[1.03] transition-all cursor-pointer">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-[10px] font-bold text-[#da7756] bg-[rgba(218,119,86,0.12)] px-1.5 py-0.5 rounded">1</span>
+                            <span class="text-[9px] uppercase tracking-wide text-[#60a5fa]">技能</span>
+                        </div>
+                        <div class="text-2xl mb-1.5 text-center">🛡️</div>
+                        <div class="text-xs font-medium text-[#e8e4df] mb-0.5 text-center">稳扎稳打</div>
+                        <p class="text-[10px] text-[#787268] text-center leading-relaxed mb-2">先稳住阵脚再图进取</p>
+                        <div class="text-center">
+                            <span class="text-[10px] font-mono text-[#60a5fa] bg-[rgba(96,165,250,0.1)] px-1.5 py-0.5 rounded">5格挡</span>
+                        </div>
+                    </button>
+                    <!-- 0费卡 -->
+                    <button class="card-glow group relative bg-gradient-to-b from-[#16151a] to-[#121015] border border-[rgba(168,85,247,0.12)] rounded-xl p-3 hover:border-[rgba(168,85,247,0.3)] hover:scale-[1.03] transition-all cursor-pointer">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-[10px] font-bold text-[#da7756] bg-[rgba(218,119,86,0.12)] px-1.5 py-0.5 rounded">0</span>
+                            <span class="text-[9px] uppercase tracking-wide text-[#a855f7]">技能</span>
+                        </div>
+                        <div class="text-2xl mb-1.5 text-center">📝</div>
+                        <div class="text-xs font-medium text-[#e8e4df] mb-0.5 text-center">提前规划</div>
+                        <p class="text-[10px] text-[#787268] text-center leading-relaxed mb-2">好的计划事半功倍</p>
+                        <div class="text-center">
+                            <span class="text-[10px] font-mono text-[#a855f7] bg-[rgba(168,85,247,0.1)] px-1.5 py-0.5 rounded">抽2张</span>
+                        </div>
+                    </button>
+                    <!-- 稀有卡 -->
+                    <button class="card-glow group relative bg-gradient-to-b from-[#1a1708] to-[#14130a] border border-[rgba(201,169,110,0.2)] rounded-xl p-3 hover:border-[rgba(201,169,110,0.35)] hover:scale-[1.03] transition-all cursor-pointer">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-[10px] font-bold text-[#da7756] bg-[rgba(218,119,86,0.12)] px-1.5 py-0.5 rounded">2</span>
+                            <span class="text-[9px] uppercase tracking-wide text-[#c9a96e]">稀有</span>
+                        </div>
+                        <div class="text-2xl mb-1.5 text-center">💰</div>
+                        <div class="text-xs font-medium text-[#e8e4df] mb-0.5 text-center">投资理财</div>
+                        <p class="text-[10px] text-[#787268] text-center leading-relaxed mb-2">钱生钱，财富工作</p>
+                        <div class="text-center">
+                            <span class="text-[10px] font-mono text-[#c9a96e] bg-[rgba(201,169,110,0.12)] px-1.5 py-0.5 rounded">+2能量</span>
+                        </div>
+                    </button>
+                </div>
+            </section>
+        </div>
+
+        <!-- 右侧：玩家状态 (占1列) -->
+        <div class="space-y-4">
+            <!-- 玩家状态 -->
+            <div class="bg-[#1a1815] border border-[rgba(255,255,255,0.06)] rounded-xl p-4">
+                <h3 class="text-xs font-medium uppercase tracking-wider text-[#787268] mb-3">你的状态</h3>
+                <!-- 生命值 -->
+                <div class="mb-4">
+                    <div class="flex items-center justify-between mb-1.5">
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-xs">❤️</span>
+                            <span class="text-[10px] text-[#787268]">生命</span>
+                        </div>
+                        <span class="text-xs font-mono font-semibold text-[#4ade80]">38/50</span>
+                    </div>
+                    <div class="h-2.5 bg-[#242019] rounded-full overflow-hidden">
+                        <div class="h-full bg-gradient-to-r from-[#16a34a] to-[#4ade80] rounded-full transition-all duration-500" style="width:76%"></div>
+                    </div>
+                </div>
+                <!-- 能量 -->
+                <div class="mb-4">
+                    <div class="flex items-center justify-between mb-1.5">
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-xs">⚡</span>
+                            <span class="text-[10px] text-[#787268]">精力</span>
+                        </div>
+                        <span class="text-xs font-mono font-semibold text-[#da7756]">3/3</span>
+                    </div>
+                    <div class="flex gap-1">
+                        <span class="flex-1 h-1.5 rounded-full bg-[#da7756] shadow-[0_0_4px_rgba(218,119,86,0.4)]"></span>
+                        <span class="flex-1 h-1.5 rounded-full bg-[#da7756] shadow-[0_0_4px_rgba(218,119,86,0.4)]"></span>
+                        <span class="flex-1 h-1.5 rounded-full bg-[#da7756] shadow-[0_0_4px_rgba(218,119,86,0.4)]"></span>
+                    </div>
+                </div>
+                <!-- 格挡 -->
+                <div class="flex items-center justify-between bg-[#242019] rounded-lg px-3 py-2 border border-[rgba(255,255,255,0.04)] mb-3">
+                    <div class="flex items-center gap-1.5">
+                        <span class="text-xs">🛡️</span>
+                        <span class="text-[10px] text-[#787268]">格挡</span>
+                    </div>
+                    <span class="text-sm font-bold text-[#60a5fa]">5</span>
+                </div>
+                <!-- 牌组 -->
+                <div class="flex items-center justify-between text-[10px] text-[#787268] mb-3 pb-3 border-b border-[rgba(255,255,255,0.04)]">
+                    <span>🃏 牌组</span>
+                    <span>抽8 · 弃3</span>
+                </div>
+                <!-- 属性加成 -->
+                <div>
+                    <div class="text-[10px] text-[#787268] mb-2">🌟 属性加成</div>
+                    <div class="flex flex-col gap-1.5">
+                        <span class="text-[10px] px-2 py-1 rounded bg-[rgba(201,169,110,0.08)] border border-[rgba(201,169,110,0.15)] text-[#c9a96e]">强壮 +25%伤害</span>
+                        <span class="text-[10px] px-2 py-1 rounded bg-[rgba(201,169,110,0.08)] border border-[rgba(201,169,110,0.15)] text-[#c9a96e]">聪颖 额外抽1</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 结束回合按钮 -->
+            <button class="w-full py-3 bg-[#da7756] hover:bg-[#c4684a] text-white font-medium text-sm rounded-xl shadow-[0_4px_12px_rgba(218,119,86,0.25)] hover:shadow-[0_6px_16px_rgba(218,119,86,0.35)] transition-all hover:scale-[1.02] active:scale-[0.98]">
+                结束回合 →
+            </button>
+        </div>
+    </div>
+
+</main>
+
+<script>
+    lucide.createIcons();
+</script>
+
+</body>
+</html>
