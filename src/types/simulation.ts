@@ -327,6 +327,7 @@ export interface GameState {
   maxLifespan: number;
   remainingLife: number;
   attributes: PlayerAttributes;
+  baseAttributes: PlayerAttributes;
   remainingAttributePoints: number;
   hiddenTags: string[];
   npcs: NPC[];
@@ -341,6 +342,7 @@ export interface GameState {
   cultivation: CultivationState | null;
   worldState: WorldState;
   seed: number;
+  damageEventCounter: number;
 }
 
 export interface WorldState {

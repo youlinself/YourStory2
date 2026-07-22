@@ -1154,7 +1154,21 @@ export const SCRIPT_1950_EVENTS: GameEvent[] = [
       if (attrs.wealth >= 20) return '你出生在一个普通家庭，虽然不富裕，但一家人其乐融融。';
       return '你出生在一个贫苦的家庭，但困难的环境让你从小就懂得了生活的不易。';
     },
-    options: [],
+    options: [
+      {
+        id: 'start_life',
+        text: '开始新的人生',
+        successRate: { energy: 0.5 },
+        successOutcome: {
+          description: '你来到了这个世界，开始了新的人生旅程。',
+          attributeChanges: { health: 5 },
+        },
+        failureOutcome: {
+          description: '生命的开始总是伴随着未知。',
+          attributeChanges: {},
+        },
+      },
+    ],
     isMilestone: true,
   },
   {

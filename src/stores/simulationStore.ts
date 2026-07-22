@@ -126,12 +126,43 @@ const initialCombatState: CombatState = {
 
 const initialCultivationState: CultivationState = { realm: 'mortal', maxLifespan: 70, tribulationThreshold: 0, realmBonus: {} };
 
+export interface DamageEvent {
+  id: string;
+  value: number;
+  targetId: string;
+  x: number;
+  y: number;
+  isHeal?: boolean;
+}
+
+let damageEvents: DamageEvent[] = [];
+let damageEventId = 0;
+
+export function triggerDamageEvent(value: number, targetId: string, isHeal = false) {
+  const event: DamageEvent = {
+    id: `dmg_${++damageEventId}`,
+    value,
+    targetId,
+    x: Math.random() * 40 + 30,
+    y: Math.random() * 20 + 10,
+    isHeal,
+  };
+  damageEvents = [...damageEvents, event];
+  setTimeout(() => {
+    damageEvents = damageEvents.filter(e => e.id !== event.id);
+  }, 1200);
+}
+
+export function getDamageEvents(): DamageEvent[] {
+  return damageEvents;
+}
+
 const initialState: GameState = {
   phase: 'setup', mode: 'normal', birthYear: null, currentYear: 1950, currentEra: 0, age: 0,
-  maxLifespan: 70, remainingLife: 70, attributes: { ...initialAttributes }, remainingAttributePoints: 15,
+  maxLifespan: 70, remainingLife: 70, attributes: { ...initialAttributes }, baseAttributes: { ...initialAttributes }, remainingAttributePoints: 15,
   hiddenTags: [], npcs: [], choiceHistory: [], lifeRecords: [], deck: [], relics: [], gold: 30,
   combat: { ...initialCombatState }, currentMap: null, shop: null, cultivation: null,
-  worldState: { ...initialWorldState }, seed: Date.now(),
+  worldState: { ...initialWorldState }, seed: Date.now(), damageEventCounter: 0,
 };
 
 interface SimulationState extends GameState {
@@ -215,7 +246,7 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
     const state: Partial<GameState> = {
       phase: 'allocating', birthYear, currentYear: birthYear, currentEra: 0, age: 0,
       maxLifespan: era.baseLifeExpectancy, remainingLife: era.baseLifeExpectancy,
-      attributes: attrs, remainingAttributePoints: era.attributePoints,
+      attributes: attrs, baseAttributes: { ...attrs }, remainingAttributePoints: era.attributePoints,
       hiddenTags: [], npcs: [], choiceHistory: [], lifeRecords: [],
       deck, relics: [], gold: 30, worldState: { ...initialWorldState }, seed: Date.now(),
     };
@@ -227,7 +258,9 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
   allocateAttribute: (attr, value) => {
     const s = get();
     const diff = value - s.attributes[attr];
-    if (diff > s.remainingAttributePoints || value < 10 || value > 99) return;
+    const baseValue = s.baseAttributes[attr];
+    if (value < baseValue || value > 99) return;
+    if (diff > s.remainingAttributePoints) return;
     set({ attributes: { ...s.attributes, [attr]: value }, remainingAttributePoints: s.remainingAttributePoints - diff });
   },
 
@@ -363,11 +396,24 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
       c.player.discardPile = [];
     }
 
+    const beforeHealth = c.enemies.map(e => e.currentHealth);
+    const beforeBlock = c.player.block;
     for (const eff of card.effects) {
       const modifiedEff = eff.type === 'damage' ? { ...eff, value: Math.floor(eff.value * damageBoost) } : eff;
       c = applyCardEffect(modifiedEff, c, targetIdx);
     }
     c.player.discardPile.push(card);
+
+    c.enemies.forEach((enemy, i) => {
+      const dmg = beforeHealth[i] - enemy.currentHealth;
+      if (dmg > 0) triggerDamageEvent(dmg, enemy.id);
+    });
+
+    const blockGained = c.player.block - beforeBlock;
+    if (blockGained > 0) {
+      triggerDamageEvent(blockGained, 'player', true);
+    }
+    set({ damageEventCounter: get().damageEventCounter + 1 });
 
     if (c.enemies.every((e) => e.currentHealth <= 0)) {
       const gold = c.enemies.reduce((sum, e) => { const [a, b] = e.goldReward; return sum + Math.floor(a + Math.random() * (b - a)); }, 0);
@@ -425,10 +471,9 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
 
   endTurn: () => {
     const s = get();
-    let c = s.combat;
+    let c = deepClone(s.combat);
     if (c.phase !== 'player_turn') return;
 
-    c.player.block = 0;
     c.player.energy = c.player.maxEnergy;
     c.player.discardPile.push(...c.player.hand);
     c.player.hand = [];
@@ -458,11 +503,18 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
         const shield = e.mechanics.includes('shield') ? 0.75 : 1;
         dmg = Math.floor(dmg * shield);
         for (let i = 0; i < hits; i++) {
+          const blocked = Math.min(c.player.block, dmg);
           const d = Math.max(0, dmg - c.player.block);
           c.player.block = Math.max(0, c.player.block - dmg);
           c.player.currentHealth -= d;
+          if (blocked > 0) {
+            triggerDamageEvent(blocked, 'player_block', true);
+          }
+          if (d > 0) {
+            triggerDamageEvent(d, 'player');
+          }
           const sh = c.player.statusEffects.find((x) => x.type === 'shields');
-          if (sh && sh.value > 0) { const ab = Math.min(sh.value, d); sh.value -= ab; c.player.currentHealth += ab; }
+          if (sh && sh.value > 0) { const ab = Math.min(sh.value, d); sh.value -= ab; c.player.currentHealth += ab; if (ab > 0) triggerDamageEvent(ab, 'player_heal', true); }
           const th = c.player.statusEffects.find((x) => x.type === 'thorns');
           if (th && e.currentHealth > 0) e.currentHealth -= th.value;
         }
@@ -486,7 +538,11 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
     }
     c.player.statusEffects = c.player.statusEffects.filter((x) => x.duration > 0);
 
-    if (c.player.currentHealth <= 0) { set({ combat: { ...c, phase: 'defeat' }, phase: 'ended' }); return; }
+    if (c.player.currentHealth <= 0) {
+      set({ combat: { ...c, phase: 'defeat' }, phase: 'ended' });
+      set({ damageEventCounter: get().damageEventCounter + 1 });
+      return;
+    }
     if (c.enemies.every((e) => e.currentHealth <= 0)) {
       const gold = c.enemies.reduce((sum, e) => { const [a, b] = e.goldReward; return sum + Math.floor(a + Math.random() * (b - a)); }, 0);
       const cardRewards: LifeCard[] = [];
@@ -498,9 +554,11 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
       const newRelics = relicReward ? [...s.relics, relicReward] : s.relics;
       set({ gold: s.gold + gold, relics: newRelics });
       set({ combat: { ...c, phase: 'victory', rewards: { cards: cardRewards, attribute: undefined, relic: relicReward } }, phase: 'reward' });
+      set({ damageEventCounter: get().damageEventCounter + 1 });
       return;
     }
 
+    c.player.block = 0;
     c.currentTurn++;
     c.phase = 'player_turn';
     const drawBonus = bonuses.filter((b) => b.effect === 'extra_draw').reduce((sum, b) => sum + b.value, 0);
@@ -510,6 +568,7 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
       if (c.player.drawPile.length > 0 && c.player.hand.length < MAX_HAND_SIZE) c.player.hand.push(c.player.drawPile.shift()!);
     }
     set({ combat: c });
+    set({ damageEventCounter: get().damageEventCounter + 1 });
   },
 
   endCombat: (victory) => {

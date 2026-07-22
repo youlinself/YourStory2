@@ -8,6 +8,7 @@ import {
   ATTRIBUTE_DESCRIPTIONS,
 } from '../../data/simulationData';
 import Tooltip from '../../components/common/Tooltip';
+import FloatingDamage from '../../components/ui/FloatingDamage';
 import type { BirthYear, PlayerAttributes, GameEvent } from '../../types/simulation';
 
 const AttributeBar: React.FC<{ attr: keyof PlayerAttributes; value: number; showLabel?: boolean }> = ({ attr, value, showLabel = true }) => (
@@ -298,29 +299,49 @@ const YearViewPhase: React.FC = () => {
 // ==========================================
 const EventPhase: React.FC<{ event: GameEvent }> = ({ event }) => {
   const makeChoice = useSimulationStore((s) => s.makeChoice);
+  const completeOption = useSimulationStore((s) => s.completeOption);
   const attributes = useSimulationStore((s) => s.attributes);
   const hiddenTags = useSimulationStore((s) => s.hiddenTags);
   const choiceHistory = useSimulationStore((s) => s.choiceHistory);
   const getSuccessRate = useSimulationStore((s) => s.getSuccessRate);
-  const displayText = event.skinRule ? event.skinRule(attributes, choiceHistory, hiddenTags) : event.baseText;
+
+  const getDisplayText = () => {
+    let text = event.baseText;
+    if (event.skinRule) {
+      const skinText = event.skinRule(attributes, choiceHistory, hiddenTags);
+      text = text.replace(/\{[^}]+\}/g, skinText);
+    }
+    return text;
+  };
+
+  const displayText = getDisplayText();
 
   return (
     <div className="bg-white rounded-xl border border-border-subtle p-6 shadow-sm max-w-lg mx-auto">
       <h3 className="text-lg font-semibold text-ink mb-3">{event.title}</h3>
       <p className="text-ink-muted text-sm leading-relaxed mb-6">{displayText}</p>
       <div className="space-y-3">
-        {event.options.map((option) => {
-          const rate = getSuccessRate(option);
-          return (
-            <button key={option.id} onClick={() => makeChoice(event, option)}
-              className="w-full text-left p-4 rounded-lg border border-border-subtle hover:border-brand hover:bg-brand/5 transition-all">
-              <div className="flex items-center justify-between mb-1">
-                <span className="font-medium text-ink">{option.text}</span>
-                <span className="text-xs font-mono px-2 py-0.5 rounded bg-gray-100 text-ink-muted">{Math.round(rate * 100)}%</span>
-              </div>
-            </button>
-          );
-        })}
+        {event.options.length === 0 ? (
+          <button onClick={() => completeOption()}
+            className="w-full text-left p-4 rounded-lg border border-border-subtle hover:border-brand hover:bg-brand/5 transition-all">
+            <div className="flex items-center justify-between mb-1">
+              <span className="font-medium text-ink">继续 →</span>
+            </div>
+          </button>
+        ) : (
+          event.options.map((option) => {
+            const rate = getSuccessRate(option);
+            return (
+              <button key={option.id} onClick={() => makeChoice(event, option)}
+                className="w-full text-left p-4 rounded-lg border border-border-subtle hover:border-brand hover:bg-brand/5 transition-all">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="font-medium text-ink">{option.text}</span>
+                  <span className="text-xs font-mono px-2 py-0.5 rounded bg-gray-100 text-ink-muted">{Math.round(rate * 100)}%</span>
+                </div>
+              </button>
+            );
+          })
+        )}
       </div>
     </div>
   );
@@ -338,6 +359,7 @@ const CombatPhaseView: React.FC = () => {
   const remainingLife = useSimulationStore((s) => s.remainingLife);
   const birthYear = useSimulationStore((s) => s.birthYear);
   const currentMap = useSimulationStore((s) => s.currentMap);
+  const damageEventCounter = useSimulationStore((s) => s.damageEventCounter);
 
   const yearNum = (birthYear || 1950) + (currentMap?.era || 0) * 10 + (currentMap?.currentYearIndex || 0);
 
@@ -403,7 +425,7 @@ const CombatPhaseView: React.FC = () => {
         {/* 左侧：敌人区域 (占3列) */}
         <div className="lg:col-span-3 space-y-4">
           {/* 敌人区 */}
-          <section className="bg-bg-elevated rounded-xl p-5 border border-border-subtle">
+          <section className="bg-bg-elevated rounded-xl p-5 border border-border-subtle relative">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xs font-medium uppercase tracking-wider text-ink-muted">敌方</h2>
               <div className="flex gap-1.5">
@@ -412,6 +434,7 @@ const CombatPhaseView: React.FC = () => {
                 ))}
               </div>
             </div>
+            <FloatingDamage counter={damageEventCounter} />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {combat.enemies.map((enemy, idx) => {
                 const isCurrent = idx === combat.currentEnemyIndex;
@@ -813,7 +836,7 @@ const SimulationPage: React.FC = () => {
 
   useEffect(() => { resetGame(); }, [resetGame]);
 
-  const currentEvent = phase === 'event' ? availableEvents[0] : null;
+  const currentEvent = phase === 'event' ? availableEvents.find(e => e.options.length > 0) : null;
 
   return (
     <div className="flex h-full">
@@ -852,7 +875,11 @@ const SimulationPage: React.FC = () => {
             <h3 className="font-semibold text-ink mb-3">📊 属性</h3>
             <div className="space-y-2.5">
               {(Object.keys(attributes) as (keyof PlayerAttributes)[]).map((attr) => (
-                <AttributeBar key={attr} attr={attr} value={attributes[attr]} />
+                <Tooltip key={attr} content={<AttributeTooltipContent attr={attr} />} position="left">
+                  <div className="cursor-help">
+                    <AttributeBar attr={attr} value={attributes[attr]} />
+                  </div>
+                </Tooltip>
               ))}
             </div>
           </div>

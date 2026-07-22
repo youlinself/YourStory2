@@ -122,6 +122,60 @@ body {
 .animate-pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
 .animate-float { animation: float 3s ease-in-out infinite; }
 
+/* Floating Damage Numbers */
+.floating-damage-container {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 50;
+}
+
+.floating-damage {
+  position: absolute;
+  font-size: 28px;
+  font-weight: 800;
+  font-family: var(--font-serif);
+  pointer-events: none;
+  animation: damageFloat 1.2s ease-out forwards;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  white-space: nowrap;
+}
+
+.floating-damage.damage {
+  color: #ef4444;
+  text-shadow: 0 0 12px rgba(239, 68, 68, 0.6), 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.floating-damage.heal {
+  color: #22c55e;
+  text-shadow: 0 0 12px rgba(34, 197, 94, 0.6), 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.floating-damage.block {
+  color: #3b82f6;
+  text-shadow: 0 0 12px rgba(59, 130, 246, 0.6), 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+@keyframes damageFloat {
+  0% {
+    opacity: 0;
+    transform: translateY(0) scale(0.5);
+  }
+  15% {
+    opacity: 1;
+    transform: translateY(-10px) scale(1.2);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-25px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-80px) scale(0.8);
+  }
+}
+
 /* Button */
 .btn {
   display: inline-flex;
