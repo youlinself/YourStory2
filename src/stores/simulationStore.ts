@@ -179,6 +179,7 @@ interface SimulationState extends GameState {
   resetGame: () => void;
   startCombat: (enemies: Enemy[]) => void;
   playCard: (cardId: string, targetIndex?: number) => void;
+  selectTarget: (index: number) => void;
   endTurn: () => void;
   activateBonus: (bonusId: string) => void;
   selectCardReward: (cardId: string) => void;
@@ -381,7 +382,7 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
     });
   },
 
-  playCard: (cardId, targetIdx = 0) => {
+  playCard: (cardId, targetIdx) => {
     const s = get();
     if (s.combat.phase !== 'player_turn') return;
     const idx = s.combat.player.hand.findIndex((c) => c.id === cardId);
@@ -403,9 +404,10 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
     const beforeHealth = c.enemies.map(e => e.currentHealth);
     const beforeBlock = c.player.block;
     const enemyBlocksBefore = c.enemies.map(e => e.block);
+    const effectiveTargetIdx = targetIdx !== undefined ? targetIdx : c.currentEnemyIndex;
     for (const eff of card.effects) {
       const modifiedEff = eff.type === 'damage' ? { ...eff, value: Math.floor(eff.value * damageBoost) } : eff;
-      c = applyCardEffect(modifiedEff, c, targetIdx);
+      c = applyCardEffect(modifiedEff, c, effectiveTargetIdx);
     }
     c.player.discardPile.push(card);
 
@@ -441,6 +443,14 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
     }
 
     set({ combat: c });
+  },
+
+  selectTarget: (index: number) => {
+    const s = get();
+    if (s.combat.phase !== 'player_turn') return;
+    if (index < 0 || index >= s.combat.enemies.length) return;
+    if (s.combat.enemies[index].currentHealth <= 0) return;
+    set({ combat: { ...s.combat, currentEnemyIndex: index } });
   },
 
   activateBonus: (bonusId) => {

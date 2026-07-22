@@ -354,6 +354,7 @@ const EventPhase: React.FC<{ event: GameEvent }> = ({ event }) => {
 const CombatPhaseView: React.FC = () => {
   const combat = useSimulationStore((s) => s.combat);
   const playCard = useSimulationStore((s) => s.playCard);
+  const selectTarget = useSimulationStore((s) => s.selectTarget);
   const endTurn = useSimulationStore((s) => s.endTurn);
   const activateBonus = useSimulationStore((s) => s.activateBonus);
   const activeBonuses = useSimulationStore((s) => s.getActiveAttributeBonuses)() as { name: string; description: string }[];
@@ -426,13 +427,16 @@ const CombatPhaseView: React.FC = () => {
         {/* 左侧：敌人区域 (占3列) */}
         <div className="lg:col-span-3 space-y-4">
           {/* 敌人区 */}
-          <section className="bg-bg-elevated rounded-xl p-5 border border-border-subtle relative">
+          <section className="bg-bg-elevated rounded-xl p-5 border border-border-subtle relative group">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xs font-medium uppercase tracking-wider text-ink-muted">敌方</h2>
-              <div className="flex gap-1.5">
-                {combat.enemies.filter(e => e.currentHealth > 0).map((_, i) => (
-                  <span key={i} className="w-2 h-2 rounded-full bg-danger animate-pulse-glow" style={{ animationDelay: `${i * 0.3}s` }} />
-                ))}
+              <div className="flex items-center gap-3">
+                <span className="text-[10px] text-ink-faint">点击敌人选择攻击目标</span>
+                <div className="flex gap-1.5">
+                  {combat.enemies.filter(e => e.currentHealth > 0).map((_, i) => (
+                    <span key={i} className="w-2 h-2 rounded-full bg-danger animate-pulse-glow" style={{ animationDelay: `${i * 0.3}s` }} />
+                  ))}
+                </div>
               </div>
             </div>
             <FloatingDamage counter={damageEventCounter} />
@@ -442,20 +446,27 @@ const CombatPhaseView: React.FC = () => {
                 const hpPercent = (enemy.currentHealth / enemy.maxHealth) * 100;
                 const intent = enemy.intents[enemy.currentIntentIndex];
                 const isTarget = isCurrent && enemy.currentHealth > 0;
+                const isAlive = enemy.currentHealth > 0;
 
                 return (
                   <div
                     key={enemy.id}
-                    className={`relative rounded-xl p-4 transition-all cursor-pointer ${enemy.currentHealth <= 0 ? 'opacity-40' : ''} ${isTarget ? 'hover:shadow-md' : 'hover:opacity-100'}`}
+                    onClick={() => isAlive && selectTarget(idx)}
+                    className={`relative rounded-xl p-4 transition-all ${isAlive ? 'cursor-pointer' : 'cursor-default opacity-40'} ${isTarget ? 'hover:shadow-md' : isAlive ? 'hover:border-danger/30 hover:shadow-sm' : ''}`}
                     style={{
-                      background: isTarget ? 'linear-gradient(to bottom, rgba(209,36,47,0.04), rgba(209,36,47,0.02))' : 'var(--color-bg-elevated)',
-                      border: `1px solid ${isTarget ? 'rgba(209,36,47,0.2)' : 'var(--color-border-subtle)'}`,
-                      boxShadow: isTarget ? 'var(--shadow-md)' : 'none',
+                      background: isTarget ? 'linear-gradient(to bottom, rgba(209,36,47,0.06), rgba(209,36,47,0.03))' : 'var(--color-bg-elevated)',
+                      border: `2px solid ${isTarget ? 'rgba(209,36,47,0.5)' : isAlive ? 'var(--color-border-subtle)' : 'transparent'}`,
+                      boxShadow: isTarget ? '0 0 12px rgba(209,36,47,0.15), var(--shadow-md)' : 'none',
                     }}
                   >
                     {isTarget && (
                       <div className="absolute top-2 right-2">
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-danger-bg text-danger border border-danger/20">目标</span>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-danger text-white font-medium shadow-sm">🎯 目标</span>
+                      </div>
+                    )}
+                    {!isTarget && isAlive && (
+                      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-ink-muted border border-border-subtle">点击选择</span>
                       </div>
                     )}
                     <div className="flex items-start gap-3 mb-3">
@@ -560,7 +571,7 @@ const CombatPhaseView: React.FC = () => {
                 手牌 <span className="text-ink-faint">({combat.player.hand.length})</span>
               </h2>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+            <div className="flex flex-wrap gap-3">
               {combat.player.hand.map((card) => {
                 const colors = getCardTypeColor(card.type);
                 const glow = getCardGlow(card.type);
@@ -573,6 +584,7 @@ const CombatPhaseView: React.FC = () => {
                     disabled={!canPlay}
                     className={`group relative rounded-xl p-3 transition-all cursor-pointer ${glow} hover:scale-[1.03] hover:shadow-md ${!canPlay ? 'opacity-40 cursor-not-allowed' : ''}`}
                     style={{
+                      width: '130px',
                       background: 'var(--color-bg-elevated)',
                       border: `1px solid ${canPlay ? colors.border : 'var(--color-border-subtle)'}`,
                       boxShadow: canPlay ? 'var(--shadow-sm)' : 'none',
@@ -680,6 +692,24 @@ const CombatPhaseView: React.FC = () => {
               </div>
               <span className="text-sm font-bold text-info">{combat.player.block}</span>
             </div>
+            {/* 当前目标 */}
+            {(() => {
+              const target = combat.enemies[combat.currentEnemyIndex];
+              if (!target || target.currentHealth <= 0) return null;
+              return (
+                <div className="rounded-lg px-3 py-2 mb-3 bg-danger/5 border border-danger/20">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <span className="text-xs">🎯</span>
+                    <span className="text-[10px] text-ink-muted">当前目标</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">{target.icon}</span>
+                    <span className="text-xs font-medium text-danger">{target.name}</span>
+                    <span className="text-[10px] text-danger/70 ml-auto">{target.currentHealth}/{target.maxHealth}</span>
+                  </div>
+                </div>
+              );
+            })()}
             {/* 牌组 */}
             <div className="flex items-center justify-between text-[10px] text-ink-muted mb-3 pb-3 border-b border-border-subtle">
               <span>🃏 牌组</span>
@@ -719,7 +749,7 @@ const CombatPhaseView: React.FC = () => {
           {combat.availableBonuses.length > 0 && (
             <div className="bg-bg-elevated rounded-xl p-4 border border-border-subtle">
               <h3 className="text-xs font-medium uppercase tracking-wider text-ink-muted mb-2">🔥 燃烧生命</h3>
-              <p className="text-[10px] text-ink-faint mb-3">剩余寿命: {Math.round(remainingLife)}年</p>
+              <p className="text-[10px] text-ink-faint mb-3">寿命上限: {Math.round(remainingLife)}年</p>
               <div className="flex flex-col gap-2">
                 {combat.availableBonuses.map((bonus) => {
                   const canActivate = bonus.lifeCost < remainingLife;
@@ -936,7 +966,7 @@ const SimulationPage: React.FC = () => {
             <div className="space-y-2 text-sm">
               <div className="flex justify-between"><span className="text-ink-muted">出生年</span><span className="font-medium">{birthYear}</span></div>
               <div className="flex justify-between"><span className="text-ink-muted">年龄</span><span className="font-medium">{age}岁</span></div>
-              <div className="flex justify-between"><span className="text-ink-muted">剩余寿命</span><span className="font-medium">{Math.round(remainingLife)}年</span></div>
+              <div className="flex justify-between"><span className="text-ink-muted">寿命上限</span><span className="font-medium">{Math.round(remainingLife)}年</span></div>
               <div className="flex justify-between"><span className="text-ink-muted">金币</span><span className="font-medium">💰 {gold}</span></div>
               {cultivation && <div className="flex justify-between"><span className="text-ink-muted">境界</span><span className="font-medium text-brand">{cultivation.realm}</span></div>}
             </div>
