@@ -164,7 +164,7 @@ export interface EraMap {
   completed: boolean;
 }
 
-export type CombatPhase = 'player_turn' | 'enemy_turn' | 'victory' | 'defeat';
+export type CombatPhase = 'player_turn' | 'discard_selection' | 'enemy_turn' | 'victory' | 'defeat';
 
 export interface CombatState {
   isInCombat: boolean;
@@ -191,6 +191,7 @@ export interface CombatState {
   };
   availableBonuses: CombatBonus[];
   log: CombatLogEntry[];
+  selectedForDiscard: string[];
 }
 
 export interface CombatBonus {

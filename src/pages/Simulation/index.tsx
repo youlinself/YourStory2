@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import useSimulationStore from '../../stores/simulationStore';
+import useSimulationStore, { getEffectDisplayValue } from '../../stores/simulationStore';
+
 import {
   ERAS,
   ATTRIBUTE_NAMES,
@@ -10,7 +11,7 @@ import {
 import Tooltip from '../../components/common/Tooltip';
 import FloatingDamage from '../../components/ui/FloatingDamage';
 import BuffDebuffBadge from '../../components/ui/BuffDebuffBadge';
-import type { BirthYear, PlayerAttributes, GameEvent } from '../../types/simulation';
+import type { BirthYear, PlayerAttributes, GameEvent, AttributeThresholdBonus } from '../../types/simulation';
 
 const AttributeBar: React.FC<{ attr: keyof PlayerAttributes; value: number; showLabel?: boolean }> = ({ attr, value, showLabel = true }) => (
   <div className="flex items-center gap-2">
@@ -357,11 +358,14 @@ const CombatPhaseView: React.FC = () => {
   const selectTarget = useSimulationStore((s) => s.selectTarget);
   const endTurn = useSimulationStore((s) => s.endTurn);
   const activateBonus = useSimulationStore((s) => s.activateBonus);
-  const activeBonuses = useSimulationStore((s) => s.getActiveAttributeBonuses)() as { name: string; description: string }[];
+  const toggleDiscardSelection = useSimulationStore((s) => s.toggleDiscardSelection);
+  const confirmDiscard = useSimulationStore((s) => s.confirmDiscard);
+  const activeBonuses = useSimulationStore((s) => s.getActiveAttributeBonuses)() as AttributeThresholdBonus[];
   const remainingLife = useSimulationStore((s) => s.remainingLife);
   const birthYear = useSimulationStore((s) => s.birthYear);
   const currentMap = useSimulationStore((s) => s.currentMap);
   const damageEventCounter = useSimulationStore((s) => s.damageEventCounter);
+  const [showDeckPanel, setShowDeckPanel] = useState<'draw' | 'discard' | 'exhaust' | null>(null);
 
   const yearNum = (birthYear || 1950) + (currentMap?.era || 0) * 10 + (currentMap?.currentYearIndex || 0);
 
@@ -576,62 +580,118 @@ const CombatPhaseView: React.FC = () => {
                 const colors = getCardTypeColor(card.type);
                 const glow = getCardGlow(card.type);
                 const canPlay = card.cost <= combat.player.energy;
+                const isSelectedForDiscard = combat.selectedForDiscard.includes(card.id);
+                const isDiscardPhase = combat.phase === 'discard_selection';
 
                 return (
-                  <button
-                    key={card.id}
-                    onClick={() => playCard(card.id)}
-                    disabled={!canPlay}
-                    className={`group relative rounded-xl p-3 transition-all cursor-pointer ${glow} hover:scale-[1.03] hover:shadow-md ${!canPlay ? 'opacity-40 cursor-not-allowed' : ''}`}
-                    style={{
-                      width: '130px',
-                      background: 'var(--color-bg-elevated)',
-                      border: `1px solid ${canPlay ? colors.border : 'var(--color-border-subtle)'}`,
-                      boxShadow: canPlay ? 'var(--shadow-sm)' : 'none',
-                    }}
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded text-brand bg-brand-light">{card.cost}</span>
-                      <span className={`text-[9px] uppercase tracking-wide ${colors.label}`}>{card.type}</span>
-                    </div>
-                    <div className="text-2xl mb-1.5 text-center">{card.icon}</div>
-                    <div className="text-xs font-medium mb-0.5 text-center text-ink">{card.name}</div>
-                    <p className="text-[10px] text-center leading-relaxed mb-2 text-ink-muted">{card.description}</p>
-                    <div className="text-center">
-                      <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${colors.label}`} style={{ background: colors.bg }}>
-                        {card.effects.map(e => {
-                          const effectNames: Record<string, string> = {
-                            damage: `${e.value}伤害`,
-                            block: `${e.value}格挡`,
-                            heal: `回复${e.value}`,
-                            draw: `抽${e.value}张`,
-                            gain_energy: `+${e.value}能量`,
-                            gain_max_energy: `+${e.value}最大能量`,
-                            gain_attribute: `+${e.value}属性`,
-                            lose_attribute: `-${e.value}属性`,
-                            vulnerable: `脆弱${e.value}`,
-                            weak: `虚弱${e.value}`,
-                            poison: `中毒${e.value}`,
-                            cure: `净化`,
-                            shield: `${e.value}护盾`,
-                            thorns: `${e.value}荆棘`,
-                            rage: `狂暴${e.value}`,
-                            stealth: '潜行',
-                            strength: `+${e.value}力量`,
-                            dexterity: `+${e.value}敏捷`,
-                            regen: `回复${e.value}/回合`,
-                            lifedrain: `${e.value}吸取`,
-                            lifesteal: `${e.value}吸血`,
-                          };
-                          return effectNames[e.type] || e.type;
-                        }).join(' · ')}
-                      </span>
-                    </div>
-                  </button>
+                  <div key={card.id} className="relative">
+                    {isDiscardPhase && isSelectedForDiscard && (
+                      <div className="absolute -top-2 -right-2 z-10 w-5 h-5 rounded-full bg-danger flex items-center justify-center shadow-md">
+                        <span className="text-[8px] text-white font-bold">弃</span>
+                      </div>
+                    )}
+                    <button
+                      onClick={() => {
+                        if (isDiscardPhase) {
+                          toggleDiscardSelection(card.id);
+                        } else {
+                          playCard(card.id);
+                        }
+                      }}
+                      disabled={!isDiscardPhase && !canPlay}
+                      className={`group relative rounded-xl p-3 transition-all cursor-pointer ${glow} hover:scale-[1.03] hover:shadow-md ${!isDiscardPhase && !canPlay ? 'opacity-40 cursor-not-allowed' : ''}`}
+                      style={{
+                        width: '130px',
+                        background: 'var(--color-bg-elevated)',
+                        border: `2px solid ${isDiscardPhase && isSelectedForDiscard ? 'var(--color-danger)' : canPlay ? colors.border : 'var(--color-border-subtle)'}`,
+                        boxShadow: isDiscardPhase && isSelectedForDiscard ? '0 0 8px rgba(209,36,47,0.4)' : canPlay ? 'var(--shadow-sm)' : 'none',
+                      }}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded text-brand bg-brand-light">{card.cost}</span>
+                        <span className={`text-[9px] uppercase tracking-wide ${colors.label}`}>{card.type}</span>
+                      </div>
+                      <div className="text-2xl mb-1.5 text-center">{card.icon}</div>
+                      <div className="text-xs font-medium mb-0.5 text-center text-ink">{card.name}</div>
+                      <p className="text-[10px] text-center leading-relaxed mb-2 text-ink-muted">{card.description}</p>
+                      <div className="text-center">
+                        <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${colors.label}`} style={{ background: colors.bg }}>
+                          {card.effects.map(e => {
+                            const damageBoost = 1 + activeBonuses.filter((b) => b.effect === 'damage_boost').reduce((sum, b) => sum + b.value, 0);
+                            const displayValue = getEffectDisplayValue(e.value, e.type, combat.player.statusEffects, damageBoost);
+                            const isModified = displayValue !== e.value;
+                            const isIncreased = displayValue > e.value;
+                            const formatEffect = (type: string, _val: number, display: number): string => {
+                              const labels: Record<string, string> = {
+                                damage: '伤害',
+                                block: '格挡',
+                                heal: '回复',
+                                draw: '抽',
+                                gain_energy: '+能量',
+                                gain_max_energy: '+最大能量',
+                                gain_attribute: '+属性',
+                                lose_attribute: '-属性',
+                                vulnerable: '脆弱',
+                                weak: '虚弱',
+                                poison: '中毒',
+                                cure: '净化',
+                                shield: '护盾',
+                                thorns: '荆棘',
+                                rage: '狂暴',
+                                stealth: '潜行',
+                                strength: '力量',
+                                dexterity: '敏捷',
+                                regen: '回复/回合',
+                                lifedrain: '吸取',
+                                lifesteal: '吸血',
+                              };
+                              const label = labels[type] || type;
+                              if (type === 'draw') return `抽${display}张`;
+                              if (type === 'heal') return `回复${display}`;
+                              if (type === 'cure') return '净化';
+                              if (type === 'stealth') return '潜行';
+                              if (type === 'regen') return `回复${display}/回合`;
+                              return `${label}${display}`;
+                            };
+                            const formatted = formatEffect(e.type, e.value, displayValue);
+                            if (isModified) {
+                              return (
+                                <span key={e.type} className={isIncreased ? 'text-success' : 'text-danger'}>
+                                  {formatted}
+                                </span>
+                              );
+                            }
+                            return formatted;
+                          }).join(' · ')}
+                        </span>
+                      </div>
+                    </button>
+                  </div>
                 );
               })}
             </div>
+
           </section>
+
+          {/* 弃牌选择提示栏 */}
+          {combat.phase === 'discard_selection' && (
+            <div className="bg-bg-elevated rounded-xl p-4 border border-danger/30 border-l-4 border-l-danger">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-sm font-bold text-ink mb-0.5">🗑️ 请选择要弃掉的卡牌</div>
+                  <div className="text-[10px] text-ink-muted">
+                    已选择弃掉 {combat.selectedForDiscard.length} 张 · 将保留 {combat.player.hand.length - combat.selectedForDiscard.length} 张
+                  </div>
+                </div>
+                <button
+                  onClick={confirmDiscard}
+                  className="px-5 py-2 bg-brand text-white font-medium text-sm rounded-lg shadow-sm hover:shadow-md hover:bg-brand-hover transition-all"
+                >
+                  确认弃牌 →
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* 右侧：玩家状态 (占1列) */}
@@ -711,10 +771,80 @@ const CombatPhaseView: React.FC = () => {
               );
             })()}
             {/* 牌组 */}
-            <div className="flex items-center justify-between text-[10px] text-ink-muted mb-3 pb-3 border-b border-border-subtle">
-              <span>🃏 牌组</span>
-              <span>抽{combat.player.drawPile.length} · 弃{combat.player.discardPile.length}</span>
+            <div className="mb-3 pb-3 border-b border-border-subtle">
+              <div className="flex items-center justify-between text-[10px] text-ink-muted mb-2">
+                <span>🃏 牌组状态</span>
+              </div>
+              <div className="grid grid-cols-3 gap-1.5">
+                <button
+                  onClick={() => setShowDeckPanel(showDeckPanel === 'draw' ? null : 'draw')}
+                  className={`text-center p-1.5 rounded-lg text-[10px] transition-all ${
+                    showDeckPanel === 'draw' ? 'bg-brand/10 border border-brand text-brand' : 'bg-bg-subtle border border-border-subtle text-ink-muted hover:border-brand/30'
+                  }`}
+                >
+                  <div className="font-bold text-sm">{combat.player.drawPile.length}</div>
+                  <div>抽牌堆</div>
+                </button>
+                <button
+                  onClick={() => setShowDeckPanel(showDeckPanel === 'discard' ? null : 'discard')}
+                  className={`text-center p-1.5 rounded-lg text-[10px] transition-all ${
+                    showDeckPanel === 'discard' ? 'bg-brand/10 border border-brand text-brand' : 'bg-bg-subtle border border-border-subtle text-ink-muted hover:border-brand/30'
+                  }`}
+                >
+                  <div className="font-bold text-sm">{combat.player.discardPile.length}</div>
+                  <div>弃牌堆</div>
+                </button>
+                <button
+                  onClick={() => setShowDeckPanel(showDeckPanel === 'exhaust' ? null : 'exhaust')}
+                  className={`text-center p-1.5 rounded-lg text-[10px] transition-all ${
+                    showDeckPanel === 'exhaust' ? 'bg-brand/10 border border-brand text-brand' : 'bg-bg-subtle border border-border-subtle text-ink-muted hover:border-brand/30'
+                  }`}
+                >
+                  <div className="font-bold text-sm">{combat.player.exhaustPile.length}</div>
+                  <div>消耗堆</div>
+                </button>
+              </div>
             </div>
+
+            {/* 牌组详情面板 */}
+            {showDeckPanel && (
+              <div className="mb-3 pb-3 border-b border-border-subtle">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[10px] font-medium text-ink">
+                    {showDeckPanel === 'draw' ? '📥 抽牌堆剩余' : showDeckPanel === 'discard' ? '🗑️ 弃牌堆' : '💨 消耗堆'}
+                  </span>
+                  <button onClick={() => setShowDeckPanel(null)} className="text-[10px] text-ink-faint hover:text-ink">✕</button>
+                </div>
+                <div className="max-h-48 overflow-y-auto space-y-1 pr-1">
+                  {showDeckPanel === 'draw' && combat.player.drawPile.map((card) => (
+                    <div key={card.id} className="flex items-center gap-2 px-2 py-1 rounded bg-bg-subtle text-[10px]">
+                      <span className="text-sm">{card.icon}</span>
+                      <span className="font-medium text-ink flex-1 truncate">{card.name}</span>
+                      <span className="text-ink-faint">{card.cost}⚡</span>
+                    </div>
+                  ))}
+                  {showDeckPanel === 'discard' && combat.player.discardPile.map((card) => (
+                    <div key={card.id} className="flex items-center gap-2 px-2 py-1 rounded bg-bg-subtle text-[10px]">
+                      <span className="text-sm">{card.icon}</span>
+                      <span className="font-medium text-ink flex-1 truncate">{card.name}</span>
+                      <span className="text-ink-faint">{card.cost}⚡</span>
+                    </div>
+                  ))}
+                  {showDeckPanel === 'exhaust' && combat.player.exhaustPile.map((card) => (
+                    <div key={card.id} className="flex items-center gap-2 px-2 py-1 rounded bg-bg-subtle text-[10px]">
+                      <span className="text-sm">{card.icon}</span>
+                      <span className="font-medium text-ink flex-1 truncate">{card.name}</span>
+                      <span className="text-ink-faint">{card.cost}⚡</span>
+                    </div>
+                  ))}
+                  {((showDeckPanel === 'draw' && combat.player.drawPile.length === 0) ||
+                    (showDeckPanel === 'discard' && combat.player.discardPile.length === 0) ||
+                    (showDeckPanel === 'exhaust' && combat.player.exhaustPile.length === 0)) && (
+                    <div className="text-center text-[10px] text-ink-faint py-2">空</div>
+                  )}
+                </div>
+              </div>
+            )}
             {/* 属性加成 */}
             {activeBonuses.length > 0 && (
               <div>
@@ -777,12 +907,14 @@ const CombatPhaseView: React.FC = () => {
           )}
 
           {/* 结束回合按钮 */}
-          <button
-            onClick={endTurn}
-            className="w-full py-3 bg-brand text-white font-medium text-sm rounded-xl shadow-sm hover:shadow-md hover:bg-brand-hover transition-all hover:scale-[1.02] active:scale-[0.98]"
-          >
-            结束回合 →
-          </button>
+          {combat.phase !== 'discard_selection' && (
+            <button
+              onClick={endTurn}
+              className="w-full py-3 bg-brand text-white font-medium text-sm rounded-xl shadow-sm hover:shadow-md hover:bg-brand-hover transition-all hover:scale-[1.02] active:scale-[0.98]"
+            >
+              结束回合 →
+            </button>
+          )}
         </div>
       </div>
     </div>
