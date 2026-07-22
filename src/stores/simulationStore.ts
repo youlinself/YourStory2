@@ -320,7 +320,18 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
         if (enemies.length > 0) get().startCombat(enemies);
         break;
       }
-      case 'event': set({ phase: 'event' }); break;
+      case 'event': {
+        // 检查当前年龄是否有可用事件
+        const availableEvents = get().getAvailableEvents();
+        const currentEvent = availableEvents.find(e => e.options.length > 0);
+        if (currentEvent) {
+          set({ phase: 'event' });
+        } else {
+          // 没有可用事件，自动跳过
+          get().completeOption();
+        }
+        break;
+      }
       case 'wonder': set({ phase: 'reward' }); break;
       case 'shop': get().generateShop(); break;
       case 'rest': set({ phase: 'rest' }); break;
@@ -771,7 +782,14 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
     return clamp(base + bonus, 0.05, 0.95);
   },
 
-  getAvailableEvents: () => SCRIPT_1950_EVENTS,
+  getAvailableEvents: () => {
+    const s = get();
+    return SCRIPT_1950_EVENTS.filter((event) => {
+      if (!event.ageRange) return true;
+      const [minAge, maxAge] = event.ageRange;
+      return s.age >= minAge && s.age <= maxAge;
+    });
+  },
   checkHiddenTags: () => { const s = get(); const tags = new Set(s.hiddenTags); for (const t of HIDDEN_TAGS) if (!tags.has(t.id) && t.condition(s)) tags.add(t.id); return Array.from(tags); },
 
   getEffectiveMaxHealth: () => {

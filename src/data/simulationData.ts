@@ -2282,15 +2282,22 @@ export const RARITY_NAMES: Record<string, string> = {
 };
 
 // ==========================================
-// 1950年代事件（兼容旧系统）
+// 1950年代事件（时间轴驱动）
+// ==========================================
+// 特殊时间事件说明：
+// - ageRange 定义事件出现的年龄窗口，超过该范围事件将不再出现
+// - 事件按时间顺序排列，与时间轴严格绑定
+// - 1950年代对应出生年份1950，era=0，年龄0-9岁对应1950-1959年
 // ==========================================
 export const SCRIPT_1950_EVENTS: GameEvent[] = [
+  // ---- 出生 (1950年，0岁) ----
   {
     id: 'born_1950',
     type: 'world_event',
     era: 0,
+    ageRange: [0, 0],
     title: '呱呱坠地',
-    baseText: '{family_situation}。你来到了这个世界。',
+    baseText: '1950年，{newborn_context}。你来到了这个世界。',
     skinRule: (attrs) => {
       if (attrs.wealth >= 40) return '你出生在一个相对富裕的家庭，家里有房有地。母亲看着你，眼里满是欣慰。';
       if (attrs.wealth >= 20) return '你出生在一个普通家庭，虽然不富裕，但一家人其乐融融。';
@@ -2313,17 +2320,235 @@ export const SCRIPT_1950_EVENTS: GameEvent[] = [
     ],
     isMilestone: true,
   },
+
+  // ---- 婴儿期 (1951年，1岁) ----
   {
-    id: 'childhood_1950',
+    id: 'toddler_first_steps_1950',
     type: 'fixed',
     era: 0,
-    title: '童年印象',
-    baseText: '到了上学的年纪，{school_experience}。',
-    skinRule: (attrs, _history) => {
-      if (attrs.iq >= 65 && attrs.wealth >= 30) return '你在学校表现优异，老师们都很喜欢你。';
-      if (attrs.iq >= 65) return '你聪明好学，但家里学费凑得吃力。每天你都在油灯下写作业。';
-      if (attrs.physique >= 60) return '你不太爱读书，但身体健壮，是同龄孩子里的孩子王。';
-      return '你的童年过得平平淡淡。';
+    ageRange: [1, 1],
+    title: '蹒跚学步',
+    baseText: '一岁的你开始尝试着迈出人生的第一步。',
+    skinRule: (attrs) => {
+      if (attrs.physique >= 60) return '你身体壮实，没几天就能摇摇晃晃地走了。';
+      if (attrs.health >= 55) return '你虽然瘦小，但好奇心驱使你不断尝试。';
+      return '你走得比别的孩子晚一些，但每一步都稳稳当当。';
+    },
+    options: [
+      {
+        id: 'explore_room',
+        text: '在家里探索',
+        successRate: { physique: 0.3, energy: 0.4 },
+        successOutcome: {
+          description: '你摸遍了家里的每个角落，对世界充满了好奇。',
+          attributeChanges: { physique: 2, iq: 1 },
+        },
+        failureOutcome: {
+          description: '你摔了一跤，哇哇大哭，但很快又爬了起来。',
+          attributeChanges: { energy: -1 },
+        },
+      },
+      {
+        id: 'stay_close_parents',
+        text: '依偎在父母身边',
+        successRate: { eq: 0.5 },
+        successOutcome: {
+          description: '父母的怀抱给了你安全感，你笑得格外灿烂。',
+          attributeChanges: { eq: 2, health: 1 },
+        },
+        failureOutcome: {
+          description: '你有些认生，但父母的爱让你慢慢放松下来。',
+          attributeChanges: { eq: 1 },
+        },
+      },
+    ],
+  },
+
+  // ---- 幼儿期 (1952年，2岁) ----
+  {
+    id: 'early_childhood_1950',
+    type: 'fixed',
+    era: 0,
+    ageRange: [2, 2],
+    title: '幼年时光',
+    baseText: '两岁的你开始认识这个世界，家里来了客人。',
+    skinRule: (attrs) => {
+      if (attrs.eq >= 55) return '你一点也不怕生，主动叫叔叔阿姨，大家都夸你聪明。';
+      if (attrs.iq >= 55) return '你虽然不太说话，但眼睛滴溜溜地转，观察着一切。';
+      return '你躲在母亲身后，偷偷地看着这些陌生人。';
+    },
+    options: [
+      {
+        id: 'greet_guests',
+        text: '主动打招呼',
+        successRate: { eq: 0.5, network: 0.2 },
+        successOutcome: {
+          description: '你的大方得体让客人们都夸赞不已。',
+          attributeChanges: { eq: 3, network: 2 },
+        },
+        failureOutcome: {
+          description: '你喊错了称呼，惹得大人们哈哈大笑。',
+          attributeChanges: { eq: 1 },
+        },
+      },
+      {
+        id: 'play_alone',
+        text: '自己玩玩具',
+        successRate: { iq: 0.4 },
+        successOutcome: {
+          description: '你专注地摆弄着玩具，发现了新的玩法。',
+          attributeChanges: { iq: 3 },
+        },
+        failureOutcome: {
+          description: '玩具被你弄坏了，你哭了一场。',
+          attributeChanges: {},
+        },
+      },
+    ],
+  },
+
+  // ---- 土地改革见证 (1952-1953年，3岁) ----
+  {
+    id: 'land_reform_witness_1950',
+    type: 'world_event',
+    era: 0,
+    ageRange: [3, 3],
+    title: '土地改革',
+    baseText: '村里来了工作队，土地改革运动开始了。{land_reform_context}',
+    skinRule: (attrs) => {
+      if (attrs.wealth >= 35) return '你家曾经有些田地，如今要分给穷人。父亲整日唉声叹气。';
+      if (attrs.wealth >= 20) return '你家是中农，看着村里翻天覆地的变化，心情复杂。';
+      return '你家终于分到了土地，父母脸上洋溢着从未有过的笑容。';
+    },
+    options: [
+      {
+        id: 'observe_quietly',
+        text: '默默观察',
+        successRate: { iq: 0.4, eq: 0.3 },
+        successOutcome: {
+          description: '虽然年幼，你隐约感受到了时代的巨变。',
+          attributeChanges: { iq: 2, eq: 2 },
+        },
+        failureOutcome: {
+          description: '你不太明白发生了什么，只是觉得村里变得热闹了。',
+          attributeChanges: { iq: 1 },
+        },
+      },
+      {
+        id: 'join_celebration',
+        text: '参加庆祝活动',
+        successRate: { network: 0.4, energy: 0.3 },
+        successOutcome: {
+          description: '你跟着大人们一起欢呼，感受到了集体的力量。',
+          attributeChanges: { network: 3, energy: 1 },
+        },
+        failureOutcome: {
+          description: '人太多，你被挤在中间，有些害怕。',
+          attributeChanges: { energy: -1 },
+        },
+      },
+    ],
+    isMilestone: true,
+  },
+
+  // ---- 幼儿园 (1953-1954年，4岁) ----
+  {
+    id: 'kindergarten_1950',
+    type: 'fixed',
+    era: 0,
+    ageRange: [4, 4],
+    title: '幼儿园时光',
+    baseText: '村里办了幼儿园，你有了和小朋友们一起玩耍的地方。',
+    skinRule: (attrs) => {
+      if (attrs.eq >= 55 && attrs.network >= 40) return '你很快就交到了很多朋友，是孩子王。';
+      if (attrs.iq >= 55) return '你最喜欢听老师讲故事，学得又快又好。';
+      return '你有些害羞，但慢慢也适应了集体生活。';
+    },
+    options: [
+      {
+        id: 'make_friends',
+        text: '交朋友',
+        successRate: { eq: 0.4, network: 0.4 },
+        successOutcome: {
+          description: '你和小伙伴们一起玩耍，度过了快乐的时光。',
+          attributeChanges: { network: 4, eq: 2 },
+        },
+        failureOutcome: {
+          description: '你和别人起了冲突，但很快就和好了。',
+          attributeChanges: { eq: 1 },
+        },
+      },
+      {
+        id: 'learn_songs',
+        text: '学唱歌跳舞',
+        successRate: { iq: 0.3, energy: 0.4 },
+        successOutcome: {
+          description: '你学会了第一首歌，回家唱给父母听。',
+          attributeChanges: { iq: 2, fame: 2 },
+        },
+        failureOutcome: {
+          description: '你总是跑调，但大家依然给你鼓掌。',
+          attributeChanges: { energy: 1 },
+        },
+      },
+    ],
+  },
+
+  // ---- 五反运动见证 (1955年，5岁) ----
+  {
+    id: 'five_anti_campaign_1950',
+    type: 'world_event',
+    era: 0,
+    ageRange: [5, 5],
+    title: '五反运动',
+    baseText: '镇上开展了五反运动，{five_anti_context}。',
+    skinRule: (attrs) => {
+      if (attrs.wealth >= 40) return '你家的店铺被调查，父母整日忧心忡忡。';
+      if (attrs.network >= 40) return '你父亲因为为人正直，被工人们尊重。';
+      return '你看到街上贴满了大字报，不太明白发生了什么。';
+    },
+    options: [
+      {
+        id: 'ask_parents',
+        text: '问父母发生了什么',
+        successRate: { iq: 0.5 },
+        successOutcome: {
+          description: '父母简单地给你解释了什么是守法与违法。',
+          attributeChanges: { iq: 3, eq: 1 },
+        },
+        failureOutcome: {
+          description: '父母只是摇摇头，让你不要多问。',
+          attributeChanges: { iq: 1 },
+        },
+      },
+      {
+        id: 'play_outside',
+        text: '在外面玩耍',
+        successRate: { physique: 0.4, energy: 0.3 },
+        successOutcome: {
+          description: '你和小伙伴们无忧无虑地玩耍着。',
+          attributeChanges: { physique: 2, health: 2 },
+        },
+        failureOutcome: {
+          description: '你摔了一跤，膝盖破了皮。',
+          attributeChanges: { energy: -2 },
+        },
+      },
+    ],
+  },
+
+  // ---- 启蒙之年 (1956年，6岁) ----
+  {
+    id: 'school_starts_1950',
+    type: 'fixed',
+    era: 0,
+    ageRange: [6, 6],
+    title: '背上书包',
+    baseText: '六岁的你终于到了上学的年纪，{school_start_context}。',
+    skinRule: (attrs) => {
+      if (attrs.iq >= 60 && attrs.wealth >= 30) return '你背着崭新的书包，穿着整洁的校服，神气极了。';
+      if (attrs.iq >= 60) return '你虽然穿着旧衣服，但书包是母亲亲手缝的，你格外珍惜。';
+      return '你不太想上学，但父亲说读书才能有出息。';
     },
     options: [
       {
@@ -2332,8 +2557,7 @@ export const SCRIPT_1950_EVENTS: GameEvent[] = [
         successRate: { iq: 0.4, energy: 0.3 },
         successOutcome: {
           description: '你的成绩突飞猛进，成为班级的尖子生。',
-          attributeChanges: { iq: 5 },
-          goldReward: 50,
+          attributeChanges: { iq: 5, energy: -2 },
         },
         failureOutcome: {
           description: '你虽然努力，但进步并不明显。',
@@ -2354,6 +2578,172 @@ export const SCRIPT_1950_EVENTS: GameEvent[] = [
         },
       },
     ],
+    isMilestone: true,
+  },
+
+  // ---- 农业合作化 (1957年，7岁) ----
+  {
+    id: 'agricultural_cooperative_1950',
+    type: 'world_event',
+    era: 0,
+    ageRange: [7, 7],
+    title: '农业合作化',
+    baseText: '村里成立了农业生产合作社，{cooperative_context}。',
+    skinRule: (attrs) => {
+      if (attrs.network >= 45) return '你父亲被推选为合作社的干部，每天忙得不可开交。';
+      if (attrs.wealth >= 35) return '你家的农具和牲口都入了社，母亲有些舍不得。';
+      return '你跟着大人一起下田干活，虽然累但很充实。';
+    },
+    options: [
+      {
+        id: 'join_work',
+        text: '参加集体劳动',
+        successRate: { physique: 0.4, network: 0.3 },
+        successOutcome: {
+          description: '你学会了插秧和除草，感受到了劳动的快乐。',
+          attributeChanges: { physique: 3, network: 2 },
+        },
+        failureOutcome: {
+          description: '你太小了，帮了不少倒忙，但大家都不怪你。',
+          attributeChanges: { physique: 1 },
+        },
+      },
+      {
+        id: 'study_after_work',
+        text: '劳动后坚持学习',
+        successRate: { iq: 0.5, energy: 0.2 },
+        successOutcome: {
+          description: '你白天劳动晚上学习，成绩依然名列前茅。',
+          attributeChanges: { iq: 4, energy: -2 },
+        },
+        failureOutcome: {
+          description: '你太累了，上课总是打瞌睡。',
+          attributeChanges: { energy: -3 },
+        },
+      },
+    ],
+  },
+
+  // ---- 百花齐放 (1958年，8岁) ----
+  {
+    id: 'hundred_flowers_1950',
+    type: 'world_event',
+    era: 0,
+    ageRange: [8, 8],
+    title: '百花齐放',
+    baseText: '今年开展了"百花齐放、百家争鸣"运动，{hundred_flowers_context}。',
+    skinRule: (attrs) => {
+      if (attrs.iq >= 60) return '你父亲因为提了几句意见，被叫去谈话，母亲整日担心。';
+      if (attrs.eq >= 55) return '你父亲谨言慎行，平安度过了这段日子。';
+      return '你不太明白为什么大人们突然变得小心翼翼。';
+    },
+    options: [
+      {
+        id: 'observe_silently',
+        text: '默默观察',
+        successRate: { iq: 0.4, eq: 0.4 },
+        successOutcome: {
+          description: '你学会了察言观色，明白了言多必失的道理。',
+          attributeChanges: { eq: 4, iq: 2 },
+        },
+        failureOutcome: {
+          description: '你不太理解为什么大家都不怎么说话了。',
+          attributeChanges: { iq: 1 },
+        },
+      },
+      {
+        id: 'focus_on_study',
+        text: '专心读书',
+        successRate: { iq: 0.5, energy: 0.2 },
+        successOutcome: {
+          description: '你把精力都放在学习上，成绩突飞猛进。',
+          attributeChanges: { iq: 5, energy: -1 },
+        },
+        failureOutcome: {
+          description: '你虽然努力，但外面的世界让你无法专心。',
+          attributeChanges: { iq: 2 },
+        },
+      },
+    ],
+  },
+
+  // ---- 大跃进 (1959年，9岁) ----
+  {
+    id: 'great_leap_forward_1950',
+    type: 'world_event',
+    era: 0,
+    ageRange: [9, 9],
+    title: '大跃进年代',
+    baseText: '1959年，大跃进运动如火如荼，{leap_forward_context}。',
+    skinRule: (attrs) => {
+      if (attrs.physique >= 55) return '你被组织起来大炼钢铁，虽然累但觉得很有意义。';
+      if (attrs.iq >= 55) return '你在学校学习知识，老师说你们是未来的接班人。';
+      return '你跟着大人一起劳动，虽然不太懂但干劲十足。';
+    },
+    options: [
+      {
+        id: 'join_steel_furnace',
+        text: '参加大炼钢铁',
+        successRate: { physique: 0.4, energy: 0.3 },
+        successOutcome: {
+          description: '你虽然年纪小，但搬砖送水，为炼钢贡献了一份力量。',
+          attributeChanges: { physique: 4, energy: -3 },
+        },
+        failureOutcome: {
+          description: '你累倒了，休息了好几天才恢复。',
+          attributeChanges: { health: -3, energy: -5 },
+        },
+      },
+      {
+        id: 'continue_studying',
+        text: '继续努力学习',
+        successRate: { iq: 0.5, energy: 0.2 },
+        successOutcome: {
+          description: '你相信知识改变命运，更加刻苦学习。',
+          attributeChanges: { iq: 5, fame: 1 },
+        },
+        failureOutcome: {
+          description: '你虽然努力，但学习条件越来越差。',
+          attributeChanges: { iq: 2 },
+        },
+      },
+    ],
+    isMilestone: true,
+  },
+
+  // ---- 时代过渡 (1959年末，9岁) ----
+  {
+    id: 'era_transition_1950',
+    type: 'world_event',
+    era: 0,
+    ageRange: [9, 9],
+    title: '十年光阴',
+    baseText: '转眼间，你已经从一个婴儿长成了十岁的少年。',
+    skinRule: (attrs, _history, tags) => {
+      const achievements = [];
+      if (attrs.iq >= 60) achievements.push('聪明好学');
+      if (attrs.physique >= 60) achievements.push('身体健壮');
+      if (attrs.network >= 50) achievements.push('人缘好');
+      if (tags.length > 0) achievements.push(`获得了"${tags[0]}"的称号`);
+      if (achievements.length === 0) return '你的童年平淡而快乐，没有什么特别的故事。';
+      return `这十年里，你${achievements.join('、')}，童年充实而有意义。`;
+    },
+    options: [
+      {
+        id: 'look_forward',
+        text: '展望未来',
+        successRate: { energy: 0.3, eq: 0.3 },
+        successOutcome: {
+          description: '你满怀期待地准备迎接新的十年。',
+          attributeChanges: { energy: 3, eq: 2 },
+        },
+        failureOutcome: {
+          description: '你对未来有些迷茫，但依然充满希望。',
+          attributeChanges: { energy: 1 },
+        },
+      },
+    ],
+    isMilestone: true,
   },
 ];
 

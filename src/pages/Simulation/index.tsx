@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import useSimulationStore, { getEffectDisplayValue } from '../../stores/simulationStore';
 
 import {
@@ -1076,11 +1077,19 @@ const SimulationPage: React.FC = () => {
   const gold = useSimulationStore((s) => s.gold);
   const cultivation = useSimulationStore((s) => s.cultivation);
   const resetGame = useSimulationStore((s) => s.resetGame);
-  const availableEvents = useSimulationStore((s) => s.getAvailableEvents());
+  const completeOption = useSimulationStore((s) => s.completeOption);
+  const availableEvents = useSimulationStore(useShallow((s) => s.getAvailableEvents()));
 
   useEffect(() => { resetGame(); }, [resetGame]);
 
-  const currentEvent = phase === 'event' ? availableEvents.find(e => e.options.length > 0) : null;
+  // 防止卡死：当 phase 是 event 但没有可用事件时，自动跳过
+  useEffect(() => {
+    if (phase === 'event' && availableEvents.length === 0) {
+      completeOption();
+    }
+  }, [phase, availableEvents, completeOption]);
+
+  const currentEvent = phase === 'event' && availableEvents.length > 0 ? availableEvents[0] : null;
 
   return (
     <div className="flex h-full">
