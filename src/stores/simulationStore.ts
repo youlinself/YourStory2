@@ -22,6 +22,8 @@ const BASE_ENERGY = 3;
 const YEARS_PER_ERA = 10;
 const OPTION_TYPES: OptionType[] = ['combat', 'elite', 'event', 'wonder', 'rest', 'shop'];
 
+export { MAX_HAND_SIZE, BASE_DRAW_COUNT };
+
 const ATTRIBUTE_BONUSES: AttributeThresholdBonus[] = [
   { attribute: 'physique', threshold: 70, name: '强壮', description: '攻击卡伤害+25%', effect: 'damage_boost', value: 0.25 },
   { attribute: 'iq', threshold: 70, name: '聪颖', description: '每回合额外抽1张卡', effect: 'extra_draw', value: 1 },

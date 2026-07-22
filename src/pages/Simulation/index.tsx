@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
-import useSimulationStore, { getEffectDisplayValue } from '../../stores/simulationStore';
+import useSimulationStore, { getEffectDisplayValue, MAX_HAND_SIZE, BASE_DRAW_COUNT } from '../../stores/simulationStore';
 
 import {
   ERAS,
@@ -16,7 +16,118 @@ import {
 import Tooltip from '../../components/common/Tooltip';
 import FloatingDamage from '../../components/ui/FloatingDamage';
 import BuffDebuffBadge from '../../components/ui/BuffDebuffBadge';
-import type { BirthYear, PlayerAttributes, GameEvent, AttributeThresholdBonus } from '../../types/simulation';
+import type { BirthYear, PlayerAttributes, GameEvent, AttributeThresholdBonus, LifeCard, CardEffect, StatusEffect } from '../../types/simulation';
+
+const EFFECT_LABELS: Record<string, string> = {
+  damage: '伤害',
+  block: '格挡',
+  heal: '回复',
+  draw: '抽',
+  gain_energy: '+精力',
+  gain_max_energy: '+最大精力',
+  gain_attribute: '+属性',
+  lose_attribute: '-属性',
+  vulnerable: '脆弱',
+  weak: '虚弱',
+  poison: '中毒',
+  cure: '净化',
+  shield: '护盾',
+  thorns: '荆棘',
+  rage: '狂暴',
+  stealth: '潜行',
+  strength: '力量',
+  dexterity: '敏捷',
+  regen: '回复/回合',
+  lifedrain: '吸取',
+  lifesteal: '吸血',
+};
+
+const formatEffectLabel = (type: string, display: number): string => {
+  const label = EFFECT_LABELS[type] || type;
+  if (type === 'draw') return `抽${display}张`;
+  if (type === 'heal') return `回复${display}`;
+  if (type === 'cure') return '净化';
+  if (type === 'stealth') return '潜行';
+  if (type === 'regen') return `回复${display}/回合`;
+  return `${label}${display}`;
+};
+
+interface CardDetailProps {
+  card: LifeCard;
+  activeBonuses?: AttributeThresholdBonus[];
+  statusEffects?: StatusEffect[];
+  onClick?: () => void;
+  selected?: boolean;
+  disabled?: boolean;
+  width?: number;
+}
+
+const CardDetail: React.FC<CardDetailProps> = ({ card, activeBonuses = [], statusEffects = [], onClick, disabled, width = 130 }) => {
+  const colors = getCardTypeColor(card.type);
+  const glow = getCardGlow(card.type);
+  const damageBoost = 1 + activeBonuses.filter((b) => b.effect === 'damage_boost').reduce((sum, b) => sum + b.value, 0);
+
+  const effectItems = card.effects.map((e: CardEffect, i: number) => {
+    const displayValue = getEffectDisplayValue(e.value, e.type, statusEffects, damageBoost);
+    const isModified = displayValue !== e.value;
+    const isIncreased = displayValue > e.value;
+    const formatted = formatEffectLabel(e.type, displayValue);
+    if (isModified) {
+      return <span key={i} className={isIncreased ? 'text-success' : 'text-danger'}>{formatted}</span>;
+    }
+    return <span key={i}>{formatted}</span>;
+  });
+  const effectNodes: React.ReactNode[] = [];
+  effectItems.forEach((item, i) => {
+    if (i > 0) effectNodes.push(<span key={`sep-${i}`} className="text-ink-faint"> · </span>);
+    effectNodes.push(item);
+  });
+
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={`group relative rounded-xl p-3 transition-all cursor-pointer ${glow} ${disabled ? 'opacity-40 cursor-not-allowed' : 'hover:scale-[1.03] hover:shadow-md'}`}
+      style={{
+        width: `${width}px`,
+        background: 'var(--color-bg-elevated)',
+        border: `2px solid ${colors.border}`,
+        boxShadow: 'var(--shadow-sm)',
+      }}
+    >
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded text-brand bg-brand-light">{card.cost}</span>
+        <span className={`text-[9px] uppercase tracking-wide ${colors.label}`}>{CARD_TYPE_NAMES[card.type] || card.type}</span>
+      </div>
+      <div className="text-2xl mb-1.5 text-center">{card.icon}</div>
+      <div className="text-xs font-medium mb-0.5 text-center text-ink">{card.name}</div>
+      <p className="text-[10px] text-center leading-relaxed mb-2 text-ink-muted">{card.description}</p>
+      <div className="text-center">
+        <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${colors.label}`} style={{ background: colors.bg }}>
+          {effectNodes}
+        </span>
+      </div>
+    </button>
+  );
+};
+
+const getCardTypeColor = (type: string) => {
+  switch (type) {
+    case 'attack': return { border: 'rgba(209,36,47,0.15)', label: 'text-danger', bg: 'rgba(209,36,47,0.08)' };
+    case 'skill': return { border: 'rgba(45,123,185,0.15)', label: 'text-info', bg: 'rgba(45,123,185,0.08)' };
+    case 'power': return { border: 'rgba(168,85,247,0.15)', label: 'text-[#a855f7]', bg: 'rgba(168,85,247,0.08)' };
+    default: return { border: 'rgba(201,169,110,0.2)', label: 'text-gold', bg: 'rgba(201,169,110,0.08)' };
+  }
+};
+
+const getCardGlow = (type: string) => {
+  switch (type) {
+    case 'attack': return 'hover:border-danger/30';
+    case 'skill': return 'hover:border-info/30';
+    case 'power': return 'hover:border-[#a855f7]/30';
+    default: return 'hover:border-gold/30';
+  }
+};
 
 const AttributeBar: React.FC<{ attr: keyof PlayerAttributes; value: number; showLabel?: boolean }> = ({ attr, value, showLabel = true }) => (
   <div className="flex items-center gap-2">
@@ -402,24 +513,6 @@ const CombatPhaseView: React.FC = () => {
     }
   };
 
-  const getCardTypeColor = (type: string) => {
-    switch (type) {
-      case 'attack': return { border: 'rgba(209,36,47,0.15)', label: 'text-danger', bg: 'rgba(209,36,47,0.08)' };
-      case 'skill': return { border: 'rgba(45,123,185,0.15)', label: 'text-info', bg: 'rgba(45,123,185,0.08)' };
-      case 'power': return { border: 'rgba(168,85,247,0.15)', label: 'text-[#a855f7]', bg: 'rgba(168,85,247,0.08)' };
-      default: return { border: 'rgba(201,169,110,0.2)', label: 'text-gold', bg: 'rgba(201,169,110,0.08)' };
-    }
-  };
-
-  const getCardGlow = (type: string) => {
-    switch (type) {
-      case 'attack': return 'hover:border-danger/30';
-      case 'skill': return 'hover:border-info/30';
-      case 'power': return 'hover:border-[#a855f7]/30';
-      default: return 'hover:border-gold/30';
-    }
-  };
-
   return (
     <div className="p-4 md:p-5 space-y-4 max-w-6xl mx-auto">
       {/* 顶部状态栏 */}
@@ -590,11 +683,17 @@ const CombatPhaseView: React.FC = () => {
             </div>
             <div className="flex flex-wrap gap-3">
               {combat.player.hand.map((card) => {
-                const colors = getCardTypeColor(card.type);
-                const glow = getCardGlow(card.type);
                 const canPlay = card.cost <= combat.player.energy;
                 const isSelectedForDiscard = combat.selectedForDiscard.includes(card.id);
                 const isDiscardPhase = combat.phase === 'discard_selection';
+
+                const handleClick = () => {
+                  if (isDiscardPhase) {
+                    toggleDiscardSelection(card.id);
+                  } else {
+                    playCard(card.id);
+                  }
+                };
 
                 return (
                   <div key={card.id} className="relative">
@@ -603,82 +702,14 @@ const CombatPhaseView: React.FC = () => {
                         <span className="text-[8px] text-white font-bold">弃</span>
                       </div>
                     )}
-                    <button
-                      onClick={() => {
-                        if (isDiscardPhase) {
-                          toggleDiscardSelection(card.id);
-                        } else {
-                          playCard(card.id);
-                        }
-                      }}
+                    <CardDetail
+                      card={card}
+                      activeBonuses={activeBonuses}
+                      statusEffects={combat.player.statusEffects}
+                      onClick={handleClick}
                       disabled={!isDiscardPhase && !canPlay}
-                      className={`group relative rounded-xl p-3 transition-all cursor-pointer ${glow} hover:scale-[1.03] hover:shadow-md ${!isDiscardPhase && !canPlay ? 'opacity-40 cursor-not-allowed' : ''}`}
-                      style={{
-                        width: '130px',
-                        background: 'var(--color-bg-elevated)',
-                        border: `2px solid ${isDiscardPhase && isSelectedForDiscard ? 'var(--color-danger)' : canPlay ? colors.border : 'var(--color-border-subtle)'}`,
-                        boxShadow: isDiscardPhase && isSelectedForDiscard ? '0 0 8px rgba(209,36,47,0.4)' : canPlay ? 'var(--shadow-sm)' : 'none',
-                      }}
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded text-brand bg-brand-light">{card.cost}</span>
-                        <span className={`text-[9px] uppercase tracking-wide ${colors.label}`}>{CARD_TYPE_NAMES[card.type] || card.type}</span>
-                      </div>
-                      <div className="text-2xl mb-1.5 text-center">{card.icon}</div>
-                      <div className="text-xs font-medium mb-0.5 text-center text-ink">{card.name}</div>
-                      <p className="text-[10px] text-center leading-relaxed mb-2 text-ink-muted">{card.description}</p>
-                      <div className="text-center">
-                        <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${colors.label}`} style={{ background: colors.bg }}>
-                          {card.effects.map(e => {
-                            const damageBoost = 1 + activeBonuses.filter((b) => b.effect === 'damage_boost').reduce((sum, b) => sum + b.value, 0);
-                            const displayValue = getEffectDisplayValue(e.value, e.type, combat.player.statusEffects, damageBoost);
-                            const isModified = displayValue !== e.value;
-                            const isIncreased = displayValue > e.value;
-                            const formatEffect = (type: string, _val: number, display: number): string => {
-                              const labels: Record<string, string> = {
-                                damage: '伤害',
-                                block: '格挡',
-                                heal: '回复',
-                                draw: '抽',
-                                gain_energy: '+精力',
-                                gain_max_energy: '+最大精力',
-                                gain_attribute: '+属性',
-                                lose_attribute: '-属性',
-                                vulnerable: '脆弱',
-                                weak: '虚弱',
-                                poison: '中毒',
-                                cure: '净化',
-                                shield: '护盾',
-                                thorns: '荆棘',
-                                rage: '狂暴',
-                                stealth: '潜行',
-                                strength: '力量',
-                                dexterity: '敏捷',
-                                regen: '回复/回合',
-                                lifedrain: '吸取',
-                                lifesteal: '吸血',
-                              };
-                              const label = labels[type] || type;
-                              if (type === 'draw') return `抽${display}张`;
-                              if (type === 'heal') return `回复${display}`;
-                              if (type === 'cure') return '净化';
-                              if (type === 'stealth') return '潜行';
-                              if (type === 'regen') return `回复${display}/回合`;
-                              return `${label}${display}`;
-                            };
-                            const formatted = formatEffect(e.type, e.value, displayValue);
-                            if (isModified) {
-                              return (
-                                <span key={e.type} className={isIncreased ? 'text-success' : 'text-danger'}>
-                                  {formatted}
-                                </span>
-                              );
-                            }
-                            return formatted;
-                          }).join(' · ')}
-                        </span>
-                      </div>
-                    </button>
+                      width={130}
+                    />
                   </div>
                 );
               })}
@@ -764,6 +795,17 @@ const CombatPhaseView: React.FC = () => {
                 <span className="text-[10px] text-ink-muted">格挡</span>
               </div>
               <span className="text-sm font-bold text-info">{combat.player.block}</span>
+            </div>
+            {/* 抽牌/手牌上限 */}
+            <div className="grid grid-cols-2 gap-2 mb-3">
+              <div className="text-center p-2 rounded-lg bg-bg-subtle border border-border-subtle">
+                <div className="text-[10px] text-ink-muted mb-0.5">抽牌数</div>
+                <div className="text-sm font-bold text-brand">{BASE_DRAW_COUNT + activeBonuses.filter((b) => b.effect === 'extra_draw').reduce((sum, b) => sum + b.value, 0)}</div>
+              </div>
+              <div className="text-center p-2 rounded-lg bg-bg-subtle border border-border-subtle">
+                <div className="text-[10px] text-ink-muted mb-0.5">手牌上限</div>
+                <div className="text-sm font-bold text-brand">{MAX_HAND_SIZE}</div>
+              </div>
             </div>
             {/* 当前目标 */}
             {(() => {
@@ -960,14 +1002,19 @@ const RewardPhase: React.FC = () => {
       </div>
 
       {tab === 'card' && hasCards && (
-        <div className="w-full max-w-2xl mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="w-full max-w-3xl mb-6">
+          <div className="flex flex-wrap gap-4 justify-center">
             {combat.rewards.cards.map((card) => (
-              <button key={card.id} onClick={() => selectCardReward(card.id)}
-                className="p-4 rounded-lg border border-border-subtle hover:border-brand hover:bg-brand/5 text-left transition-all">
-                <div className="flex items-center gap-2 mb-1"><span className="text-2xl">{card.icon}</span><span className="font-medium">{card.name}</span></div>
-                <p className="text-xs text-ink-muted">{card.description}</p>
-              </button>
+              <div key={card.id} className="relative">
+                <CardDetail
+                  card={card}
+                  onClick={() => selectCardReward(card.id)}
+                  width={140}
+                />
+                <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                  <span className="text-[9px] px-2 py-0.5 rounded-full bg-brand text-white whitespace-nowrap">点击选择</span>
+                </div>
+              </div>
             ))}
           </div>
         </div>
