@@ -64,7 +64,8 @@ function applyCardEffect(effect: { type: string; value: number; duration?: numbe
     case 'strength': c.player.statusEffects.push({ type: 'strength', value: effect.value, duration: effect.duration || 99 }); break;
     case 'dexterity': c.player.statusEffects.push({ type: 'dexterity', value: effect.value, duration: effect.duration || 99 }); break;
     case 'regen': c.player.statusEffects.push({ type: 'regen', value: effect.value, duration: effect.duration || 99 }); break;
-    case 'lifesteal': if (t && effect.value) { const dmg = Math.max(0, effect.value - t.block); t.currentHealth -= dmg; c.player.currentHealth = Math.min(c.player.maxHealth, c.player.currentHealth + Math.floor(dmg * 0.5)); } break;
+    case 'lifesteal':
+      break;
   }
   return c;
 }
@@ -416,9 +417,18 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
     const beforeBlock = c.player.block;
     const enemyBlocksBefore = c.enemies.map(e => e.block);
     const effectiveTargetIdx = targetIdx !== undefined ? targetIdx : c.currentEnemyIndex;
-    for (const eff of card.effects) {
+    const lifestealEff = card.effects.find((e) => e.type === 'lifesteal');
+    const otherEffects = card.effects.filter((e) => e.type !== 'lifesteal');
+    for (const eff of otherEffects) {
       const modifiedEff = eff.type === 'damage' ? { ...eff, value: Math.floor(eff.value * damageBoost) } : eff;
       c = applyCardEffect(modifiedEff, c, effectiveTargetIdx);
+    }
+    if (lifestealEff && lifestealEff.value > 0) {
+      const totalDamage = beforeHealth.reduce((sum, h, i) => sum + Math.max(0, h - c.enemies[i].currentHealth), 0);
+      const healAmount = Math.floor(totalDamage * lifestealEff.value);
+      if (healAmount > 0) {
+        c.player.currentHealth = Math.min(c.player.maxHealth, c.player.currentHealth + healAmount);
+      }
     }
     c.player.discardPile.push(card);
 
