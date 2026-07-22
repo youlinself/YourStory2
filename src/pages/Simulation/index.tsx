@@ -1161,7 +1161,7 @@ const SimulationPage: React.FC = () => {
   const currentEvent = phase === 'event' && availableEvents.length > 0 ? availableEvents[0] : null;
 
   return (
-    <div className="flex h-full">
+    <div className="flex h-full simulation-page">
       <div className="flex-1 overflow-y-auto">
         {phase === 'setup' && <ModeSelectPhase />}
         {phase === 'allocating' && <AllocatingPhase />}

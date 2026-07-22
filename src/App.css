@@ -87,6 +87,14 @@
 .text-serif { font-family: var(--font-serif); }
 .text-sans { font-family: var(--font-sans); }
 
+/* 模拟人生页面禁止文本选中 */
+.simulation-page {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
 body {
   font-family: var(--font-sans);
   background: var(--color-bg);
