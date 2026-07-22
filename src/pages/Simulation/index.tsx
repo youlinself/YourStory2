@@ -14,6 +14,7 @@ import {
   RARITY_NAMES,
 } from '../../data/simulationData';
 import Tooltip from '../../components/common/Tooltip';
+import { useToast } from '../../components/common';
 import FloatingDamage from '../../components/ui/FloatingDamage';
 import BuffDebuffBadge from '../../components/ui/BuffDebuffBadge';
 import type { BirthYear, PlayerAttributes, GameEvent, AttributeThresholdBonus, LifeCard, CardEffect, StatusEffect } from '../../types/simulation';
@@ -160,6 +161,11 @@ const ModeSelectPhase: React.FC = () => {
   const startGame = useSimulationStore((s) => s.startGame);
   const mode = useSimulationStore((s) => s.mode);
   const selectedEra = ERAS.find((e) => e.year === selectedYear);
+  const { addToast } = useToast();
+
+  const handleAiToggle = () => {
+    addToast({ type: 'info', message: '✨ 敬请期待' });
+  };
 
   if (step === 'mode') {
     return (
@@ -177,6 +183,17 @@ const ModeSelectPhase: React.FC = () => {
             <h3 className="text-lg font-semibold text-ink mb-1">修仙模式</h3>
             <p className="text-xs text-ink-muted">突破寿元极限，追求长生</p>
           </button>
+        </div>
+        <div className="mt-6 flex items-center gap-3 bg-white border border-border-subtle rounded-xl px-5 py-3">
+          <span className="text-sm font-medium text-ink">🤖 开启AI大模型</span>
+          <label className="toggle-switch">
+            <input
+              type="checkbox"
+              checked={false}
+              onChange={handleAiToggle}
+            />
+            <span className="toggle-slider" />
+          </label>
         </div>
       </div>
     );
