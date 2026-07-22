@@ -331,7 +331,10 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
     newYears[yearIdx] = { ...newYears[yearIdx], isCompleted: true };
     const nextIdx = yearIdx + 1;
     const completed = nextIdx >= YEARS_PER_ERA;
-    set({ currentMap: { ...s.currentMap, years: newYears, currentYearIndex: completed ? yearIdx : nextIdx, completed }, phase: completed ? 'era_transition' : 'year_view' });
+    const nextYearIndex = completed ? yearIdx : nextIdx;
+    const newCurrentYear = (s.birthYear || 1950) + s.currentEra * 10 + nextYearIndex;
+    const newAge = newCurrentYear - (s.birthYear || 1950);
+    set({ currentMap: { ...s.currentMap, years: newYears, currentYearIndex: nextYearIndex, completed }, currentYear: newCurrentYear, age: newAge, phase: completed ? 'era_transition' : 'year_view' });
     if (completed) get().advanceEra();
   },
 
@@ -339,11 +342,12 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
     const s = get();
     const nextEra = s.currentEra + 1;
     const nextYear = (s.birthYear || 1950) + nextEra * 10;
+    const newAge = nextYear - (s.birthYear || 1950);
     const lifeDec = Math.floor(5 + Math.random() * 5);
     const newTags = get().checkHiddenTags();
     const newLife = Math.max(0, s.remainingLife - lifeDec);
     const newPhase: GamePhase = (newLife <= 0 || s.attributes.health <= 0) ? 'ended' : 'year_view';
-    set({ currentEra: nextEra, currentYear: nextYear, age: s.age + 10, remainingLife: newLife, hiddenTags: newTags, phase: newPhase, currentMap: null, combat: { ...initialCombatState }, shop: null });
+    set({ currentEra: nextEra, currentYear: nextYear, age: newAge, remainingLife: newLife, hiddenTags: newTags, phase: newPhase, currentMap: null, combat: { ...initialCombatState }, shop: null });
     if (newPhase === 'year_view') get().generateMap();
   },
 
@@ -398,6 +402,7 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
 
     const beforeHealth = c.enemies.map(e => e.currentHealth);
     const beforeBlock = c.player.block;
+    const enemyBlocksBefore = c.enemies.map(e => e.block);
     for (const eff of card.effects) {
       const modifiedEff = eff.type === 'damage' ? { ...eff, value: Math.floor(eff.value * damageBoost) } : eff;
       c = applyCardEffect(modifiedEff, c, targetIdx);
@@ -406,7 +411,13 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
 
     c.enemies.forEach((enemy, i) => {
       const dmg = beforeHealth[i] - enemy.currentHealth;
-      if (dmg > 0) triggerDamageEvent(dmg, enemy.id);
+      const blockUsed = enemyBlocksBefore[i] - enemy.block;
+      if (blockUsed > 0) {
+        triggerDamageEvent(blockUsed, `enemy_block_${enemy.id}`, true);
+      }
+      if (dmg > 0) {
+        triggerDamageEvent(dmg, enemy.id);
+      }
     });
 
     const blockGained = c.player.block - beforeBlock;

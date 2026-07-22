@@ -18,6 +18,7 @@ const FloatingDamage: React.FC<FloatingDamageProps> = ({ counter }) => {
   const getEventStyle = (event: DamageEvent) => {
     if (event.targetId === 'player_block') return { class: 'block', prefix: '-', label: '🛡️' };
     if (event.targetId === 'player_heal') return { class: 'heal', prefix: '+', label: '💚' };
+    if (event.targetId.startsWith('enemy_block_')) return { class: 'block', prefix: '-', label: '🛡️' };
     if (event.isHeal) return { class: 'block', prefix: '+', label: '🛡️' };
     if (event.targetId === 'player') return { class: 'damage', prefix: '-', label: '' };
     return { class: 'damage', prefix: '-', label: '' };

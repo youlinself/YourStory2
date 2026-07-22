@@ -485,6 +485,16 @@ const CombatPhaseView: React.FC = () => {
                         />
                       </div>
                     </div>
+                    {/* 格挡 */}
+                    {enemy.block > 0 && (
+                      <div className="flex items-center justify-between rounded-lg px-3 py-1.5 mb-2 bg-info-light border border-info/20">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs">🛡️</span>
+                          <span className="text-[10px] text-info">格挡</span>
+                        </div>
+                        <span className="text-sm font-bold text-info">{enemy.block}</span>
+                      </div>
+                    )}
                     {/* 意图 */}
                     {intent && enemy.currentHealth > 0 && (
                       <div className="rounded-lg px-3 py-2 bg-bg-subtle border border-border-subtle">
@@ -506,11 +516,25 @@ const CombatPhaseView: React.FC = () => {
                     {/* 状态 */}
                     {enemy.statusEffects.length > 0 && (
                       <div className="flex gap-1.5 mt-2 flex-wrap">
-                        {enemy.statusEffects.map((eff, i) => (
-                          <span key={i} className="text-[10px] px-1.5 py-0.5 rounded bg-bg-subtle border border-border-subtle text-ink-muted">
-                            {eff.type}:{eff.value}
-                          </span>
-                        ))}
+                        {enemy.statusEffects.map((eff, i) => {
+                          const typeNames: Record<string, string> = {
+                            strength: '力量',
+                            weak: '虚弱',
+                            vulnerable: '脆弱',
+                            poison: '中毒',
+                            block: '格挡',
+                            rage: '狂暴',
+                            regen: '回复',
+                            shields: '护盾',
+                            thorns: '荆棘',
+                            dexterity: '敏捷',
+                          };
+                          return (
+                            <span key={i} className="text-[10px] px-1.5 py-0.5 rounded bg-bg-subtle border border-border-subtle text-ink-muted">
+                              {typeNames[eff.type] || eff.type}:{eff.value}
+                            </span>
+                          );
+                        })}
                       </div>
                     )}
                   </div>
@@ -553,7 +577,28 @@ const CombatPhaseView: React.FC = () => {
                     <p className="text-[10px] text-center leading-relaxed mb-2 text-ink-muted">{card.description}</p>
                     <div className="text-center">
                       <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${colors.label}`} style={{ background: colors.bg }}>
-                        {card.effects.map(e => e.type === 'damage' ? `${e.value}伤害` : e.type === 'block' ? `${e.value}格挡` : e.type === 'draw' ? `抽${e.value}张` : e.type).join(' · ')}
+                        {card.effects.map(e => {
+                          const effectNames: Record<string, string> = {
+                            damage: `${e.value}伤害`,
+                            block: `${e.value}格挡`,
+                            heal: `回复${e.value}`,
+                            draw: `抽${e.value}张`,
+                            gain_energy: `+${e.value}能量`,
+                            gain_max_energy: `+${e.value}最大能量`,
+                            vulnerable: `脆弱${e.value}`,
+                            weak: `虚弱${e.value}`,
+                            poison: `中毒${e.value}`,
+                            cure: `净化`,
+                            shield: `${e.value}护盾`,
+                            thorns: `${e.value}荆棘`,
+                            rage: `狂暴${e.value}`,
+                            strength: `+${e.value}力量`,
+                            dexterity: `+${e.value}敏捷`,
+                            regen: `回复${e.value}/回合`,
+                            lifesteal: `${e.value}吸血`,
+                          };
+                          return effectNames[e.type] || e.type;
+                        }).join(' · ')}
                       </span>
                     </div>
                   </button>
