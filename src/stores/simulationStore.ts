@@ -182,16 +182,35 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
     const rand = seededRandom(Date.now());
     const [minW, maxW] = era.initialWealthRange;
     const [minN, maxN] = era.initialNetworkRange;
+
+    const TOTAL_FACTOR = 0.6;
+    const targetTotal = Math.round((
+      Math.floor(60 + rand() * 20) +
+      Math.floor(40 + rand() * 30) +
+      Math.floor(50 + rand() * 20) +
+      Math.floor(40 + rand() * 30) +
+      Math.floor(40 + rand() * 30) +
+      Math.floor(minW + rand() * (maxW - minW)) +
+      Math.floor(minN + rand() * (maxN - minN)) +
+      10
+    ) * TOTAL_FACTOR);
+
+    const rawWeights = Array.from({ length: 8 }, () => 0.5 + rand() * 0.5);
+    const weightSum = rawWeights.reduce((a, b) => a + b, 0);
+    const portions = rawWeights.map((w) => w / weightSum);
+
+    const baseValue = 10;
     const attrs: PlayerAttributes = {
-      ...initialAttributes,
-      wealth: Math.floor(minW + rand() * (maxW - minW)),
-      network: Math.floor(minN + rand() * (maxN - minN)),
-      health: Math.floor(50 + rand() * 20),
-      energy: Math.floor(60 + rand() * 20),
-      physique: Math.floor(40 + rand() * 30),
-      iq: Math.floor(40 + rand() * 30),
-      eq: Math.floor(40 + rand() * 30),
+      energy: Math.max(baseValue, Math.round(portions[0] * targetTotal)),
+      physique: Math.max(baseValue, Math.round(portions[1] * targetTotal)),
+      health: Math.max(baseValue, Math.round(portions[2] * targetTotal)),
+      iq: Math.max(baseValue, Math.round(portions[3] * targetTotal)),
+      eq: Math.max(baseValue, Math.round(portions[4] * targetTotal)),
+      wealth: Math.max(baseValue, Math.round(portions[5] * targetTotal)),
+      network: Math.max(baseValue, Math.round(portions[6] * targetTotal)),
+      fame: Math.max(baseValue, Math.round(portions[7] * targetTotal)),
     };
+
     const deck = STARTER_DECK.map((c) => ({ ...c, id: generateId() }));
     const state: Partial<GameState> = {
       phase: 'allocating', birthYear, currentYear: birthYear, currentEra: 0, age: 0,
