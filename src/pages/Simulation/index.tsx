@@ -127,6 +127,7 @@ const AttributeTooltipContent: React.FC<{ attr: keyof PlayerAttributes }> = ({ a
 
 const AllocatingPhase: React.FC = () => {
   const attributes = useSimulationStore((s) => s.attributes);
+  const baseAttributes = useSimulationStore((s) => s.baseAttributes);
   const remainingPoints = useSimulationStore((s) => s.remainingAttributePoints);
   const allocateAttribute = useSimulationStore((s) => s.allocateAttribute);
   const confirmAllocation = useSimulationStore((s) => s.confirmAllocation);
@@ -144,13 +145,20 @@ const AllocatingPhase: React.FC = () => {
                   <span>{ATTRIBUTE_ICONS[attr]}</span>
                   <span className="text-sm font-medium text-ink">{ATTRIBUTE_NAMES[attr]}</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <button onClick={(e) => { e.stopPropagation(); allocateAttribute(attr, attributes[attr] - 1); }} disabled={attributes[attr] <= 10} className="w-7 h-7 rounded bg-gray-100 hover:bg-gray-200 disabled:opacity-50 text-sm">-</button>
-                  <span className="w-10 text-center font-mono font-bold">{attributes[attr]}</span>
-                  <button onClick={(e) => { e.stopPropagation(); allocateAttribute(attr, attributes[attr] + 1); }} disabled={remainingPoints <= 0 || attributes[attr] >= 99} className="w-7 h-7 rounded bg-gray-100 hover:bg-gray-200 disabled:opacity-50 text-sm">+</button>
-                </div>
+                <span className="w-10 text-center font-mono font-bold text-brand">{attributes[attr]}</span>
               </div>
-              <AttributeBar attr={attr} value={attributes[attr]} showLabel={false} />
+              <input
+                type="range"
+                min={baseAttributes[attr]}
+                max={Math.min(99, attributes[attr] + remainingPoints)}
+                value={attributes[attr]}
+                onChange={(e) => allocateAttribute(attr, parseInt(e.target.value))}
+                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-brand"
+              />
+              <div className="flex justify-between text-[10px] text-ink-muted mt-1">
+                <span>{baseAttributes[attr]}</span>
+                <span>{Math.min(99, attributes[attr] + remainingPoints)}</span>
+              </div>
             </div>
           </Tooltip>
         ))}
