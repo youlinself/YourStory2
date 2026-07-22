@@ -9,6 +9,7 @@ import {
 } from '../../data/simulationData';
 import Tooltip from '../../components/common/Tooltip';
 import FloatingDamage from '../../components/ui/FloatingDamage';
+import BuffDebuffBadge from '../../components/ui/BuffDebuffBadge';
 import type { BirthYear, PlayerAttributes, GameEvent } from '../../types/simulation';
 
 const AttributeBar: React.FC<{ attr: keyof PlayerAttributes; value: number; showLabel?: boolean }> = ({ attr, value, showLabel = true }) => (
@@ -496,45 +497,54 @@ const CombatPhaseView: React.FC = () => {
                       </div>
                     )}
                     {/* 意图 */}
-                    {intent && enemy.currentHealth > 0 && (
-                      <div className="rounded-lg px-3 py-2 bg-bg-subtle border border-border-subtle">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm">{getIntentIcon(intent)}</span>
-                          <div>
-                            <div className="text-[10px] text-ink-muted">下回合</div>
-                            <div className={`text-xs font-medium ${getIntentColor(intent)}`}>
-                              {intent.type === 'attack' && `攻击 ${intent.damage} 伤害`}
-                              {intent.type === 'defend' && `格挡 ${intent.block}`}
-                              {intent.type === 'buff' && `强化 +${intent.value}力量`}
-                              {intent.type === 'debuff' && `削弱`}
-                              {!['attack', 'defend', 'buff', 'debuff'].includes(intent.type) && intent.type}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
+                    {intent && enemy.currentHealth > 0 && (() => {
+                       let actualDamage = 0;
+                       let baseDamage = 0;
+                       if (intent.type === 'attack') {
+                         baseDamage = intent.damage;
+                         actualDamage = intent.damage;
+                         const str = enemy.statusEffects.find((x) => x.type === 'strength');
+                         if (str) actualDamage += str.value;
+                         const wk = enemy.statusEffects.find((x) => x.type === 'weak');
+                         if (wk) actualDamage = Math.floor(actualDamage * 0.75);
+                         const shield = enemy.mechanics?.includes('shield') ? 0.75 : 1;
+                         actualDamage = Math.floor(actualDamage * shield);
+                       }
+                       return (
+                         <div className="rounded-lg px-3 py-2 bg-bg-subtle border border-border-subtle">
+                           <div className="flex items-center gap-2">
+                             <span className="text-sm">{getIntentIcon(intent)}</span>
+                             <div>
+                               <div className="text-[10px] text-ink-muted">下回合</div>
+                               <div className={`text-xs font-medium ${getIntentColor(intent)}`}>
+                                 {intent.type === 'attack' && (
+                                   <>
+                                     攻击 {actualDamage} 伤害
+                                     {baseDamage !== actualDamage && (
+                                       <span className="text-[9px] text-ink-faint ml-1">({baseDamage}
+                                         {enemy.statusEffects.find((x) => x.type === 'strength') && `+${enemy.statusEffects.find((x) => x.type === 'strength')!.value}`}
+                                         {enemy.statusEffects.find((x) => x.type === 'weak') && '×0.75'}
+                                         {enemy.mechanics?.includes('shield') && '×0.75'})
+                                       </span>
+                                     )}
+                                   </>
+                                 )}
+                                 {intent.type === 'defend' && `格挡 ${intent.block}`}
+                                 {intent.type === 'buff' && `强化 +${intent.value}力量`}
+                                 {intent.type === 'debuff' && `削弱`}
+                                 {!['attack', 'defend', 'buff', 'debuff'].includes(intent.type) && intent.type}
+                               </div>
+                             </div>
+                           </div>
+                         </div>
+                       );
+                     })()}
                     {/* 状态 */}
                     {enemy.statusEffects.length > 0 && (
                       <div className="flex gap-1.5 mt-2 flex-wrap">
-                        {enemy.statusEffects.map((eff, i) => {
-                          const typeNames: Record<string, string> = {
-                            strength: '力量',
-                            weak: '虚弱',
-                            vulnerable: '脆弱',
-                            poison: '中毒',
-                            block: '格挡',
-                            rage: '狂暴',
-                            regen: '回复',
-                            shields: '护盾',
-                            thorns: '荆棘',
-                            dexterity: '敏捷',
-                          };
-                          return (
-                            <span key={i} className="text-[10px] px-1.5 py-0.5 rounded bg-bg-subtle border border-border-subtle text-ink-muted">
-                              {typeNames[eff.type] || eff.type}:{eff.value}
-                            </span>
-                          );
-                        })}
+                        {enemy.statusEffects.map((eff, i) => (
+                          <BuffDebuffBadge key={i} buff={eff} />
+                        ))}
                       </div>
                     )}
                   </div>
@@ -585,6 +595,8 @@ const CombatPhaseView: React.FC = () => {
                             draw: `抽${e.value}张`,
                             gain_energy: `+${e.value}能量`,
                             gain_max_energy: `+${e.value}最大能量`,
+                            gain_attribute: `+${e.value}属性`,
+                            lose_attribute: `-${e.value}属性`,
                             vulnerable: `脆弱${e.value}`,
                             weak: `虚弱${e.value}`,
                             poison: `中毒${e.value}`,
@@ -592,9 +604,11 @@ const CombatPhaseView: React.FC = () => {
                             shield: `${e.value}护盾`,
                             thorns: `${e.value}荆棘`,
                             rage: `狂暴${e.value}`,
+                            stealth: '潜行',
                             strength: `+${e.value}力量`,
                             dexterity: `+${e.value}敏捷`,
                             regen: `回复${e.value}/回合`,
+                            lifedrain: `${e.value}吸取`,
                             lifesteal: `${e.value}吸血`,
                           };
                           return effectNames[e.type] || e.type;
@@ -684,6 +698,17 @@ const CombatPhaseView: React.FC = () => {
                     >
                       {b.name}
                     </span>
+                  ))}
+                </div>
+              </div>
+            )}
+            {/* 状态效果 */}
+            {combat.player.statusEffects.length > 0 && (
+              <div className="mt-3">
+                <div className="text-[10px] text-ink-muted mb-2">💫 状态效果</div>
+                <div className="flex gap-1.5 flex-wrap">
+                  {combat.player.statusEffects.map((eff, i) => (
+                    <BuffDebuffBadge key={i} buff={eff} />
                   ))}
                 </div>
               </div>
