@@ -223,7 +223,7 @@ const ModeSelectPhase: React.FC = () => {
 };
 
 // ==========================================
-// 属性分配
+// 模式 + 出生年选择
 // ==========================================
 const AttributeTooltipContent: React.FC<{ attr: keyof PlayerAttributes }> = ({ attr }) => (
   <div className="max-w-[220px]">
@@ -493,6 +493,7 @@ const CombatPhaseView: React.FC = () => {
   const currentMap = useSimulationStore((s) => s.currentMap);
   const damageEventCounter = useSimulationStore((s) => s.damageEventCounter);
   const [showDeckPanel, setShowDeckPanel] = useState<'draw' | 'discard' | 'exhaust' | null>(null);
+  const [showMacro, setShowMacro] = useState(false);
 
   const yearNum = (birthYear || 1950) + (currentMap?.era || 0) * 10 + (currentMap?.currentYearIndex || 0);
 
@@ -529,7 +530,7 @@ const CombatPhaseView: React.FC = () => {
           <div className="text-xs text-ink-muted">
             <span className="text-gold">{yearNum}年</span> · 第{(currentMap?.currentYearIndex || 0) + 1}年/共10年
           </div>
-          <button className="text-xs px-3 py-1.5 rounded-lg border border-border-subtle text-ink-muted hover:border-brand hover:text-brand transition-colors">
+          <button onClick={() => setShowMacro(true)} className="text-xs px-3 py-1.5 rounded-lg border border-border-subtle text-ink-muted hover:border-brand hover:text-brand transition-colors">
             🗺️ 宏观地图
           </button>
         </div>
@@ -975,6 +976,7 @@ const CombatPhaseView: React.FC = () => {
           )}
         </div>
       </div>
+      {showMacro && <MacroMapModal onClose={() => setShowMacro(false)} />}
     </div>
   );
 };
