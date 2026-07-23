@@ -760,14 +760,19 @@ const CombatPhaseView: React.FC = () => {
             <div className="bg-bg-elevated rounded-xl p-4 border border-danger/30 border-l-4 border-l-danger">
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="text-sm font-bold text-ink mb-0.5">🗑️ 请选择要弃掉的卡牌</div>
+                  <div className="text-sm font-bold text-ink mb-0.5">🗑️ 手牌超出上限，请选择要弃掉的卡牌</div>
                   <div className="text-[10px] text-ink-muted">
-                    已选择弃掉 {combat.selectedForDiscard.length} 张 · 将保留 {combat.player.hand.length - combat.selectedForDiscard.length} 张
+                    需弃掉 {combat.requiredDiscardCount} 张 · 已选择 {combat.selectedForDiscard.length} 张 · 将保留 {combat.player.hand.length - combat.selectedForDiscard.length} 张
                   </div>
                 </div>
                 <button
                   onClick={confirmDiscard}
-                  className="px-5 py-2 bg-brand text-white font-medium text-sm rounded-lg shadow-sm hover:shadow-md hover:bg-brand-hover transition-all"
+                  disabled={combat.selectedForDiscard.length !== combat.requiredDiscardCount}
+                  className={`px-5 py-2 font-medium text-sm rounded-lg shadow-sm transition-all ${
+                    combat.selectedForDiscard.length === combat.requiredDiscardCount
+                      ? 'bg-brand text-white hover:shadow-md hover:bg-brand-hover'
+                      : 'bg-bg-subtle text-ink-faint cursor-not-allowed'
+                  }`}
                 >
                   确认弃牌 →
                 </button>

@@ -199,6 +199,7 @@ export interface CombatState {
   log: CombatLogEntry[];
   burnLifeUsed: boolean;
   selectedForDiscard: string[];
+  requiredDiscardCount: number;
 }
 
 export interface CombatBonus {

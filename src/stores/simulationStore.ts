@@ -78,7 +78,7 @@ function applyCardEffect(effect: { type: string; value: number; duration?: numbe
     case 'damage': if (t) { const d = Math.max(0, effect.value - t.block); t.block = Math.max(0, t.block - effect.value); t.currentHealth -= d; } break;
     case 'block': c.player.block += effect.value; break;
     case 'heal': c.player.currentHealth = Math.min(c.player.maxHealth, c.player.currentHealth + effect.value); break;
-    case 'draw': for (let i = 0; i < effect.value; i++) { if (c.player.drawPile.length > 0 && c.player.hand.length < MAX_HAND_SIZE) c.player.hand.push(c.player.drawPile.shift()!); } break;
+    case 'draw': for (let i = 0; i < effect.value; i++) { if (c.player.drawPile.length > 0) c.player.hand.push(c.player.drawPile.shift()!); } break;
     case 'gain_energy': c.player.energy += effect.value; break;
     case 'vulnerable': if (t) { const e = t.statusEffects.find((s) => s.type === 'vulnerable'); if (e) e.value += effect.value; else t.statusEffects.push({ type: 'vulnerable', value: effect.value, duration: effect.duration || 2 }); } break;
     case 'weak': if (t) { const e = t.statusEffects.find((s) => s.type === 'weak'); if (e) e.value += effect.value; else t.statusEffects.push({ type: 'weak', value: effect.value, duration: effect.duration || 2 }); } break;
@@ -303,7 +303,7 @@ const initialAttributes: PlayerAttributes = { energy: 50, physique: 50, health: 
 const initialCombatState: CombatState = {
   isInCombat: false, phase: 'player_turn', currentTurn: 0,
   player: { currentHealth: 50, maxHealth: 50, block: 0, energy: BASE_ENERGY, maxEnergy: BASE_ENERGY, hand: [], drawPile: [], discardPile: [], exhaustPile: [], statusEffects: [] },
-  enemies: [], currentEnemyIndex: 0, rewards: { cards: [], attribute: undefined }, availableBonuses: [], log: [], burnLifeUsed: false, selectedForDiscard: [],
+  enemies: [], currentEnemyIndex: 0, rewards: { cards: [], attribute: undefined }, availableBonuses: [], log: [], burnLifeUsed: false, selectedForDiscard: [], requiredDiscardCount: 0,
 };
 
 const initialCultivationState: CultivationState = { realm: 'mortal', maxLifespan: 70, tribulationThreshold: 0, realmBonus: {} };
@@ -625,7 +625,7 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
           hand, drawPile, discardPile: [], exhaustPile: [], statusEffects: [],
         },
         enemies: enemies.map((e) => ({ ...e, id: generateId(), currentHealth: e.maxHealth, block: 0, statusEffects: [], currentIntentIndex: 0 })),
-        currentEnemyIndex: 0, rewards: { cards: [], attribute: undefined }, availableBonuses: combatBonuses, log: [], burnLifeUsed: false, selectedForDiscard: [],
+        currentEnemyIndex: 0, rewards: { cards: [], attribute: undefined }, availableBonuses: combatBonuses, log: [], burnLifeUsed: false, selectedForDiscard: [], requiredDiscardCount: 0,
       },
       phase: 'combat',
       lastCombatEnemies: enemies,
@@ -723,7 +723,7 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
       case 'draw':
         for (let i = 0; i < bonus.value; i++) {
           if (c.player.drawPile.length === 0) { c.player.drawPile = shuffle(c.player.discardPile); c.player.discardPile = []; }
-          if (c.player.drawPile.length > 0 && c.player.hand.length < MAX_HAND_SIZE) c.player.hand.push(c.player.drawPile.shift()!);
+          if (c.player.drawPile.length > 0) c.player.hand.push(c.player.drawPile.shift()!);
         }
         break;
       case 'damage_boost':
@@ -739,7 +739,7 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
         c.player.drawPile = shuffle([...c.player.drawPile, ...c.player.discardPile]);
         c.player.discardPile = [];
         for (let i = 0; i < BASE_DRAW_COUNT; i++) {
-          if (c.player.drawPile.length > 0 && c.player.hand.length < MAX_HAND_SIZE) c.player.hand.push(c.player.drawPile.shift()!);
+          if (c.player.drawPile.length > 0) c.player.hand.push(c.player.drawPile.shift()!);
         }
         break;
       case 'extra_energy':
@@ -768,23 +768,28 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
   confirmDiscard: () => {
     const s = get();
     let c = deepClone(s.combat);
-    if (c.phase !== 'discard_selection') return;
 
-    const selectedIds = c.selectedForDiscard;
-    const retainedCards: LifeCard[] = [];
-    const toDiscard: LifeCard[] = [];
-    for (const card of c.player.hand) {
-      if (selectedIds.includes(card.id)) {
-        toDiscard.push(card);
-      } else {
-        retainedCards.push(card);
+    let retainedCards: LifeCard[] = [];
+    if (c.phase === 'discard_selection') {
+      const selectedIds = c.selectedForDiscard;
+      const toDiscard: LifeCard[] = [];
+      for (const card of c.player.hand) {
+        if (selectedIds.includes(card.id)) {
+          toDiscard.push(card);
+        } else {
+          retainedCards.push(card);
+        }
       }
+      c.player.discardPile.push(...toDiscard);
+      c.player.hand = [];
+      c.selectedForDiscard = [];
+      c.requiredDiscardCount = 0;
+    } else {
+      retainedCards = [...c.player.hand];
+      c.player.hand = [];
     }
-    c.player.discardPile.push(...toDiscard);
-    c.player.hand = [];
 
     c.player.energy = c.player.maxEnergy;
-    c.selectedForDiscard = [];
 
     const bonuses = getActiveBonuses(s.attributes);
     const interruptChance = bonuses.filter((b) => b.effect === 'interrupt_chance').reduce((sum, b) => sum + b.value, 0);
@@ -881,7 +886,7 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
     const draw = BASE_DRAW_COUNT + drawBonus;
     for (let i = 0; i < draw; i++) {
       if (c.player.drawPile.length === 0) { c.player.drawPile = shuffle(c.player.discardPile); c.player.discardPile = []; }
-      if (c.player.drawPile.length > 0 && c.player.hand.length < MAX_HAND_SIZE) c.player.hand.push(c.player.drawPile.shift()!);
+      if (c.player.drawPile.length > 0) c.player.hand.push(c.player.drawPile.shift()!);
     }
     set({ combat: c });
     set({ damageEventCounter: get().damageEventCounter + 1 });
@@ -890,11 +895,12 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
   endTurn: () => {
     const s = get();
     if (s.combat.phase !== 'player_turn') return;
-    if (s.combat.player.hand.length === 0) {
+    const excess = s.combat.player.hand.length - MAX_HAND_SIZE;
+    if (excess > 0) {
+      set({ combat: { ...s.combat, phase: 'discard_selection', selectedForDiscard: [], requiredDiscardCount: excess } });
+    } else {
       get().confirmDiscard();
-      return;
     }
-    set({ combat: { ...s.combat, phase: 'discard_selection', selectedForDiscard: [] } });
   },
 
   exileCard: (cardId: string) => {
