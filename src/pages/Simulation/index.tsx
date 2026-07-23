@@ -527,6 +527,7 @@ const CombatPhaseView: React.FC = () => {
   const damageEventCounter = useSimulationStore((s) => s.damageEventCounter);
   const [showDeckPanel, setShowDeckPanel] = useState<'draw' | 'discard' | 'exhaust' | null>(null);
   const [showMacro, setShowMacro] = useState(false);
+  const [showBurnLifeModal, setShowBurnLifeModal] = useState(false);
 
   const yearNum = (birthYear || 1950) + (currentMap?.era || 0) * 10 + (currentMap?.currentYearIndex || 0);
 
@@ -969,31 +970,54 @@ const CombatPhaseView: React.FC = () => {
 
           {/* 燃烧生命 */}
           {combat.availableBonuses.length > 0 && (
-            <div className="bg-bg-elevated rounded-xl p-4 border border-border-subtle">
-              <h3 className="text-xs font-medium uppercase tracking-wider text-ink-muted mb-2">🔥 燃烧生命</h3>
-              <p className="text-[10px] text-ink-faint mb-3">寿命上限: {Math.round(remainingLife)}年</p>
-              <div className="flex flex-col gap-2">
-                {combat.availableBonuses.map((bonus) => {
-                  const canActivate = bonus.lifeCost < remainingLife;
-                  return (
-                    <button
-                      key={bonus.id}
-                      onClick={() => activateBonus(bonus.id)}
-                      disabled={!canActivate}
-                      className={`p-2.5 rounded-lg text-left transition-all ${canActivate ? 'hover:scale-[1.02] hover:shadow-sm' : 'opacity-40 cursor-not-allowed'}`}
-                      style={{
-                        background: canActivate ? 'var(--color-brand-surface)' : 'var(--color-bg-subtle)',
-                        border: `1px solid ${canActivate ? 'rgba(218,119,86,0.2)' : 'var(--color-border-subtle)'}`,
-                      }}
-                    >
-                      <div className="flex items-center justify-between mb-0.5">
-                        <span className="text-xs font-medium text-ink">{bonus.name}</span>
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-danger-bg text-danger">-{bonus.lifeCost}年</span>
-                      </div>
-                      <p className="text-[10px] text-ink-muted">{bonus.description}</p>
-                    </button>
-                  );
-                })}
+            <button
+              onClick={() => !combat.burnLifeUsed && setShowBurnLifeModal(true)}
+              disabled={combat.burnLifeUsed}
+              className={`w-full py-3 font-medium text-sm rounded-xl transition-all flex items-center justify-center gap-2 ${
+                combat.burnLifeUsed
+                  ? 'bg-gray-100 border border-gray-200 text-gray-400 cursor-not-allowed'
+                  : 'bg-danger/10 border border-danger/30 text-danger hover:bg-danger/20'
+              }`}
+            >
+              <span>{combat.burnLifeUsed ? '✓' : '🔥'}</span>
+              <span>{combat.burnLifeUsed ? '已燃烧' : '燃烧生命'}</span>
+              {!combat.burnLifeUsed && <span className="text-xs opacity-70">({combat.availableBonuses.length}个选项)</span>}
+            </button>
+          )}
+
+          {/* 燃烧生命弹窗 */}
+          {showBurnLifeModal && !combat.burnLifeUsed && (
+            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowBurnLifeModal(false)}>
+              <div className="bg-white rounded-2xl p-6 max-w-md w-full max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-bold text-ink">🔥 燃烧生命</h3>
+                  <button onClick={() => setShowBurnLifeModal(false)} className="text-ink-muted hover:text-ink text-xl">&times;</button>
+                </div>
+                <p className="text-sm text-ink-muted mb-2">寿命上限: <span className="font-semibold text-danger">{Math.round(remainingLife)}年</span></p>
+                <p className="text-xs text-warning mb-4">⚠️ 每场战斗只能选择一次</p>
+                <div className="flex flex-col gap-3">
+                  {combat.availableBonuses.map((bonus) => {
+                    const canActivate = bonus.lifeCost < remainingLife;
+                    return (
+                      <button
+                        key={bonus.id}
+                        onClick={() => { activateBonus(bonus.id); setShowBurnLifeModal(false); }}
+                        disabled={!canActivate}
+                        className={`p-4 rounded-xl text-left transition-all ${canActivate ? 'hover:scale-[1.02] hover:shadow-md' : 'opacity-40 cursor-not-allowed'}`}
+                        style={{
+                          background: canActivate ? 'var(--color-brand-surface)' : 'var(--color-bg-subtle)',
+                          border: `1px solid ${canActivate ? 'rgba(218,119,86,0.2)' : 'var(--color-border-subtle)'}`,
+                        }}
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-sm font-medium text-ink">{bonus.name}</span>
+                          <span className="text-xs px-2 py-0.5 rounded bg-danger-bg text-danger font-medium">-{bonus.lifeCost}年</span>
+                        </div>
+                        <p className="text-xs text-ink-muted">{bonus.description}</p>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           )}

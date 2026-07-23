@@ -303,7 +303,7 @@ const initialAttributes: PlayerAttributes = { energy: 50, physique: 50, health: 
 const initialCombatState: CombatState = {
   isInCombat: false, phase: 'player_turn', currentTurn: 0,
   player: { currentHealth: 50, maxHealth: 50, block: 0, energy: BASE_ENERGY, maxEnergy: BASE_ENERGY, hand: [], drawPile: [], discardPile: [], exhaustPile: [], statusEffects: [] },
-  enemies: [], currentEnemyIndex: 0, rewards: { cards: [], attribute: undefined }, availableBonuses: [], log: [], selectedForDiscard: [],
+  enemies: [], currentEnemyIndex: 0, rewards: { cards: [], attribute: undefined }, availableBonuses: [], log: [], burnLifeUsed: false, selectedForDiscard: [],
 };
 
 const initialCultivationState: CultivationState = { realm: 'mortal', maxLifespan: 70, tribulationThreshold: 0, realmBonus: {} };
@@ -623,7 +623,7 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
           hand, drawPile, discardPile: [], exhaustPile: [], statusEffects: [],
         },
         enemies: enemies.map((e) => ({ ...e, id: generateId(), currentHealth: e.maxHealth, block: 0, statusEffects: [], currentIntentIndex: 0 })),
-        currentEnemyIndex: 0, rewards: { cards: [], attribute: undefined }, availableBonuses: combatBonuses, log: [], selectedForDiscard: [],
+        currentEnemyIndex: 0, rewards: { cards: [], attribute: undefined }, availableBonuses: combatBonuses, log: [], burnLifeUsed: false, selectedForDiscard: [],
       },
       phase: 'combat',
       lastCombatEnemies: enemies,
@@ -712,6 +712,7 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
 
   activateBonus: (bonusId) => {
     const s = get();
+    if (s.combat.burnLifeUsed) return;
     const bonus = s.combat.availableBonuses.find((b) => b.id === bonusId);
     if (!bonus || s.remainingLife <= bonus.lifeCost) return;
 
@@ -744,6 +745,7 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
         break;
     }
 
+    c.burnLifeUsed = true;
     set({ combat: c, remainingLife: s.remainingLife - bonus.lifeCost });
   },
 

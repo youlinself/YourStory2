@@ -197,6 +197,7 @@ export interface CombatState {
   };
   availableBonuses: CombatBonus[];
   log: CombatLogEntry[];
+  burnLifeUsed: boolean;
   selectedForDiscard: string[];
 }
 
