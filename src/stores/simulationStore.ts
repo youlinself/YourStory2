@@ -463,6 +463,11 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
       return;
     }
 
+    const nextAliveIdx = c.enemies.findIndex((e) => e.currentHealth > 0);
+    if (nextAliveIdx >= 0 && c.enemies[c.currentEnemyIndex]?.currentHealth <= 0) {
+      c.currentEnemyIndex = nextAliveIdx;
+    }
+
     set({ combat: c });
   },
 
@@ -624,6 +629,11 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
       set({ combat: { ...c, phase: 'victory', rewards: { cards: cardRewards, attribute: undefined, relic: relicReward } }, phase: 'reward' });
       set({ damageEventCounter: get().damageEventCounter + 1 });
       return;
+    }
+
+    const nextAliveIdx2 = c.enemies.findIndex((e) => e.currentHealth > 0);
+    if (nextAliveIdx2 >= 0 && c.enemies[c.currentEnemyIndex]?.currentHealth <= 0) {
+      c.currentEnemyIndex = nextAliveIdx2;
     }
 
     c.player.block = 0;
