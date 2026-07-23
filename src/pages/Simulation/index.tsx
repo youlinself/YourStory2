@@ -9,6 +9,7 @@ import {
   ATTRIBUTE_COLORS,
   ATTRIBUTE_DESCRIPTIONS,
   TAG_NAMES,
+  HIDDEN_TAGS,
   CARD_TYPE_NAMES,
   CULTIVATION_REALM_NAMES,
   RARITY_NAMES,
@@ -1766,15 +1767,29 @@ const SimulationPage: React.FC = () => {
             </div>
           )}
           {hiddenTags.length > 0 && phase !== 'setup' && (
-            <div className="bg-white rounded-xl border border-border-subtle p-4">
-              <h3 className="font-semibold text-ink mb-3">🏷️ 标签</h3>
-              <div className="flex flex-wrap gap-1">
-                {hiddenTags.map((tag) => (
-                  <span key={tag} className="px-2 py-1 rounded-full bg-amber-100 text-amber-700 text-xs">{TAG_NAMES[tag] || tag}</span>
-                ))}
-              </div>
+          <div className="bg-white rounded-xl border border-border-subtle p-4">
+            <h3 className="font-semibold text-ink mb-3">🏷️ 标签</h3>
+            <div className="flex flex-wrap gap-1">
+              {hiddenTags.map((tag) => {
+                const tagData = HIDDEN_TAGS.find((t) => t.id === tag);
+                return (
+                  <Tooltip
+                    key={tag}
+                    content={
+                      <div className="px-3 py-2 max-w-[200px]">
+                        <div className="font-semibold text-amber-900 mb-1">{TAG_NAMES[tag] || tag}</div>
+                        <div className="text-amber-700 text-[11px] leading-relaxed">{tagData?.description || ''}</div>
+                      </div>
+                    }
+                    position="top"
+                  >
+                    <span className="px-2 py-1 rounded-full bg-amber-100 text-amber-700 text-xs cursor-default hover:bg-amber-200 transition-colors">{TAG_NAMES[tag] || tag}</span>
+                  </Tooltip>
+                );
+              })}
             </div>
-          )}
+          </div>
+        )}
         </div>
       )}
 
