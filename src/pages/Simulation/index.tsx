@@ -276,14 +276,30 @@ const AllocatingPhase: React.FC = () => {
                 </div>
                 <span className="w-10 text-center font-mono font-bold text-brand">{attributes[attr]}</span>
               </div>
-              <input
-                type="range"
-                min={baseAttributes[attr]}
-                max={Math.min(99, attributes[attr] + remainingPoints)}
-                value={attributes[attr]}
-                onChange={(e) => allocateAttribute(attr, parseInt(e.target.value))}
-                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-brand"
-              />
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={(e) => { e.stopPropagation(); allocateAttribute(attr, attributes[attr] - 1); }}
+                  disabled={attributes[attr] <= baseAttributes[attr]}
+                  className="w-6 h-6 rounded bg-gray-100 hover:bg-gray-200 disabled:opacity-50 text-xs flex-shrink-0"
+                >
+                  -
+                </button>
+                <input
+                  type="range"
+                  min={baseAttributes[attr]}
+                  max={Math.min(99, attributes[attr] + remainingPoints)}
+                  value={attributes[attr]}
+                  onChange={(e) => allocateAttribute(attr, parseInt(e.target.value))}
+                  className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-brand"
+                />
+                <button
+                  onClick={(e) => { e.stopPropagation(); allocateAttribute(attr, attributes[attr] + 1); }}
+                  disabled={remainingPoints <= 0 || attributes[attr] >= 99}
+                  className="w-6 h-6 rounded bg-gray-100 hover:bg-gray-200 disabled:opacity-50 text-xs flex-shrink-0"
+                >
+                  +
+                </button>
+              </div>
               <div className="flex justify-between text-[10px] text-ink-muted mt-1">
                 <span>{baseAttributes[attr]}</span>
                 <span>{Math.min(99, attributes[attr] + remainingPoints)}</span>
