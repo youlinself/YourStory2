@@ -4,7 +4,7 @@ import { generateId } from '../utils';
 import {
   ERAS, STARTER_DECK, SCRIPT_1950_EVENTS, HIDDEN_TAGS,
   COMMON_ATTACK_CARDS, COMMON_SKILL_CARDS, RARE_CARDS, LEGENDARY_CARDS,
-  WONDER_REWARD_POOL,
+  WONDER_REWARD_POOL, ATTRIBUTE_TIER_CARDS,
 } from '../data/simulationData';
 import {
   getAgeStage,
@@ -24,8 +24,8 @@ import type {
 const STORAGE_KEY = 'simulation_game_v3';
 const storageService = StorageService.getInstance();
 
-const MAX_HAND_SIZE = 7;
-const BASE_DRAW_COUNT = 5;
+const MAX_HAND_SIZE = 5;
+const BASE_DRAW_COUNT = 4;
 const BASE_ENERGY = 3;
 const YEARS_PER_ERA = 10;
 const OPTION_WEIGHTS: Record<OptionType, number> = {
@@ -51,15 +51,139 @@ function pickWeightedType(rand: () => number): OptionType {
 export { MAX_HAND_SIZE, BASE_DRAW_COUNT };
 
 const ATTRIBUTE_BONUSES: AttributeThresholdBonus[] = [
-  { attribute: 'physique', threshold: 70, name: '强壮', description: '攻击卡伤害+25%', effect: 'damage_boost', value: 0.25 },
-  { attribute: 'iq', threshold: 70, name: '聪颖', description: '每回合额外抽1张卡', effect: 'extra_draw', value: 1 },
-  { attribute: 'eq', threshold: 70, name: '沉稳', description: '受到debuff持续时间-1回合', effect: 'debuff_reduction', value: 1 },
-  { attribute: 'health', threshold: 70, name: '坚韧', description: '最大生命值+20', effect: 'max_health_bonus', value: 20 },
-  { attribute: 'energy', threshold: 70, name: '活力', description: '初始精力+1', effect: 'energy_bonus', value: 1 },
-  { attribute: 'wealth', threshold: 70, name: '富贵', description: '商店折扣10%', effect: 'shop_discount', value: 0.1 },
-  { attribute: 'network', threshold: 70, name: '人脉', description: '战斗开始获得5点格挡', effect: 'start_block', value: 5 },
-  { attribute: 'fame', threshold: 70, name: '威名', description: '20%概率打断敌人攻击', effect: 'interrupt_chance', value: 0.2 },
+  // ========== 精力 (energy) ==========
+  // 30点: 卡牌奖励 - 精力充沛
+  { attribute: 'energy', threshold: 30, name: '精力充沛', description: '获得卡牌【精力充沛】- 抽2张牌', effect: 'card_reward', value: 0, cardId: 'energy_tier1' },
+  // 50点: 被动 - 初始精力+1
+  { attribute: 'energy', threshold: 50, name: '精力充沛', description: '初始精力+1', effect: 'energy_bonus', value: 1 },
+  // 70点: 卡牌奖励 - 活力爆发
+  { attribute: 'energy', threshold: 70, name: '活力爆发', description: '获得卡牌【活力爆发】- 获得3点精力', effect: 'card_reward', value: 0, cardId: 'energy_tier3' },
+  // 90点: 被动 - 初始精力+1
+  { attribute: 'energy', threshold: 90, name: '神采奕奕', description: '初始精力+1', effect: 'energy_bonus', value: 1 },
+  // 100点: 卡牌奖励 - 超凡入圣
+  { attribute: 'energy', threshold: 100, name: '超凡入圣', description: '获得卡牌【超凡入圣】- 最大精力+1', effect: 'card_reward', value: 0, cardId: 'energy_tier5' },
+
+  // ========== 体魄 (physique) ==========
+  // 30点: 卡牌奖励 - 强壮一击
+  { attribute: 'physique', threshold: 30, name: '强壮一击', description: '获得卡牌【强壮一击】- 造成12伤害+2力量', effect: 'card_reward', value: 0, cardId: 'physique_tier1' },
+  // 50点: 被动 - 伤害+10%
+  { attribute: 'physique', threshold: 50, name: '强壮', description: '攻击卡伤害+10%', effect: 'damage_boost', value: 0.10 },
+  // 70点: 卡牌奖励 - 威猛
+  { attribute: 'physique', threshold: 70, name: '威猛', description: '获得卡牌【威猛】- 10格挡+3力量', effect: 'card_reward', value: 0, cardId: 'physique_tier3' },
+  // 90点: 被动 - 伤害+10%
+  { attribute: 'physique', threshold: 90, name: '勇猛', description: '攻击卡伤害+10%', effect: 'damage_boost', value: 0.10 },
+  // 100点: 卡牌奖励 - 勇猛
+  { attribute: 'physique', threshold: 100, name: '勇猛', description: '获得卡牌【勇猛】- 攻击伤害+30%', effect: 'card_reward', value: 0, cardId: 'physique_tier5' },
+
+  // ========== 健康 (health) ==========
+  // 30点: 卡牌奖励 - 生命恢复
+  { attribute: 'health', threshold: 30, name: '生命恢复', description: '获得卡牌【生命恢复】- 回复6生命', effect: 'card_reward', value: 0, cardId: 'health_tier1' },
+  // 50点: 被动 - 生命+10
+  { attribute: 'health', threshold: 50, name: '健壮', description: '最大生命值+10', effect: 'max_health_bonus', value: 10 },
+  // 70点: 卡牌奖励 - 坚韧
+  { attribute: 'health', threshold: 70, name: '坚韧', description: '获得卡牌【坚韧】- 12格挡+回复8生命', effect: 'card_reward', value: 0, cardId: 'health_tier3' },
+  // 90点: 被动 - 生命+15
+  { attribute: 'health', threshold: 90, name: '强健', description: '最大生命值+15', effect: 'max_health_bonus', value: 15 },
+  // 100点: 卡牌奖励 - 钢铁之躯
+  { attribute: 'health', threshold: 100, name: '钢铁之躯', description: '获得卡牌【钢铁之躯】- 每回合回复2生命', effect: 'card_reward', value: 0, cardId: 'health_tier5' },
+
+  // ========== 智商 (iq) ==========
+  // 30点: 卡牌奖励 - 灵光一闪
+  { attribute: 'iq', threshold: 30, name: '灵光一闪', description: '获得卡牌【灵光一闪】- 抽3张牌', effect: 'card_reward', value: 0, cardId: 'iq_tier1' },
+  // 50点: 被动 - 抽+1卡
+  { attribute: 'iq', threshold: 50, name: '聪明', description: '每回合额外抽1张卡', effect: 'extra_draw', value: 1 },
+  // 70点: 卡牌奖励 - 聪颖
+  { attribute: 'iq', threshold: 70, name: '聪颖', description: '获得卡牌【聪颖】- 抽2牌+1精力', effect: 'card_reward', value: 0, cardId: 'iq_tier3' },
+  // 90点: 被动 - 抽+1卡
+  { attribute: 'iq', threshold: 90, name: '睿智', description: '每回合额外抽1张卡', effect: 'extra_draw', value: 1 },
+  // 100点: 卡牌奖励 - 睿智
+  { attribute: 'iq', threshold: 100, name: '睿智', description: '获得卡牌【睿智】- 最大精力+1', effect: 'card_reward', value: 0, cardId: 'iq_tier5' },
+
+  // ========== 情商 (eq) ==========
+  // 30点: 卡牌奖励 - 友善
+  { attribute: 'eq', threshold: 30, name: '友善', description: '获得卡牌【友善】- 6格挡+净化', effect: 'card_reward', value: 0, cardId: 'eq_tier1' },
+  // 50点: 被动 - 格挡+3
+  { attribute: 'eq', threshold: 50, name: '亲和', description: '战斗开始获得3点格挡', effect: 'start_block', value: 3 },
+  // 70点: 卡牌奖励 - 亲和
+  { attribute: 'eq', threshold: 70, name: '亲和', description: '获得卡牌【亲和】- 12格挡+净化', effect: 'card_reward', value: 0, cardId: 'eq_tier3' },
+  // 90点: 被动 - 格挡+5
+  { attribute: 'eq', threshold: 90, name: '睿智', description: '战斗开始获得5点格挡', effect: 'start_block', value: 5 },
+  // 100点: 卡牌奖励 - 沉稳
+  { attribute: 'eq', threshold: 100, name: '沉稳', description: '获得卡牌【沉稳】- 每回合+2格挡', effect: 'card_reward', value: 0, cardId: 'eq_tier5' },
+
+  // ========== 财富 (wealth) ==========
+  // 30点: 卡牌奖励 - 小富
+  { attribute: 'wealth', threshold: 30, name: '小富', description: '获得卡牌【小富】- 1精力+抽1牌', effect: 'card_reward', value: 0, cardId: 'wealth_tier1' },
+  // 50点: 被动 - 折扣5%
+  { attribute: 'wealth', threshold: 50, name: '殷实', description: '商店折扣5%', effect: 'shop_discount', value: 0.05 },
+  // 70点: 卡牌奖励 - 富贵
+  { attribute: 'wealth', threshold: 70, name: '富贵', description: '获得卡牌【富贵】- 2精力+抽1牌', effect: 'card_reward', value: 0, cardId: 'wealth_tier3' },
+  // 90点: 被动 - 折扣10%
+  { attribute: 'wealth', threshold: 90, name: '豪富', description: '商店折扣10%', effect: 'shop_discount', value: 0.10 },
+  // 100点: 卡牌奖励 - 豪富
+  { attribute: 'wealth', threshold: 100, name: '豪富', description: '获得卡牌【豪富】- 最大精力+1', effect: 'card_reward', value: 0, cardId: 'wealth_tier5' },
+
+  // ========== 人脉 (network) ==========
+  // 30点: 卡牌奖励 - 熟人
+  { attribute: 'network', threshold: 30, name: '熟人', description: '获得卡牌【熟人】- 8格挡', effect: 'card_reward', value: 0, cardId: 'network_tier1' },
+  // 50点: 被动 - 格挡+3
+  { attribute: 'network', threshold: 50, name: '朋友', description: '战斗开始获得3点格挡', effect: 'start_block', value: 3 },
+  // 70点: 卡牌奖励 - 人脉
+  { attribute: 'network', threshold: 70, name: '人脉', description: '获得卡牌【人脉】- 15格挡+抽1牌', effect: 'card_reward', value: 0, cardId: 'network_tier3' },
+  // 90点: 被动 - 格挡+8
+  { attribute: 'network', threshold: 90, name: '广交', description: '战斗开始获得8点格挡', effect: 'start_block', value: 8 },
+  // 100点: 卡牌奖励 - 四通八达
+  { attribute: 'network', threshold: 100, name: '四通八达', description: '获得卡牌【四通八达】- 每回合+10护盾', effect: 'card_reward', value: 0, cardId: 'network_tier5' },
+
+  // ========== 名望 (fame) ==========
+  // 30点: 卡牌奖励 - 小有名气
+  { attribute: 'fame', threshold: 30, name: '小有名气', description: '获得卡牌【小有名气】- 10伤害+虚弱', effect: 'card_reward', value: 0, cardId: 'fame_tier1' },
+  // 50点: 被动 - 打断10%
+  { attribute: 'fame', threshold: 50, name: '知名', description: '10%概率打断敌人攻击', effect: 'interrupt_chance', value: 0.10 },
+  // 70点: 卡牌奖励 - 威名
+  { attribute: 'fame', threshold: 70, name: '威名', description: '获得卡牌【威名】- 18伤害+脆弱', effect: 'card_reward', value: 0, cardId: 'fame_tier3' },
+  // 90点: 被动 - 打断25%
+  { attribute: 'fame', threshold: 90, name: '盛名', description: '25%概率打断敌人攻击', effect: 'interrupt_chance', value: 0.25 },
+  // 100点: 卡牌奖励 - 传奇
+  { attribute: 'fame', threshold: 100, name: '传奇', description: '获得卡牌【传奇】- 反伤3点', effect: 'card_reward', value: 0, cardId: 'fame_tier5' },
 ];
+
+const TIER_THRESHOLDS = [30, 50, 70, 90, 100];
+
+export interface AttributeTierInfo {
+  currentTier: number;
+  nextTier: number | null;
+  currentTierName: string | null;
+  nextTierName: string | null;
+  bonuses: AttributeThresholdBonus[];
+  nextBonuses: AttributeThresholdBonus[];
+  cardBonuses: AttributeThresholdBonus[];
+  passiveBonuses: AttributeThresholdBonus[];
+}
+
+export function getAttributeTierInfo(attr: keyof PlayerAttributes, value: number): AttributeTierInfo {
+  const bonuses = ATTRIBUTE_BONUSES.filter((b) => b.attribute === attr && value >= b.threshold);
+  const nextBonuses = ATTRIBUTE_BONUSES.filter((b) => b.attribute === attr && value < b.threshold);
+  const currentTier = bonuses.length;
+  const nextTier = nextBonuses.length > 0 ? nextBonuses[0].threshold : null;
+
+  const currentTierBonus = bonuses.length > 0 ? bonuses[bonuses.length - 1] : null;
+  const nextTierBonus = nextBonuses.length > 0 ? nextBonuses[0] : null;
+
+  const cardBonuses = bonuses.filter((b) => b.effect === 'card_reward');
+  const passiveBonuses = bonuses.filter((b) => b.effect !== 'card_reward');
+
+  return {
+    currentTier,
+    nextTier,
+    currentTierName: currentTierBonus?.name || null,
+    nextTierName: nextTierBonus?.name || null,
+    bonuses,
+    nextBonuses: nextTierBonus ? [nextTierBonus] : [],
+    cardBonuses,
+    passiveBonuses,
+  };
+}
 
 function getActiveBonuses(attrs: PlayerAttributes): AttributeThresholdBonus[] {
   return ATTRIBUTE_BONUSES.filter((b) => attrs[b.attribute] >= b.threshold);
@@ -328,7 +452,7 @@ function generateCombatBonuses(remainingLife: number): CombatBonus[] {
 }
 
 const initialWorldState: WorldState = { industryEvolution: {}, socialClimate: 50, techProgress: 30, customEvents: [] };
-const initialAttributes: PlayerAttributes = { energy: 50, physique: 50, health: 50, iq: 50, eq: 50, wealth: 30, network: 30, fame: 10 };
+const initialAttributes: PlayerAttributes = { energy: 18, physique: 18, health: 18, iq: 18, eq: 18, wealth: 16, network: 16, fame: 16 };
 
 const initialCombatState: CombatState = {
   isInCombat: false, phase: 'player_turn', currentTurn: 0,
@@ -380,7 +504,7 @@ const initialState: GameState = {
   remainingLife: 70,
   attributes: { ...initialAttributes },
   baseAttributes: { ...initialAttributes },
-  remainingAttributePoints: 15,
+  remainingAttributePoints: 35,
   hiddenTags: [],
   npcs: [],
   choiceHistory: [],
@@ -396,6 +520,7 @@ const initialState: GameState = {
   seed: Date.now(),
   damageEventCounter: 0,
   lastCombatEnemies: [],
+  attributeCardsGranted: false,
 };
 
 interface SimulationState extends GameState {
@@ -436,6 +561,7 @@ interface SimulationState extends GameState {
   getEnergy: () => number;
   getShopDiscount: () => number;
   getActiveAttributeBonuses: () => AttributeThresholdBonus[];
+  getAttributeTierInfo: (attr: keyof PlayerAttributes, value: number) => AttributeTierInfo;
   toggleDiscardSelection: (cardId: string) => void;
   confirmDiscard: () => void;
   exileCard: (cardId: string) => void;
@@ -451,36 +577,45 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
     if (!era) return;
     const mode = get().mode;
     const rand = seededRandom(Date.now());
-    const [minW, maxW] = era.initialWealthRange;
-    const [minN, maxN] = era.initialNetworkRange;
 
-    const TOTAL_FACTOR = 0.6;
-    const targetTotal = Math.round((
-      Math.floor(60 + rand() * 20) +
-      Math.floor(40 + rand() * 30) +
-      Math.floor(50 + rand() * 20) +
-      Math.floor(40 + rand() * 30) +
-      Math.floor(40 + rand() * 30) +
-      Math.floor(minW + rand() * (maxW - minW)) +
-      Math.floor(minN + rand() * (maxN - minN)) +
-      10
-    ) * TOTAL_FACTOR);
+    // 基础属性总值140点，随机分配给8项属性
+    const TOTAL_BASE_POINTS = 140;
+    const MIN_ATTR_VALUE = 5; // 每项属性最低5点
+    const MAX_ATTR_VALUE = 30; // 每项属性最高30点
 
-    const rawWeights = Array.from({ length: 8 }, () => 0.5 + rand() * 0.5);
+    // 生成8个随机权重
+    const rawWeights = Array.from({ length: 8 }, () => 0.3 + rand() * 0.7);
     const weightSum = rawWeights.reduce((a, b) => a + b, 0);
     const portions = rawWeights.map((w) => w / weightSum);
 
-    const baseValue = 10;
+    // 先按比例分配，再应用上下限
+    const rawAttrs = portions.map((p) => Math.round(p * TOTAL_BASE_POINTS));
     const attrs: PlayerAttributes = {
-      energy: Math.max(baseValue, Math.round(portions[0] * targetTotal)),
-      physique: Math.max(baseValue, Math.round(portions[1] * targetTotal)),
-      health: Math.max(baseValue, Math.round(portions[2] * targetTotal)),
-      iq: Math.max(baseValue, Math.round(portions[3] * targetTotal)),
-      eq: Math.max(baseValue, Math.round(portions[4] * targetTotal)),
-      wealth: Math.max(baseValue, Math.round(portions[5] * targetTotal)),
-      network: Math.max(baseValue, Math.round(portions[6] * targetTotal)),
-      fame: Math.max(baseValue, Math.round(portions[7] * targetTotal)),
+      energy: Math.max(MIN_ATTR_VALUE, Math.min(MAX_ATTR_VALUE, rawAttrs[0])),
+      physique: Math.max(MIN_ATTR_VALUE, Math.min(MAX_ATTR_VALUE, rawAttrs[1])),
+      health: Math.max(MIN_ATTR_VALUE, Math.min(MAX_ATTR_VALUE, rawAttrs[2])),
+      iq: Math.max(MIN_ATTR_VALUE, Math.min(MAX_ATTR_VALUE, rawAttrs[3])),
+      eq: Math.max(MIN_ATTR_VALUE, Math.min(MAX_ATTR_VALUE, rawAttrs[4])),
+      wealth: Math.max(MIN_ATTR_VALUE, Math.min(MAX_ATTR_VALUE, rawAttrs[5])),
+      network: Math.max(MIN_ATTR_VALUE, Math.min(MAX_ATTR_VALUE, rawAttrs[6])),
+      fame: Math.max(MIN_ATTR_VALUE, Math.min(MAX_ATTR_VALUE, rawAttrs[7])),
     };
+
+    // 调整使总和为140（处理上限截断后的差值）
+    let currentSum = Object.values(attrs).reduce((a, b) => a + b, 0);
+    let diff = TOTAL_BASE_POINTS - currentSum;
+    let attempts = 0;
+    while (diff !== 0 && attempts < 100) {
+      const adjustable = (Object.keys(attrs) as (keyof PlayerAttributes)[]).filter((k) =>
+        diff > 0 ? attrs[k] < MAX_ATTR_VALUE : attrs[k] > MIN_ATTR_VALUE
+      );
+      if (adjustable.length === 0) break;
+      const attr = adjustable[Math.floor(rand() * adjustable.length)];
+      const adjust = diff > 0 ? 1 : -1;
+      attrs[attr] += adjust;
+      diff -= adjust;
+      attempts++;
+    }
 
     const deck = STARTER_DECK.map((c) => ({ ...c, id: generateId() }));
     const state: Partial<GameState> = {
@@ -489,6 +624,7 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
       attributes: attrs, baseAttributes: { ...attrs }, remainingAttributePoints: era.attributePoints,
       hiddenTags: [], npcs: [], choiceHistory: [], lifeRecords: [],
       deck, relics: [], gold: 30, worldState: { ...initialWorldState }, seed: Date.now(),
+      attributeCardsGranted: false,
     };
     if (mode === 'endless') state.cultivation = { ...initialCultivationState, maxLifespan: era.baseLifeExpectancy };
     set(state as GameState);
@@ -504,7 +640,31 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
     set({ attributes: { ...s.attributes, [attr]: value }, remainingAttributePoints: s.remainingAttributePoints - diff });
   },
 
-  confirmAllocation: () => { if (get().remainingAttributePoints > 0) return; set({ phase: 'year_view' }); get().generateMap(); },
+  confirmAllocation: () => {
+    const s = get();
+    if (s.remainingAttributePoints > 0) return;
+
+    // 发放属性阶层卡牌
+    if (!s.attributeCardsGranted) {
+      const cardsToAdd: LifeCard[] = [];
+      const allBonuses = getActiveBonuses(s.attributes);
+      for (const bonus of allBonuses) {
+        if (bonus.effect === 'card_reward' && bonus.cardId) {
+          const attrCards = ATTRIBUTE_TIER_CARDS[bonus.attribute];
+          const card = attrCards?.find((c) => c.id === bonus.cardId);
+          if (card) {
+            cardsToAdd.push({ ...card, id: generateId() });
+          }
+        }
+      }
+      if (cardsToAdd.length > 0) {
+        set({ deck: [...s.deck, ...cardsToAdd], attributeCardsGranted: true });
+      }
+    }
+
+    set({ phase: 'year_view' });
+    get().generateMap();
+  },
 
   generateMap: () => {
     const s = get();
@@ -850,7 +1010,7 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
         if (existing) existing.value += intent.value;
         else e.statusEffects.push({ type: intent.effect as any, value: intent.value, duration: 99 });
       } else if (intent.type === 'debuff') {
-        const debuffRed = bonuses.filter((b) => b.effect === 'debuff_reduction').length;
+        const debuffRed = bonuses.filter((b) => b.effect === 'debuff_reduction').reduce((sum, b) => sum + b.value, 0);
         c.player.statusEffects.push({ type: intent.effect as any, value: intent.value, duration: Math.max(1, 2 - debuffRed) });
       }
       e.currentIntentIndex = (e.currentIntentIndex + 1) % e.intents.length;
@@ -1071,8 +1231,30 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
   },
 
   loadGame: async () => {
-    try { const d = await storageService.loadData<any>(STORAGE_KEY); if (d?.gameState && !d.isDead) set(d.gameState); }
-    catch (e) { console.error('加载失败:', e); }
+    try {
+      const d = await storageService.loadData<any>(STORAGE_KEY);
+      if (d?.gameState && !d.isDead) {
+        set(d.gameState);
+        // 确保属性阶层卡牌已发放
+        const s = get();
+        if (!s.attributeCardsGranted && s.phase !== 'setup' && s.phase !== 'allocating') {
+          const cardsToAdd: LifeCard[] = [];
+          const allBonuses = getActiveBonuses(s.attributes);
+          for (const bonus of allBonuses) {
+            if (bonus.effect === 'card_reward' && bonus.cardId) {
+              const attrCards = ATTRIBUTE_TIER_CARDS[bonus.attribute];
+              const card = attrCards?.find((c) => c.id === bonus.cardId);
+              if (card) {
+                cardsToAdd.push({ ...card, id: generateId() });
+              }
+            }
+          }
+          if (cardsToAdd.length > 0) {
+            set({ deck: [...get().deck, ...cardsToAdd], attributeCardsGranted: true });
+          }
+        }
+      }
+    } catch (e) { console.error('加载失败:', e); }
   },
 
   deleteSave: async () => {
@@ -1136,6 +1318,7 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
   },
 
   getActiveAttributeBonuses: () => getActiveBonuses(get().attributes),
+  getAttributeTierInfo: (attr, value) => getAttributeTierInfo(attr, value),
 }));
 
 export function getEffectDisplayValue(
@@ -1162,3 +1345,4 @@ export function getEffectDisplayValue(
 }
 
 export default useSimulationStore;
+export { TIER_THRESHOLDS };

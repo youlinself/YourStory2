@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
-import useSimulationStore, { getEffectDisplayValue, MAX_HAND_SIZE, BASE_DRAW_COUNT } from '../../stores/simulationStore';
+import useSimulationStore, { getEffectDisplayValue, MAX_HAND_SIZE, BASE_DRAW_COUNT, getAttributeTierInfo } from '../../stores/simulationStore';
 
 import {
   ERAS,
@@ -12,6 +12,7 @@ import {
   CARD_TYPE_NAMES,
   CULTIVATION_REALM_NAMES,
   RARITY_NAMES,
+  ATTRIBUTE_TIER_CARDS,
 } from '../../data/simulationData';
 import Tooltip from '../../components/common/Tooltip';
 import { useToast } from '../../components/common';
@@ -130,16 +131,36 @@ const getCardGlow = (type: string) => {
   }
 };
 
-const AttributeBar: React.FC<{ attr: keyof PlayerAttributes; value: number; showLabel?: boolean }> = ({ attr, value, showLabel = true }) => (
-  <div className="flex items-center gap-2">
-    <span className="text-base w-5 text-center">{ATTRIBUTE_ICONS[attr] || '•'}</span>
-    {showLabel && <span className="text-xs text-ink-muted w-8">{ATTRIBUTE_NAMES[attr] || attr}</span>}
-    <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden min-w-[60px]">
-      <div className="h-full rounded-full transition-all duration-500" style={{ width: `${Math.min(100, value)}%`, backgroundColor: ATTRIBUTE_COLORS[attr] || '#6B7280' }} />
+const AttributeBar: React.FC<{ attr: keyof PlayerAttributes; value: number; showLabel?: boolean }> = ({ attr, value, showLabel = true }) => {
+  const TIERS = [30, 50, 70, 90, 100];
+  const tierInfo = getAttributeTierInfo(attr, value);
+
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-base w-5 text-center">{ATTRIBUTE_ICONS[attr] || '•'}</span>
+      {showLabel && <span className="text-xs text-ink-muted w-8">{ATTRIBUTE_NAMES[attr] || attr}</span>}
+      <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden min-w-[60px] relative">
+        <div className="h-full rounded-full transition-all duration-500" style={{ width: `${Math.min(100, value)}%`, backgroundColor: ATTRIBUTE_COLORS[attr] || '#6B7280' }} />
+        {TIERS.map((t) => (
+          <div
+            key={t}
+            className="absolute top-0 h-full w-0.5"
+            style={{
+              left: `${t}%`,
+              backgroundColor: value >= t ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.15)',
+            }}
+          />
+        ))}
+      </div>
+      <span className="text-xs font-mono text-ink w-7 text-right">{Math.round(value)}</span>
+      {tierInfo.currentTier > 0 && (
+        <span className="text-[9px] px-1 py-0.5 rounded bg-amber-100 text-amber-700 font-medium" title={tierInfo.currentTierName || ''}>
+          {tierInfo.currentTier}阶
+        </span>
+      )}
     </div>
-    <span className="text-xs font-mono text-ink w-7 text-right">{Math.round(value)}</span>
-  </div>
-);
+  );
+};
 
 const OPTION_ICONS: Record<string, string> = {
   combat: '⚔️', elite: '👹', event: '❓', wonder: '🌟', rest: '🛏️', shop: '🏪', boss: '💀',
@@ -240,19 +261,82 @@ const ModeSelectPhase: React.FC = () => {
 };
 
 // ==========================================
-// 模式 + 出生年选择
+// 属性提示内容（含阶层信息）
 // ==========================================
-const AttributeTooltipContent: React.FC<{ attr: keyof PlayerAttributes }> = ({ attr }) => (
-  <div className="max-w-[220px]">
-    <div className="flex items-center gap-2 mb-1.5">
-      <span className="text-sm">{ATTRIBUTE_ICONS[attr]}</span>
-      <span className="font-semibold text-ink text-sm">{ATTRIBUTE_NAMES[attr]}</span>
+const AttributeTooltipContent: React.FC<{ attr: keyof PlayerAttributes }> = ({ attr }) => {
+  const value = useSimulationStore((s) => s.attributes[attr]);
+  const tierInfo = getAttributeTierInfo(attr, value);
+  const attrCards = ATTRIBUTE_TIER_CARDS[attr] || [];
+  const nextCard = attrCards.find((c) => {
+    const bonus = tierInfo.nextBonuses.find((b) => b.cardId === c.id);
+    return !!bonus;
+  });
+  const acquiredCards = attrCards.filter((c) => tierInfo.cardBonuses.some((b) => b.cardId === c.id));
+
+  return (
+    <div className="max-w-[260px]">
+      <div className="flex items-center gap-2 mb-1.5">
+        <span className="text-sm">{ATTRIBUTE_ICONS[attr]}</span>
+        <span className="font-semibold text-ink text-sm">{ATTRIBUTE_NAMES[attr]}</span>
+        <span className="text-xs text-ink-muted ml-auto">{Math.round(value)}/100</span>
+      </div>
+      <p className="text-[11px] leading-relaxed text-ink-muted mb-2">
+        {ATTRIBUTE_DESCRIPTIONS[attr]}
+      </p>
+
+      {/* 已获得的卡牌 */}
+      {acquiredCards.length > 0 && (
+        <div className="mb-2 p-1.5 rounded bg-purple-50 border border-purple-200">
+          <div className="text-[10px] text-purple-600 font-medium mb-1">🎴 已获得的卡牌</div>
+          {acquiredCards.map((card) => (
+            <div key={card.id} className="text-[10px] text-purple-700 mb-0.5">
+              <span className="font-medium">{card.icon} {card.name}</span>
+              <span className="text-purple-500 ml-1">- {card.description}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* 当前阶层 */}
+      {tierInfo.currentTier > 0 && (
+        <div className="mb-2 p-1.5 rounded bg-amber-50 border border-amber-200">
+          <div className="text-[10px] text-amber-600 font-medium mb-0.5">
+            🏆 当前阶层: {tierInfo.currentTierName} ({tierInfo.currentTier}/5阶)
+          </div>
+          <div className="text-[10px] text-amber-700">
+            {tierInfo.passiveBonuses.length > 0 && (
+              <div>✨ 被动: {tierInfo.passiveBonuses.map((b) => b.description).join(', ')}</div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 下一阶预览 */}
+      {tierInfo.nextTier && tierInfo.nextTierName && (
+        <div className="p-1.5 rounded bg-blue-50 border border-blue-200">
+          <div className="text-[10px] text-blue-600 font-medium mb-0.5">
+            🔓 下一阶 ({tierInfo.nextTier}点): {tierInfo.nextTierName}
+          </div>
+          <div className="text-[10px] text-blue-700">
+            {tierInfo.nextBonuses[0]?.effect === 'card_reward' && nextCard ? (
+              <div>🎴 获得卡牌: {nextCard.icon} {nextCard.name} - {nextCard.description}</div>
+            ) : (
+              <div>✨ 被动: {tierInfo.nextBonuses[0]?.description}</div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {!tierInfo.currentTier && (
+        <div className="p-1.5 rounded bg-gray-50 border border-gray-200">
+          <div className="text-[10px] text-gray-500">
+            🔒 达到30点解锁第一阶奖励
+          </div>
+        </div>
+      )}
     </div>
-    <p className="text-[11px] leading-relaxed text-ink-muted whitespace-normal">
-      {ATTRIBUTE_DESCRIPTIONS[attr]}
-    </p>
-  </div>
-);
+  );
+};
 
 const AllocatingPhase: React.FC = () => {
   const attributes = useSimulationStore((s) => s.attributes);
@@ -261,52 +345,95 @@ const AllocatingPhase: React.FC = () => {
   const allocateAttribute = useSimulationStore((s) => s.allocateAttribute);
   const confirmAllocation = useSimulationStore((s) => s.confirmAllocation);
 
+  const TIERS = [30, 50, 70, 90, 100];
+
   return (
     <div className="flex flex-col items-center justify-center min-h-[70vh] px-6 py-8">
       <h2 className="text-xl font-semibold text-ink mb-2">分配属性点</h2>
       <p className="text-ink-muted text-sm mb-6">剩余点数：<span className="font-bold text-brand">{remainingPoints}</span></p>
-      <div className="w-full max-w-2xl grid grid-cols-2 gap-4 mb-8">
-        {(Object.keys(attributes) as (keyof PlayerAttributes)[]).map((attr) => (
-          <Tooltip key={attr} content={<AttributeTooltipContent attr={attr} />} position="top">
-            <div className="bg-white rounded-lg border border-border-subtle p-4 cursor-help transition-all hover:border-brand/50 hover:shadow-sm">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <span>{ATTRIBUTE_ICONS[attr]}</span>
-                  <span className="text-sm font-medium text-ink">{ATTRIBUTE_NAMES[attr]}</span>
+      <div className="w-full max-w-2xl grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+        {(Object.keys(attributes) as (keyof PlayerAttributes)[]).map((attr) => {
+          const tierInfo = getAttributeTierInfo(attr, attributes[attr]);
+          const nextTier = tierInfo.nextTier;
+          const hasReachedTier = tierInfo.currentTier > 0;
+          return (
+            <Tooltip key={attr} content={<AttributeTooltipContent attr={attr} />} position="top">
+              <div className="bg-white rounded-lg border border-border-subtle p-4 cursor-help transition-all hover:border-brand/50 hover:shadow-sm">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <span>{ATTRIBUTE_ICONS[attr]}</span>
+                    <span className="text-sm font-medium text-ink">{ATTRIBUTE_NAMES[attr]}</span>
+                    {hasReachedTier && (
+                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-medium">
+                        {tierInfo.currentTierName}
+                      </span>
+                    )}
+                  </div>
+                  <span className="w-10 text-center font-mono font-bold text-brand">{attributes[attr]}</span>
                 </div>
-                <span className="w-10 text-center font-mono font-bold text-brand">{attributes[attr]}</span>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); allocateAttribute(attr, attributes[attr] - 1); }}
+                    disabled={attributes[attr] <= baseAttributes[attr]}
+                    className="w-6 h-6 rounded bg-gray-100 hover:bg-gray-200 disabled:opacity-50 text-xs flex-shrink-0"
+                  >
+                    -
+                  </button>
+                  <div className="flex-1 relative">
+                    <input
+                      type="range"
+                      min={baseAttributes[attr]}
+                      max={Math.min(60, attributes[attr] + remainingPoints)}
+                      value={attributes[attr]}
+                      onChange={(e) => allocateAttribute(attr, parseInt(e.target.value))}
+                      className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-brand w-full"
+                    />
+                    <div className="flex justify-between mt-1">
+                      {TIERS.map((t) => {
+                        const isReached = attributes[attr] >= t;
+                        const isNext = nextTier === t;
+                        return (
+                          <div key={t} className="flex flex-col items-center">
+                            <div className={`w-1.5 h-1.5 rounded-full ${isReached ? 'bg-amber-400' : isNext ? 'bg-blue-300' : 'bg-gray-200'}`} />
+                            <span className={`text-[8px] ${isReached ? 'text-amber-600' : isNext ? 'text-blue-500' : 'text-gray-400'}`}>
+                              {t}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); allocateAttribute(attr, attributes[attr] + 1); }}
+                    disabled={remainingPoints <= 0 || attributes[attr] >= 60}
+                    className="w-6 h-6 rounded bg-gray-100 hover:bg-gray-200 disabled:opacity-50 text-xs flex-shrink-0"
+                  >
+                    +
+                  </button>
+                </div>
+                <div className="flex justify-between text-[10px] text-ink-muted mt-1">
+                  <span>基础 {baseAttributes[attr]}</span>
+                  {nextTier && (
+                    <span className="text-blue-500">
+                      下一阶 {nextTier} 点
+                      {tierInfo.nextBonuses[0]?.effect === 'card_reward' && (
+                        <span className="ml-1 text-purple-500">🎴</span>
+                      )}
+                    </span>
+                  )}
+                </div>
+                {nextTier && tierInfo.nextBonuses[0]?.effect === 'card_reward' && (() => {
+                  const nextCard = ATTRIBUTE_TIER_CARDS[attr]?.find((c) => c.id === tierInfo.nextBonuses[0]?.cardId);
+                  return nextCard ? (
+                    <div className="mt-1 p-1 rounded bg-purple-50 border border-purple-100 text-[9px] text-purple-600">
+                      <span className="font-medium">{nextCard.icon} {nextCard.name}</span>: {nextCard.description}
+                    </div>
+                  ) : null;
+                })()}
               </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={(e) => { e.stopPropagation(); allocateAttribute(attr, attributes[attr] - 1); }}
-                  disabled={attributes[attr] <= baseAttributes[attr]}
-                  className="w-6 h-6 rounded bg-gray-100 hover:bg-gray-200 disabled:opacity-50 text-xs flex-shrink-0"
-                >
-                  -
-                </button>
-                <input
-                  type="range"
-                  min={baseAttributes[attr]}
-                  max={Math.min(99, attributes[attr] + remainingPoints)}
-                  value={attributes[attr]}
-                  onChange={(e) => allocateAttribute(attr, parseInt(e.target.value))}
-                  className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-brand"
-                />
-                <button
-                  onClick={(e) => { e.stopPropagation(); allocateAttribute(attr, attributes[attr] + 1); }}
-                  disabled={remainingPoints <= 0 || attributes[attr] >= 99}
-                  className="w-6 h-6 rounded bg-gray-100 hover:bg-gray-200 disabled:opacity-50 text-xs flex-shrink-0"
-                >
-                  +
-                </button>
-              </div>
-              <div className="flex justify-between text-[10px] text-ink-muted mt-1">
-                <span>{baseAttributes[attr]}</span>
-                <span>{Math.min(99, attributes[attr] + remainingPoints)}</span>
-              </div>
-            </div>
-          </Tooltip>
-        ))}
+            </Tooltip>
+          );
+        })}
       </div>
       <button onClick={confirmAllocation} disabled={remainingPoints > 0}
         className={`px-8 py-3 rounded-lg font-medium transition-all ${remainingPoints === 0 ? 'bg-brand text-white hover:bg-brand/90 shadow-md' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}>
@@ -1390,6 +1517,25 @@ const SimulationPage: React.FC = () => {
             </div>
           </div>
           )}
+          {phase !== 'setup' && (() => {
+            const allBonuses = (Object.keys(attributes) as (keyof PlayerAttributes)[]).flatMap((attr) =>
+              getAttributeTierInfo(attr, attributes[attr]).bonuses.map((b) => ({ ...b, attrName: ATTRIBUTE_NAMES[attr] }))
+            );
+            return allBonuses.length > 0 ? (
+              <div className="bg-white rounded-xl border border-border-subtle p-4 mb-4">
+                <h3 className="font-semibold text-ink mb-3">🌟 阶层效果</h3>
+                <div className="space-y-1.5">
+                  {allBonuses.map((b, i) => (
+                    <div key={i} className="flex items-center gap-2 text-[10px]">
+                      <span className="text-ink-faint w-8 flex-shrink-0">{b.attrName}</span>
+                      <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-medium flex-shrink-0">{b.name}</span>
+                      <span className="text-ink-muted truncate">{b.description}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null;
+          })()}
           {phase !== 'setup' && (
           <div className="bg-white rounded-xl border border-border-subtle p-4 mb-4">
             <h3 className="font-semibold text-ink mb-3">🃏 卡组 ({deck.length})</h3>

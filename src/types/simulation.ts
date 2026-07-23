@@ -335,8 +335,10 @@ export interface AttributeThresholdBonus {
   name: string;
   description: string;
   effect: 'damage_boost' | 'extra_draw' | 'debuff_reduction' | 'max_health_bonus'
-    | 'energy_bonus' | 'shop_discount' | 'start_block' | 'interrupt_chance';
+    | 'energy_bonus' | 'shop_discount' | 'start_block' | 'interrupt_chance'
+    | 'card_reward';
   value: number;
+  cardId?: string;
 }
 
 export interface GameState {
@@ -366,6 +368,7 @@ export interface GameState {
   seed: number;
   damageEventCounter: number;
   lastCombatEnemies: Enemy[];
+  attributeCardsGranted: boolean;
 }
 
 export interface WorldState {

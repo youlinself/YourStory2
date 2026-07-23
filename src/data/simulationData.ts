@@ -8,6 +8,7 @@ import type {
   GameEvent,
   StatusEffect,
   EnemyMechanic,
+  PlayerAttributes,
 } from '../types/simulation';
 
 // ==========================================
@@ -21,7 +22,7 @@ export const ERAS: EraDefinition[] = [
     description: '百废待兴的年代，到处都是机会，也充满了挑战。',
     initialWealthRange: [5, 25],
     initialNetworkRange: [10, 40],
-    attributePoints: 15,
+    attributePoints: 30,
   },
   {
     year: 1960,
@@ -30,7 +31,7 @@ export const ERAS: EraDefinition[] = [
     description: '社会剧烈变革的十年，有人乘风破浪，有人随波逐流。',
     initialWealthRange: [5, 20],
     initialNetworkRange: [15, 45],
-    attributePoints: 15,
+    attributePoints: 30,
   },
   {
     year: 1970,
@@ -39,7 +40,7 @@ export const ERAS: EraDefinition[] = [
     description: '黎明前的黑暗即将过去，新时代的曙光即将到来。',
     initialWealthRange: [8, 25],
     initialNetworkRange: [15, 40],
-    attributePoints: 16,
+    attributePoints: 32,
   },
   {
     year: 1980,
@@ -48,7 +49,7 @@ export const ERAS: EraDefinition[] = [
     description: '思想解放的浪潮席卷大地，到处都是创业的声音。',
     initialWealthRange: [10, 35],
     initialNetworkRange: [15, 50],
-    attributePoints: 16,
+    attributePoints: 32,
   },
   {
     year: 1990,
@@ -57,7 +58,7 @@ export const ERAS: EraDefinition[] = [
     description: '体制变革带来巨大的机遇和风险，敢问路在何方。',
     initialWealthRange: [15, 45],
     initialNetworkRange: [20, 55],
-    attributePoints: 17,
+    attributePoints: 34,
   },
   {
     year: 2000,
@@ -66,7 +67,7 @@ export const ERAS: EraDefinition[] = [
     description: '互联网浪潮来临，世界开始连接，新的规则正在建立。',
     initialWealthRange: [20, 55],
     initialNetworkRange: [20, 60],
-    attributePoints: 17,
+    attributePoints: 34,
   },
   {
     year: 2010,
@@ -75,7 +76,7 @@ export const ERAS: EraDefinition[] = [
     description: '智能手机普及，让每个人都能触摸到整个世界。',
     initialWealthRange: [25, 60],
     initialNetworkRange: [25, 65],
-    attributePoints: 18,
+    attributePoints: 36,
   },
   {
     year: 2020,
@@ -84,7 +85,7 @@ export const ERAS: EraDefinition[] = [
     description: 'AI、大数据、元宇宙...科技与生活的边界正在模糊。',
     initialWealthRange: [30, 65],
     initialNetworkRange: [30, 70],
-    attributePoints: 18,
+    attributePoints: 36,
   },
   {
     year: 2030,
@@ -93,7 +94,7 @@ export const ERAS: EraDefinition[] = [
     description: '新能源技术突破，传统行业正在重新洗牌。',
     initialWealthRange: [35, 70],
     initialNetworkRange: [30, 75],
-    attributePoints: 19,
+    attributePoints: 38,
   },
   {
     year: 2040,
@@ -102,7 +103,7 @@ export const ERAS: EraDefinition[] = [
     description: '太空商业化起步，人类的视野投向星辰大海。',
     initialWealthRange: [40, 75],
     initialNetworkRange: [35, 80],
-    attributePoints: 19,
+    attributePoints: 38,
   },
   {
     year: 2050,
@@ -111,7 +112,7 @@ export const ERAS: EraDefinition[] = [
     description: '人机融合成为常态，生命的定义正在被改写。',
     initialWealthRange: [45, 80],
     initialNetworkRange: [40, 85],
-    attributePoints: 20,
+    attributePoints: 40,
   },
   {
     year: 2060,
@@ -120,7 +121,7 @@ export const ERAS: EraDefinition[] = [
     description: '太阳系殖民成为现实，人类的脚步不再局限于地球。',
     initialWealthRange: [50, 85],
     initialNetworkRange: [45, 90],
-    attributePoints: 21,
+    attributePoints: 42,
   },
   {
     year: 2070,
@@ -365,6 +366,366 @@ export const LEGENDARY_CARDS: LifeCard[] = [
     ageRange: [30, 80], // 需要一定积累
   },
 ];
+
+// ==========================================
+// 属性阶层卡牌 - 达到特定属性阶层时获得
+// ==========================================
+
+// 精力卡牌
+export const ENERGY_TIER_CARDS: LifeCard[] = [
+  {
+    id: 'energy_tier1',
+    name: '精力充沛',
+    type: 'skill',
+    rarity: 'uncommon',
+    cost: 0,
+    target: 'self',
+    effects: [{ type: 'draw', value: 2 }],
+    description: '精力旺盛，思维敏捷，抽2张牌',
+    icon: '⚡',
+    tags: ['精力'],
+    ageRange: null,
+  },
+  {
+    id: 'energy_tier3',
+    name: '活力爆发',
+    type: 'skill',
+    rarity: 'rare',
+    cost: 1,
+    target: 'self',
+    effects: [{ type: 'gain_energy', value: 3 }],
+    description: '精力充沛，获得3点精力',
+    icon: '🔥',
+    tags: ['精力'],
+    ageRange: null,
+  },
+  {
+    id: 'energy_tier5',
+    name: '超凡入圣',
+    type: 'power',
+    rarity: 'legendary',
+    cost: 2,
+    target: 'self',
+    effects: [{ type: 'gain_max_energy', value: 1 }],
+    description: '精力超凡，最大精力+1（被动）',
+    icon: '✨',
+    tags: ['精力'],
+    ageRange: null,
+  },
+];
+
+// 体魄卡牌
+export const PHYSIQUE_TIER_CARDS: LifeCard[] = [
+  {
+    id: 'physique_tier1',
+    name: '强壮一击',
+    type: 'attack',
+    rarity: 'uncommon',
+    cost: 1,
+    target: 'enemy',
+    effects: [{ type: 'damage', value: 12 }, { type: 'strength', value: 2, duration: 99 }],
+    description: '强壮的体魄让你打出有力一击，获得2点力量',
+    icon: '💪',
+    tags: ['体魄'],
+    ageRange: null,
+  },
+  {
+    id: 'physique_tier3',
+    name: '威猛',
+    type: 'skill',
+    rarity: 'rare',
+    cost: 2,
+    target: 'self',
+    effects: [{ type: 'block', value: 10 }, { type: 'strength', value: 3, duration: 99 }],
+    description: '威猛之姿，获得10点格挡和3点力量',
+    icon: '🛡️',
+    tags: ['体魄'],
+    ageRange: null,
+  },
+  {
+    id: 'physique_tier5',
+    name: '勇猛',
+    type: 'power',
+    rarity: 'legendary',
+    cost: 2,
+    target: 'self',
+    effects: [{ type: 'rage', value: 3, duration: 99 }],
+    description: '勇猛无畏，攻击卡伤害+30%（被动）',
+    icon: '⚔️',
+    tags: ['体魄'],
+    ageRange: null,
+  },
+];
+
+// 健康卡牌
+export const HEALTH_TIER_CARDS: LifeCard[] = [
+  {
+    id: 'health_tier1',
+    name: '生命恢复',
+    type: 'skill',
+    rarity: 'uncommon',
+    cost: 1,
+    target: 'self',
+    effects: [{ type: 'heal', value: 6 }],
+    description: '健康的身体让你快速恢复，回复6点生命',
+    icon: '❤️',
+    tags: ['健康'],
+    ageRange: null,
+  },
+  {
+    id: 'health_tier3',
+    name: '坚韧',
+    type: 'skill',
+    rarity: 'rare',
+    cost: 2,
+    target: 'self',
+    effects: [{ type: 'block', value: 12 }, { type: 'heal', value: 8 }],
+    description: '坚韧不拔，获得12点格挡并回复8点生命',
+    icon: '🏥',
+    tags: ['健康'],
+    ageRange: null,
+  },
+  {
+    id: 'health_tier5',
+    name: '钢铁之躯',
+    type: 'power',
+    rarity: 'legendary',
+    cost: 2,
+    target: 'self',
+    effects: [{ type: 'regen', value: 2, duration: 99 }],
+    description: '钢铁之躯，每回合回复2点生命（被动）',
+    icon: '🛡️',
+    tags: ['健康'],
+    ageRange: null,
+  },
+];
+
+// 智商卡牌
+export const IQ_TIER_CARDS: LifeCard[] = [
+  {
+    id: 'iq_tier1',
+    name: '灵光一闪',
+    type: 'skill',
+    rarity: 'uncommon',
+    cost: 0,
+    target: 'self',
+    effects: [{ type: 'draw', value: 3 }],
+    description: '智商超群，灵感涌现，抽3张牌',
+    icon: '🧠',
+    tags: ['智商'],
+    ageRange: null,
+  },
+  {
+    id: 'iq_tier3',
+    name: '聪颖',
+    type: 'skill',
+    rarity: 'rare',
+    cost: 1,
+    target: 'self',
+    effects: [{ type: 'draw', value: 2 }, { type: 'gain_energy', value: 1 }],
+    description: '聪颖过人，抽2张牌并获得1点精力',
+    icon: '💡',
+    tags: ['智商'],
+    ageRange: null,
+  },
+  {
+    id: 'iq_tier5',
+    name: '睿智',
+    type: 'power',
+    rarity: 'legendary',
+    cost: 2,
+    target: 'self',
+    effects: [{ type: 'gain_max_energy', value: 1 }],
+    description: '睿智通达，最大精力+1（被动）',
+    icon: '📚',
+    tags: ['智商'],
+    ageRange: null,
+  },
+];
+
+// 情商卡牌
+export const EQ_TIER_CARDS: LifeCard[] = [
+  {
+    id: 'eq_tier1',
+    name: '友善',
+    type: 'skill',
+    rarity: 'uncommon',
+    cost: 1,
+    target: 'self',
+    effects: [{ type: 'block', value: 6 }, { type: 'cure', value: 1 }],
+    description: '高情商让你化解冲突，获得6点格挡并移除1个负面效果',
+    icon: '💬',
+    tags: ['情商'],
+    ageRange: null,
+  },
+  {
+    id: 'eq_tier3',
+    name: '亲和',
+    type: 'skill',
+    rarity: 'rare',
+    cost: 2,
+    target: 'self',
+    effects: [{ type: 'block', value: 12 }, { type: 'cure', value: 99 }],
+    description: '亲和力强，获得12点格挡并移除所有负面效果',
+    icon: '🤝',
+    tags: ['情商'],
+    ageRange: null,
+  },
+  {
+    id: 'eq_tier5',
+    name: '沉稳',
+    type: 'power',
+    rarity: 'legendary',
+    cost: 2,
+    target: 'self',
+    effects: [{ type: 'dexterity', value: 2, duration: 99 }],
+    description: '沉稳大气，每回合额外获得2点格挡（被动）',
+    icon: '🧘',
+    tags: ['情商'],
+    ageRange: null,
+  },
+];
+
+// 财富卡牌
+export const WEALTH_TIER_CARDS: LifeCard[] = [
+  {
+    id: 'wealth_tier1',
+    name: '小富',
+    type: 'skill',
+    rarity: 'uncommon',
+    cost: 0,
+    target: 'self',
+    effects: [{ type: 'gain_energy', value: 1 }, { type: 'draw', value: 1 }],
+    description: '小有财富，获得1点精力并抽1张牌',
+    icon: '💰',
+    tags: ['财富'],
+    ageRange: null,
+  },
+  {
+    id: 'wealth_tier3',
+    name: '富贵',
+    type: 'skill',
+    rarity: 'rare',
+    cost: 1,
+    target: 'self',
+    effects: [{ type: 'gain_energy', value: 2 }, { type: 'draw', value: 1 }],
+    description: '富贵逼人，获得2点精力并抽1张牌',
+    icon: '💎',
+    tags: ['财富'],
+    ageRange: null,
+  },
+  {
+    id: 'wealth_tier5',
+    name: '豪富',
+    type: 'power',
+    rarity: 'legendary',
+    cost: 2,
+    target: 'self',
+    effects: [{ type: 'gain_max_energy', value: 1 }],
+    description: '豪富之家，最大精力+1（被动）',
+    icon: '🏆',
+    tags: ['财富'],
+    ageRange: null,
+  },
+];
+
+// 人脉卡牌
+export const NETWORK_TIER_CARDS: LifeCard[] = [
+  {
+    id: 'network_tier1',
+    name: '熟人',
+    type: 'skill',
+    rarity: 'uncommon',
+    cost: 1,
+    target: 'self',
+    effects: [{ type: 'block', value: 8 }],
+    description: '人脉广泛，朋友相助，获得8点格挡',
+    icon: '👥',
+    tags: ['人脉'],
+    ageRange: null,
+  },
+  {
+    id: 'network_tier3',
+    name: '人脉',
+    type: 'skill',
+    rarity: 'rare',
+    cost: 2,
+    target: 'self',
+    effects: [{ type: 'block', value: 15 }, { type: 'draw', value: 1 }],
+    description: '人脉亨通，获得15点格挡并抽1张牌',
+    icon: '🌐',
+    tags: ['人脉'],
+    ageRange: null,
+  },
+  {
+    id: 'network_tier5',
+    name: '四通八达',
+    type: 'power',
+    rarity: 'legendary',
+    cost: 2,
+    target: 'self',
+    effects: [{ type: 'shield', value: 10, duration: 99 }],
+    description: '四通八达，每回合开始获得10点护盾（被动）',
+    icon: '🔗',
+    tags: ['人脉'],
+    ageRange: null,
+  },
+];
+
+// 名望卡牌
+export const FAME_TIER_CARDS: LifeCard[] = [
+  {
+    id: 'fame_tier1',
+    name: '小有名气',
+    type: 'attack',
+    rarity: 'uncommon',
+    cost: 1,
+    target: 'enemy',
+    effects: [{ type: 'damage', value: 10 }, { type: 'weak', value: 1, duration: 1 }],
+    description: '名声在外，使敌人虚弱，造成10点伤害',
+    icon: '⭐',
+    tags: ['名望'],
+    ageRange: null,
+  },
+  {
+    id: 'fame_tier3',
+    name: '威名',
+    type: 'attack',
+    rarity: 'rare',
+    cost: 2,
+    target: 'enemy',
+    effects: [{ type: 'damage', value: 18 }, { type: 'vulnerable', value: 2, duration: 2 }],
+    description: '威名远扬，使敌人脆弱，造成18点伤害',
+    icon: '🌟',
+    tags: ['名望'],
+    ageRange: null,
+  },
+  {
+    id: 'fame_tier5',
+    name: '传奇',
+    type: 'power',
+    rarity: 'legendary',
+    cost: 2,
+    target: 'self',
+    effects: [{ type: 'thorns', value: 3, duration: 99 }],
+    description: '传奇人物，攻击你的敌人受到3点反伤（被动）',
+    icon: '👑',
+    tags: ['名望'],
+    ageRange: null,
+  },
+];
+
+// 属性卡牌映射表
+export const ATTRIBUTE_TIER_CARDS: Record<keyof PlayerAttributes, LifeCard[]> = {
+  energy: ENERGY_TIER_CARDS,
+  physique: PHYSIQUE_TIER_CARDS,
+  health: HEALTH_TIER_CARDS,
+  iq: IQ_TIER_CARDS,
+  eq: EQ_TIER_CARDS,
+  wealth: WEALTH_TIER_CARDS,
+  network: NETWORK_TIER_CARDS,
+  fame: FAME_TIER_CARDS,
+};
 
 // 修仙模式专属卡
 export const CULTIVATION_CARDS: LifeCard[] = [
@@ -2248,14 +2609,14 @@ export const ATTRIBUTE_COLORS: Record<string, string> = {
 };
 
 export const ATTRIBUTE_DESCRIPTIONS: Record<string, string> = {
-  energy: '决定行动力与精力上限，影响每回合可出牌数量及事件成功率',
-  physique: '身体素质与力量，影响战斗伤害、体力活动成功率及寿命',
-  health: '身体健康状况，影响生命值上限、恢复速度及疾病抵抗力',
-  iq: '智力与学识，影响技能卡效果、事件判断成功率及卡牌奖励',
-  eq: '情商与社交智慧，影响人脉拓展、NPC关系建立及事件成功率',
-  wealth: '金钱与物质资源，影响商店购买力、初始资产及投资回报',
-  network: '人脉与社会关系，影响随机事件质量、NPC互动及信息获取',
-  fame: '名声与社会影响力，影响事件卡奖励、特殊选项解锁及结局评价',
+  energy: '⚡ 精力: 30点获【精力充沛】抽2牌 | 50/90点初始精力+1 | 70点获【活力爆发】+3精力 | 100点最大精力+1',
+  physique: '💪 体魄: 30点获【强壮一击】12伤+2力量 | 50/90点攻击伤害+10% | 70点获【威猛】10格挡+3力量 | 100点攻击+30%',
+  health: '❤️ 健康: 30点获【生命恢复】回6血 | 50/90点最大生命+10/15 | 70点获【坚韧】12格挡+回8血 | 100点每回合回2血',
+  iq: '🧠 智商: 30点获【灵光一闪】抽3牌 | 50/90点每回合抽+1卡 | 70点获【聪颖】抽2牌+1精力 | 100点最大精力+1',
+  eq: '💬 情商: 30点获【友善】6格挡+净化 | 50/90点战斗格挡+3/+5 | 70点获【亲和】12格挡+全净化 | 100点每回合+2格挡',
+  wealth: '💰 财富: 30点获【小富】1精力+抽1牌 | 50/90点商店折扣5%/10% | 70点获【富贵】2精力+抽1牌 | 100点最大精力+1',
+  network: '🤝 人脉: 30点获【熟人】8格挡 | 50/90点战斗格挡+3/+8 | 70点获【人脉】15格挡+抽1牌 | 100点每回合+10护盾',
+  fame: '⭐ 名望: 30点获【小有名气】10伤+虚弱 | 50/90点打断敌人10%/25% | 70点获【威名】18伤+脆弱 | 100点反伤3点',
 };
 
 // ==========================================
