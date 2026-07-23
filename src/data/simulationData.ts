@@ -3415,6 +3415,8 @@ export function calculateDamage(baseDamage: number, attackerEffects: StatusEffec
   if (strength) damage += strength.value;
   const rage = attackerEffects.find((e) => e.type === 'rage');
   if (rage) damage = Math.floor(damage * 1.5);
+  const weak = attackerEffects.find((e) => e.type === 'weak');
+  if (weak) damage = Math.max(0, damage - weak.value);
 
   // 防御者加成
   const vulnerable = defenderEffects.find((e) => e.type === 'vulnerable');

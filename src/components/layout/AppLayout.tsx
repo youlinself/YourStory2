@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { Outlet, useLocation, Link, useParams } from 'react-router-dom';
 import useAutobiographyStore from '../../stores/autobiographyStore';
 import useDialogueStore from '../../stores/dialogueStore';
+import useLocalStorage from '../../hooks/useLocalStorage';
 import type { Chapter } from '../../types';
 
 const navItems = [
@@ -41,7 +42,7 @@ const iconMap: Record<string, React.ReactNode> = {
   ),
 };
 
-const SidebarBottomContent: React.FC = () => {
+const SidebarBottomContent: React.FC<{ collapsed: boolean }> = ({ collapsed }) => {
   const location = useLocation();
   const path = location.pathname;
   const { chapterId: routeChapterId } = useParams<{ chapterId?: string }>();
@@ -70,6 +71,16 @@ const SidebarBottomContent: React.FC = () => {
       default: return 0;
     }
   };
+
+  if (collapsed) {
+    return (
+      <div className="py-4 border-t border-border-subtle flex justify-center">
+        <div className="relative w-10 h-10 rounded-full bg-brand/10 flex items-center justify-center">
+          <span className="text-xs font-semibold text-brand">{progressPercent}%</span>
+        </div>
+      </div>
+    );
+  }
 
   if (path === '/') {
     return (
@@ -183,18 +194,40 @@ const SidebarBottomContent: React.FC = () => {
 
 const AppLayout: React.FC = () => {
   const location = useLocation();
+  const [collapsed, setCollapsed] = useLocalStorage('sidebar-collapsed', false);
+
+  const toggleSidebar = () => {
+    setCollapsed(!collapsed);
+  };
 
   return (
     <div className="main-area h-screen">
-      <aside className="sidebar h-full">
+      <aside className={`sidebar h-full ${collapsed ? 'sidebar-collapsed' : ''}`}>
         <div className="px-5 pt-6 pb-4">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-brand flex items-center justify-center">
-              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
-              </svg>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-brand flex items-center justify-center flex-shrink-0">
+                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+                </svg>
+              </div>
+              {!collapsed && (
+                <span className="font-semibold text-[15px] tracking-tight text-ink">YourStory</span>
+              )}
             </div>
-            <span className="font-semibold text-[15px] tracking-tight text-ink">YourStory</span>
+            <button
+              onClick={toggleSidebar}
+              className="w-6 h-6 flex items-center justify-center rounded-md hover:bg-bg-hover text-ink-muted hover:text-ink transition-colors"
+              aria-label={collapsed ? '展开侧边栏' : '收起侧边栏'}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                {collapsed ? (
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                ) : (
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 4.5L3 12m0 0l7.5 7.5M3 12h18" />
+                )}
+              </svg>
+            </button>
           </div>
         </div>
 
@@ -206,16 +239,17 @@ const AppLayout: React.FC = () => {
               <Link
                 key={item.path}
                 to={item.path}
-                className={`nav-link ${isActive ? 'active' : ''}`}
+                className={`nav-link ${isActive ? 'active' : ''} ${collapsed ? 'nav-link-collapsed' : ''}`}
+                title={collapsed ? item.label : undefined}
               >
                 <span className={isActive ? 'text-brand' : ''}>{iconMap[item.icon]}</span>
-                <span>{item.label}</span>
+                {!collapsed && <span>{item.label}</span>}
               </Link>
             );
           })}
         </nav>
 
-        <SidebarBottomContent />
+        <SidebarBottomContent collapsed={collapsed} />
       </aside>
 
       <main className="flex-1 overflow-y-auto">

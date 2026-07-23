@@ -13,6 +13,7 @@ import {
   CULTIVATION_REALM_NAMES,
   RARITY_NAMES,
   ATTRIBUTE_TIER_CARDS,
+  calculateDamage,
 } from '../../data/simulationData';
 import Tooltip from '../../components/common/Tooltip';
 import { useToast } from '../../components/common';
@@ -788,14 +789,10 @@ const CombatPhaseView: React.FC = () => {
                        let baseDamage = 0;
                        if (intent.type === 'attack') {
                          baseDamage = intent.damage;
-                         actualDamage = intent.damage;
-                         const str = enemy.statusEffects.find((x) => x.type === 'strength');
-                         if (str) actualDamage += str.value;
-                         const wk = enemy.statusEffects.find((x) => x.type === 'weak');
-                         if (wk) actualDamage = Math.floor(actualDamage * 0.75);
                          const shield = enemy.mechanics?.includes('shield') ? 0.75 : 1;
-                         actualDamage = Math.floor(actualDamage * shield);
+                         actualDamage = calculateDamage(Math.floor(intent.damage * shield), enemy.statusEffects, combat.player.statusEffects);
                        }
+                       const weakValue = enemy.statusEffects.find((x) => x.type === 'weak')?.value;
                        return (
                          <div className="rounded-lg px-3 py-2 bg-bg-subtle border border-border-subtle">
                            <div className="flex items-center gap-2">
@@ -809,7 +806,7 @@ const CombatPhaseView: React.FC = () => {
                                      {baseDamage !== actualDamage && (
                                        <span className="text-[9px] text-ink-faint ml-1">({baseDamage}
                                          {enemy.statusEffects.find((x) => x.type === 'strength') && `+${enemy.statusEffects.find((x) => x.type === 'strength')!.value}`}
-                                         {enemy.statusEffects.find((x) => x.type === 'weak') && '×0.75'}
+                                         {weakValue && `-${weakValue}`}
                                          {enemy.mechanics?.includes('shield') && '×0.75'})
                                        </span>
                                      )}

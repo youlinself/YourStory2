@@ -4,7 +4,7 @@ import { generateId } from '../utils';
 import {
   ERAS, STARTER_DECK, SCRIPT_1950_EVENTS, HIDDEN_TAGS,
   COMMON_ATTACK_CARDS, COMMON_SKILL_CARDS, RARE_CARDS, LEGENDARY_CARDS,
-  WONDER_REWARD_POOL, ATTRIBUTE_TIER_CARDS,
+  WONDER_REWARD_POOL, ATTRIBUTE_TIER_CARDS, calculateDamage,
 } from '../data/simulationData';
 import {
   getAgeStage,
@@ -229,7 +229,12 @@ function applyCardEffect(effect: { type: string; value: number; duration?: numbe
   const c = { ...combat, player: { ...combat.player, statusEffects: [...combat.player.statusEffects] }, enemies: combat.enemies.map((e) => ({ ...e, statusEffects: [...e.statusEffects] })) };
   const t = c.enemies[targetIdx];
   switch (effect.type) {
-    case 'damage': if (t) { const d = Math.max(0, effect.value - t.block); t.block = Math.max(0, t.block - effect.value); t.currentHealth -= d; } break;
+    case 'damage': if (t) { 
+      const damage = calculateDamage(effect.value, c.player.statusEffects, t.statusEffects);
+      const d = Math.max(0, damage - t.block); 
+      t.block = Math.max(0, t.block - damage); 
+      t.currentHealth -= d; 
+    } break;
     case 'block': c.player.block += effect.value; break;
     case 'heal': c.player.currentHealth = Math.min(c.player.maxHealth, c.player.currentHealth + effect.value); break;
     case 'draw': for (let i = 0; i < effect.value; i++) { if (c.player.drawPile.length > 0) c.player.hand.push(c.player.drawPile.shift()!); } break;
@@ -980,15 +985,11 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
       const intent = e.intents[e.currentIntentIndex % e.intents.length];
       if (intent.type === 'attack') {
         if (Math.random() < interruptChance) { e.currentIntentIndex = (e.currentIntentIndex + 1) % e.intents.length; continue; }
-        let dmg = intent.damage;
         const hits = intent.hits || (e.mechanics.includes('double_attack') ? 2 : 1);
-        const str = e.statusEffects.find((x) => x.type === 'strength');
-        if (str) dmg += str.value;
-        const wk = e.statusEffects.find((x) => x.type === 'weak');
-        if (wk) dmg = Math.floor(dmg * 0.75);
         const shield = e.mechanics.includes('shield') ? 0.75 : 1;
-        dmg = Math.floor(dmg * shield);
+        let baseDmg = Math.floor(intent.damage * shield);
         for (let i = 0; i < hits; i++) {
+          const dmg = calculateDamage(baseDmg, e.statusEffects, c.player.statusEffects);
           const blocked = Math.min(c.player.block, dmg);
           const d = Math.max(0, dmg - c.player.block);
           c.player.block = Math.max(0, c.player.block - dmg);
@@ -1331,8 +1332,10 @@ export function getEffectDisplayValue(
     let value = Math.floor(baseValue * damageBoost);
     const strength = playerStatusEffects.find((s) => s.type === 'strength');
     if (strength) value += strength.value;
+    const rage = playerStatusEffects.find((s) => s.type === 'rage');
+    if (rage) value = Math.floor(value * 1.5);
     const weak = playerStatusEffects.find((s) => s.type === 'weak');
-    if (weak) value = Math.floor(value * 0.75);
+    if (weak) value = Math.max(0, value - weak.value);
     return Math.max(0, value);
   }
   if (effectType === 'block') {

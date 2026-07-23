@@ -172,6 +172,26 @@ body {
   flex-direction: column;
   flex-shrink: 0;
   padding: 0;
+  transition: width 0.25s var(--ease-out);
+  overflow: hidden;
+}
+
+.sidebar-collapsed {
+  width: 64px;
+}
+
+.sidebar-collapsed .nav-link {
+  justify-content: center;
+  padding: 10px 0;
+}
+
+.sidebar-collapsed .nav-link span {
+  display: none;
+}
+
+.sidebar-collapsed .px-5 {
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
 }
 
 .sidebar-header {
@@ -239,6 +259,28 @@ body {
   width: 18px;
   height: 18px;
   stroke-width: 1.5;
+  flex-shrink: 0;
+}
+
+.nav-link-collapsed {
+  position: relative;
+}
+
+.nav-link-collapsed:hover::after {
+  content: attr(title);
+  position: absolute;
+  left: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  margin-left: 8px;
+  padding: 4px 8px;
+  background: var(--color-ink);
+  color: var(--color-bg-elevated);
+  font-size: 12px;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+  z-index: 50;
+  pointer-events: none;
 }
 
 .sidebar-chapter-card {
