@@ -46,6 +46,60 @@ const EFFECT_LABELS: Record<string, string> = {
   lifesteal: '吸血',
 };
 
+const RELIC_EFFECT_LABELS: Record<string, string> = {
+  max_health_bonus: '最大生命',
+  energy_bonus: '精力',
+  card_draw_bonus: '每回合抽牌',
+  discount: '商店折扣',
+  double_damage: '双倍伤害几率',
+  heal_on_rest: '休息回血',
+  extra_card_reward: '战斗后额外卡牌',
+  card_type_bonus: '特定卡牌费用减免',
+  attribute_scaling: '属性成长',
+  lifespan_extend: '寿命延长',
+  retention_bonus: '保留卡牌',
+};
+
+const ATTRIBUTE_NAMES_RELIC: Record<string, string> = {
+  energy: '精力',
+  physique: '体魄',
+  health: '健康',
+  iq: '智商',
+  eq: '情商',
+  wealth: '财富',
+  network: '人脉',
+  fame: '名望',
+};
+
+const formatRelicEffect = (effect: import('../../types/simulation').RelicEffect): string => {
+  const label = RELIC_EFFECT_LABELS[effect.type] || effect.type;
+  switch (effect.type) {
+    case 'discount':
+      return `${label} +${(effect.value * 100).toFixed(0)}%`;
+    case 'double_damage':
+      return `${label} +${(effect.value * 100).toFixed(0)}%`;
+    case 'card_type_bonus':
+      return `${label} -${(effect.value * 100).toFixed(0)}%`;
+    case 'attribute_scaling':
+      return `${ATTRIBUTE_NAMES_RELIC[effect.attribute || 'iq'] || effect.attribute}${label} +${(effect.value * 100).toFixed(0)}%`;
+    case 'card_draw_bonus':
+      return `${label} +${effect.value}张`;
+    case 'extra_card_reward':
+      return `${label} +${effect.value}张`;
+    case 'heal_on_rest':
+      return `${label} +${effect.value}`;
+    case 'energy_bonus':
+    case 'max_health_bonus':
+      return `${label} +${effect.value}`;
+    case 'lifespan_extend':
+      return `${label} +${effect.value}年`;
+    case 'retention_bonus':
+      return `${label} +${effect.value}张`;
+    default:
+      return `${label} +${effect.value}`;
+  }
+};
+
 const formatEffectLabel = (type: string, display: number): string => {
   const label = EFFECT_LABELS[type] || type;
   if (type === 'draw') return `抽${display}张`;
@@ -1761,8 +1815,30 @@ const SimulationPage: React.FC = () => {
               <h3 className="font-semibold text-ink mb-3">🏺 遗物 ({relics.length})</h3>
               <div className="grid grid-cols-3 gap-1">
                 {relics.slice(0, 9).map((relic) => (
-                  <div key={relic.id} className="text-center p-1 bg-gray-50 rounded" title={relic.name}><span className="text-lg">{relic.icon}</span>
-                </div>))}
+                  <Tooltip
+                    key={relic.id}
+                    content={
+                      <div className="px-3 py-2 max-w-[220px]">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-lg">{relic.icon}</span>
+                          <span className="font-semibold text-amber-900">{relic.name}</span>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-200 text-amber-800">{RARITY_NAMES[relic.rarity] || relic.rarity}</span>
+                        </div>
+                        <div className="text-amber-700 text-[11px] leading-relaxed mb-1.5">{relic.description}</div>
+                        <div className="space-y-0.5">
+                          {relic.effects.map((effect, i) => (
+                            <div key={i} className="text-[11px] text-green-700">• {formatRelicEffect(effect)}</div>
+                          ))}
+                        </div>
+                      </div>
+                    }
+                    position="top"
+                  >
+                    <div className="text-center p-1 bg-gray-50 rounded cursor-default hover:bg-amber-50 transition-colors">
+                      <span className="text-lg">{relic.icon}</span>
+                    </div>
+                  </Tooltip>
+                ))}
               </div>
             </div>
           )}
