@@ -58,8 +58,8 @@ const Tooltip: React.FC<TooltipProps> = ({ content, children, position = 'top' }
       {children}
       {show && createPortal(
         <div
-          className="fixed px-3 py-2 rounded-lg bg-gray-800 text-white text-xs shadow-xl pointer-events-none"
-          style={{ left: coords.x, top: coords.y, minWidth: '180px', maxWidth: '240px', zIndex: 99999 }}
+          className="fixed rounded-lg bg-white/90 backdrop-blur-sm text-ink text-xs shadow-lg border border-border-subtle"
+          style={{ left: coords.x, top: coords.y, zIndex: 99999 }}
         >
           {content}
           <span className={`absolute w-0 h-0 border-4 ${arrowClass[position]}`} />

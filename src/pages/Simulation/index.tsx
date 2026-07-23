@@ -246,9 +246,9 @@ const AttributeTooltipContent: React.FC<{ attr: keyof PlayerAttributes }> = ({ a
   <div className="max-w-[220px]">
     <div className="flex items-center gap-2 mb-1.5">
       <span className="text-sm">{ATTRIBUTE_ICONS[attr]}</span>
-      <span className="font-semibold text-white text-sm">{ATTRIBUTE_NAMES[attr]}</span>
+      <span className="font-semibold text-ink text-sm">{ATTRIBUTE_NAMES[attr]}</span>
     </div>
-    <p className="text-[11px] leading-relaxed text-white/80 whitespace-normal">
+    <p className="text-[11px] leading-relaxed text-ink-muted whitespace-normal">
       {ATTRIBUTE_DESCRIPTIONS[attr]}
     </p>
   </div>
@@ -915,25 +915,31 @@ const CombatPhaseView: React.FC = () => {
                 </div>
                 <div className="max-h-48 overflow-y-auto space-y-1 pr-1">
                   {showDeckPanel === 'draw' && combat.player.drawPile.map((card) => (
-                    <div key={card.id} className="flex items-center gap-2 px-2 py-1 rounded bg-bg-subtle text-[10px]">
-                      <span className="text-sm">{card.icon}</span>
-                      <span className="font-medium text-ink flex-1 truncate">{card.name}</span>
-                      <span className="text-ink-faint">{card.cost}⚡</span>
-                    </div>
+                    <Tooltip key={card.id} content={<CardDetail card={card} width={130} />} position="right">
+                      <div className="flex items-center gap-2 px-2 py-1 rounded bg-bg-subtle text-[10px] cursor-pointer hover:bg-bg-elevated">
+                        <span className="text-sm">{card.icon}</span>
+                        <span className="font-medium text-ink flex-1 truncate">{card.name}</span>
+                        <span className="text-ink-faint">{card.cost}⚡</span>
+                      </div>
+                    </Tooltip>
                   ))}
                   {showDeckPanel === 'discard' && combat.player.discardPile.map((card) => (
-                    <div key={card.id} className="flex items-center gap-2 px-2 py-1 rounded bg-bg-subtle text-[10px]">
-                      <span className="text-sm">{card.icon}</span>
-                      <span className="font-medium text-ink flex-1 truncate">{card.name}</span>
-                      <span className="text-ink-faint">{card.cost}⚡</span>
-                    </div>
+                    <Tooltip key={card.id} content={<CardDetail card={card} width={130} />} position="right">
+                      <div className="flex items-center gap-2 px-2 py-1 rounded bg-bg-subtle text-[10px] cursor-pointer hover:bg-bg-elevated">
+                        <span className="text-sm">{card.icon}</span>
+                        <span className="font-medium text-ink flex-1 truncate">{card.name}</span>
+                        <span className="text-ink-faint">{card.cost}⚡</span>
+                      </div>
+                    </Tooltip>
                   ))}
                   {showDeckPanel === 'exhaust' && combat.player.exhaustPile.map((card) => (
-                    <div key={card.id} className="flex items-center gap-2 px-2 py-1 rounded bg-bg-subtle text-[10px]">
-                      <span className="text-sm">{card.icon}</span>
-                      <span className="font-medium text-ink flex-1 truncate">{card.name}</span>
-                      <span className="text-ink-faint">{card.cost}⚡</span>
-                    </div>
+                    <Tooltip key={card.id} content={<CardDetail card={card} width={130} />} position="right">
+                      <div className="flex items-center gap-2 px-2 py-1 rounded bg-bg-subtle text-[10px] cursor-pointer hover:bg-bg-elevated">
+                        <span className="text-sm">{card.icon}</span>
+                        <span className="font-medium text-ink flex-1 truncate">{card.name}</span>
+                        <span className="text-ink-faint">{card.cost}⚡</span>
+                      </div>
+                    </Tooltip>
                   ))}
                   {((showDeckPanel === 'draw' && combat.player.drawPile.length === 0) ||
                     (showDeckPanel === 'discard' && combat.player.discardPile.length === 0) ||
@@ -1201,6 +1207,7 @@ const SimulationPage: React.FC = () => {
   const [hasSave, setHasSave] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [gameLoaded, setGameLoaded] = useState(false);
+  const [showDeckModal, setShowDeckModal] = useState(false);
 
   useEffect(() => {
     const initGame = async () => {
@@ -1317,11 +1324,20 @@ const SimulationPage: React.FC = () => {
           {phase !== 'setup' && (
           <div className="bg-white rounded-xl border border-border-subtle p-4 mb-4">
             <h3 className="font-semibold text-ink mb-3">🃏 卡组 ({deck.length})</h3>
-            <div className="grid grid-cols-3 gap-1">
+            <div 
+              className="grid grid-cols-3 gap-1 cursor-pointer"
+              onClick={() => setShowDeckModal(true)}
+            >
               {deck.slice(0, 9).map((card) => (
-                <div key={card.id} className="text-center p-1 bg-gray-50 rounded" title={card.name}><span className="text-lg">{card.icon}</span></div>
+                <div key={card.id} className="text-center p-1 bg-gray-50 rounded hover:bg-gray-100 transition-colors" title={card.name}>
+                  <span className="text-lg">{card.icon}</span>
+                </div>
               ))}
             </div>
+            {deck.length > 9 && (
+              <p className="text-xs text-ink-muted text-center mt-2">还有 {deck.length - 9} 张...</p>
+            )}
+            <p className="text-[10px] text-ink-faint text-center mt-1">点击查看详情</p>
           </div>
           )}
           {relics.length > 0 && phase !== 'setup' && (
@@ -1344,6 +1360,31 @@ const SimulationPage: React.FC = () => {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* 卡组详情弹窗 */}
+      {showDeckModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowDeckModal(false)}>
+          <div className="bg-white rounded-2xl p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-ink">🃏 卡组详情 ({deck.length}张)</h3>
+              <button onClick={() => setShowDeckModal(false)} className="text-ink-muted hover:text-ink text-xl">&times;</button>
+            </div>
+            {deck.length === 0 ? (
+              <p className="text-ink-muted text-center py-8">卡组为空</p>
+            ) : (
+              <div className="flex flex-wrap gap-4 justify-center">
+                {deck.map((card) => (
+                  <CardDetail
+                    key={card.id}
+                    card={card}
+                    width={140}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
