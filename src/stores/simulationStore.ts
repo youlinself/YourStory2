@@ -526,6 +526,7 @@ const initialState: GameState = {
   damageEventCounter: 0,
   lastCombatEnemies: [],
   attributeCardsGranted: false,
+  cardRemovalCount: 0,
 };
 
 interface SimulationState extends GameState {
@@ -570,6 +571,7 @@ interface SimulationState extends GameState {
   toggleDiscardSelection: (cardId: string) => void;
   confirmDiscard: () => void;
   exileCard: (cardId: string) => void;
+  removeCardFromDeck: (cardId: string) => void;
 }
 
 const useSimulationStore = create<SimulationState>((set, get) => ({
@@ -1105,6 +1107,21 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
     }
   },
 
+  removeCardFromDeck: (cardId: string) => {
+    const s = get();
+    if (!s.shop || s.shop.cardRemovalUsed) return;
+    const card = s.deck.find((c) => c.id === cardId);
+    if (!card) return;
+    const removalCost = 50 + s.cardRemovalCount * 50;
+    if (s.gold < removalCost) return;
+    set({
+      deck: s.deck.filter((c) => c.id !== cardId),
+      gold: s.gold - removalCost,
+      cardRemovalCount: s.cardRemovalCount + 1,
+      shop: { ...s.shop, cardRemovalUsed: true },
+    });
+  },
+
   endCombat: (victory) => {
     const s = get();
     if (victory) {
@@ -1182,7 +1199,7 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
       const card: LifeCard = { id: generateId(), name: '战斗卡牌', type: 'attack', rarity: 'common', cost: 1, target: 'enemy', effects: [{ type: 'damage', value: 6 }], description: '造成6点伤害', icon: '⚔️', tags: ['攻击'] };
       items.push({ card, price: 25 });
     }
-    set({ shop: { items: items.map((it) => ({ ...it, price: Math.floor(it.price * (1 - discount)), isPurchased: false })), refreshCost: 25, era: s.currentEra }, phase: 'shop' });
+    set({ shop: { items: items.map((it) => ({ ...it, price: Math.floor(it.price * (1 - discount)), isPurchased: false })), refreshCost: 25, era: s.currentEra, cardRemovalUsed: false }, phase: 'shop' });
   },
 
   buyShopItem: (idx) => {

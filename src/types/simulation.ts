@@ -290,6 +290,7 @@ export interface ShopState {
   items: ShopItem[];
   refreshCost: number;
   era: number;
+  cardRemovalUsed: boolean;
 }
 
 export type GamePhase =
@@ -369,6 +370,7 @@ export interface GameState {
   damageEventCounter: number;
   lastCombatEnemies: Enemy[];
   attributeCardsGranted: boolean;
+  cardRemovalCount: number;
 }
 
 export interface WorldState {

@@ -1252,6 +1252,13 @@ const RewardPhase: React.FC = () => {
             </button>
           ))}
         </div>
+
+        <button
+          onClick={completeOption}
+          className="px-6 py-2.5 bg-gray-100 text-ink-muted rounded-lg font-medium hover:bg-gray-200 hover:text-ink transition-colors"
+        >
+          跳过奖励 →
+        </button>
       </div>
     );
   }
@@ -1316,6 +1323,15 @@ const RewardPhase: React.FC = () => {
       {!hasCards && !hasAttribute && !hasRelic && (
         <button onClick={completeOption} className="px-6 py-2.5 bg-brand text-white rounded-lg font-medium hover:bg-brand/90 transition-colors">继续</button>
       )}
+
+      {(hasCards || hasAttribute || hasRelic) && (
+        <button
+          onClick={completeOption}
+          className="px-6 py-2.5 bg-gray-100 text-ink-muted rounded-lg font-medium hover:bg-gray-200 hover:text-ink transition-colors"
+        >
+          跳过奖励 →
+        </button>
+      )}
     </div>
   );
 };
@@ -1326,9 +1342,16 @@ const RewardPhase: React.FC = () => {
 const ShopPhase: React.FC = () => {
   const shop = useSimulationStore((s) => s.shop);
   const gold = useSimulationStore((s) => s.gold);
+  const deck = useSimulationStore((s) => s.deck);
+  const cardRemovalCount = useSimulationStore((s) => s.cardRemovalCount);
   const buyShopItem = useSimulationStore((s) => s.buyShopItem);
+  const removeCardFromDeck = useSimulationStore((s) => s.removeCardFromDeck);
   const completeOption = useSimulationStore((s) => s.completeOption);
+  const [showRemoveModal, setShowRemoveModal] = useState(false);
   if (!shop) return null;
+
+  const removalCost = 50 + cardRemovalCount * 50;
+  const canRemoveCard = !shop.cardRemovalUsed && gold >= removalCost && deck.length > 0;
 
   return (
     <div className="p-4 max-w-2xl mx-auto">
@@ -1353,9 +1376,78 @@ const ShopPhase: React.FC = () => {
           </div>
         ))}
       </div>
+
+      {/* 卡牌删除服务 */}
+      <div className="mb-6 p-4 rounded-xl border border-border-subtle bg-bg-elevated">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <span className="text-xl">🗑️</span>
+            <h3 className="font-semibold text-ink">删除卡牌</h3>
+          </div>
+          <span className="text-sm font-bold text-brand">💰 {removalCost}</span>
+        </div>
+        <p className="text-xs text-ink-muted mb-3">从卡组中永久移除一张卡牌（每次商店限用1次）</p>
+        {shop.cardRemovalUsed ? (
+          <div className="text-sm text-ink-muted text-center py-2 bg-gray-50 rounded-lg">已使用</div>
+        ) : deck.length === 0 ? (
+          <div className="text-sm text-ink-muted text-center py-2 bg-gray-50 rounded-lg">卡组为空</div>
+        ) : (
+          <button
+            onClick={() => setShowRemoveModal(true)}
+            disabled={!canRemoveCard}
+            className={`w-full py-2.5 rounded-lg font-medium text-sm transition-all ${
+              canRemoveCard
+                ? 'bg-danger/10 text-danger border border-danger/30 hover:bg-danger/20'
+                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+            }`}
+          >
+            {canRemoveCard ? '选择要删除的卡牌' : gold < removalCost ? '金币不足' : '无法删除'}
+          </button>
+        )}
+      </div>
+
       <div className="text-center">
         <button onClick={completeOption} className="px-6 py-2.5 bg-brand text-white rounded-lg font-medium hover:bg-brand/90 transition-colors">离开商店</button>
       </div>
+
+      {/* 删除卡牌弹窗 */}
+      {showRemoveModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowRemoveModal(false)}>
+          <div className="bg-white rounded-2xl p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-ink">🗑️ 选择要删除的卡牌</h3>
+              <button onClick={() => setShowRemoveModal(false)} className="text-ink-muted hover:text-ink text-xl">&times;</button>
+            </div>
+            <p className="text-sm text-ink-muted mb-2">删除费用：<span className="font-semibold text-danger">💰 {removalCost}</span></p>
+            <p className="text-xs text-ink-muted mb-4">点击卡牌删除，删除后将从卡组中永久移除</p>
+            {deck.length === 0 ? (
+              <p className="text-ink-muted text-center py-8">卡组为空</p>
+            ) : (
+              <div className="flex flex-wrap gap-4 justify-center">
+                {deck.map((card) => (
+                  <div key={card.id} className="relative group">
+                    <div
+                      onClick={() => {
+                        removeCardFromDeck(card.id);
+                        setShowRemoveModal(false);
+                      }}
+                      className="cursor-pointer"
+                    >
+                      <CardDetail
+                        card={card}
+                        width={140}
+                      />
+                    </div>
+                    <div className="absolute inset-0 flex items-center justify-center bg-danger/10 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                      <span className="text-sm font-medium text-danger bg-white/90 px-3 py-1.5 rounded-lg shadow-sm">点击删除</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
