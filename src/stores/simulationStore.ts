@@ -395,6 +395,8 @@ interface SimulationState extends GameState {
   attemptBreakthrough: () => void;
   saveGame: () => Promise<void>;
   loadGame: () => Promise<void>;
+  deleteSave: () => Promise<void>;
+  hasSavedGame: () => Promise<boolean>;
   getSuccessRate: (option: EventOption) => number;
   getAvailableEvents: () => GameEvent[];
   checkHiddenTags: () => string[];
@@ -459,7 +461,7 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
     };
     if (mode === 'endless') state.cultivation = { ...initialCultivationState, maxLifespan: era.baseLifeExpectancy };
     set(state as GameState);
-    get().saveGame();
+    storageService.removeData(STORAGE_KEY);
   },
 
   allocateAttribute: (attr, value) => {
@@ -599,8 +601,8 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
     if (newPhase === 'year_view') get().generateMap();
   },
 
-  endGame: () => { set({ phase: 'ended' }); get().saveGame(); },
-  resetGame: () => { set({ ...initialState }); storageService.removeData(STORAGE_KEY); },
+  endGame: () => { set({ phase: 'ended' }); },
+  resetGame: () => { set({ ...initialState, phase: 'setup' }); storageService.removeData(STORAGE_KEY); },
 
   startCombat: (enemies) => {
     const s = get();
@@ -1016,7 +1018,15 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
     const s = get();
     try {
       await storageService.saveData(STORAGE_KEY, {
-        id: generateId(), gameState: { phase: s.phase, mode: s.mode, birthYear: s.birthYear, currentYear: s.currentYear, currentEra: s.currentEra, age: s.age, maxLifespan: s.maxLifespan, remainingLife: s.remainingLife, attributes: s.attributes, remainingAttributePoints: s.remainingAttributePoints, hiddenTags: s.hiddenTags, npcs: s.npcs, choiceHistory: s.choiceHistory, lifeRecords: s.lifeRecords, deck: s.deck, relics: s.relics, gold: s.gold, worldState: s.worldState, seed: s.seed, cultivation: s.cultivation }, updatedAt: new Date().toISOString(), isDead: false,
+        id: generateId(), gameState: {
+          phase: s.phase, mode: s.mode, birthYear: s.birthYear, currentYear: s.currentYear,
+          currentEra: s.currentEra, age: s.age, maxLifespan: s.maxLifespan, remainingLife: s.remainingLife,
+          attributes: s.attributes, baseAttributes: s.baseAttributes, remainingAttributePoints: s.remainingAttributePoints,
+          hiddenTags: s.hiddenTags, npcs: s.npcs, choiceHistory: s.choiceHistory, lifeRecords: s.lifeRecords,
+          deck: s.deck, relics: s.relics, gold: s.gold, combat: s.combat, currentMap: s.currentMap,
+          shop: s.shop, cultivation: s.cultivation, worldState: s.worldState, seed: s.seed,
+          damageEventCounter: s.damageEventCounter, lastCombatEnemies: s.lastCombatEnemies,
+        }, updatedAt: new Date().toISOString(), isDead: false,
       });
     } catch (e) { console.error('保存失败:', e); }
   },
@@ -1024,6 +1034,14 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
   loadGame: async () => {
     try { const d = await storageService.loadData<any>(STORAGE_KEY); if (d?.gameState && !d.isDead) set(d.gameState); }
     catch (e) { console.error('加载失败:', e); }
+  },
+
+  deleteSave: async () => {
+    try { await storageService.removeData(STORAGE_KEY); } catch (e) { console.error('删除存档失败:', e); }
+  },
+
+  hasSavedGame: async (): Promise<boolean> => {
+    try { const d = await storageService.loadData<any>(STORAGE_KEY); return !!(d?.gameState && !d.isDead); } catch { return false; }
   },
 
   getSuccessRate: (option) => {

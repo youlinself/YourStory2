@@ -1185,11 +1185,37 @@ const SimulationPage: React.FC = () => {
   const relics = useSimulationStore((s) => s.relics);
   const gold = useSimulationStore((s) => s.gold);
   const cultivation = useSimulationStore((s) => s.cultivation);
+  const { addToast } = useToast();
   const resetGame = useSimulationStore((s) => s.resetGame);
+  const loadGame = useSimulationStore((s) => s.loadGame);
+  const hasSavedGame = useSimulationStore((s) => s.hasSavedGame);
+  const deleteSave = useSimulationStore((s) => s.deleteSave);
+  const saveGame = useSimulationStore((s) => s.saveGame);
   const completeOption = useSimulationStore((s) => s.completeOption);
   const availableEvents = useSimulationStore(useShallow((s) => s.getAvailableEvents()));
+  const [hasSave, setHasSave] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [gameLoaded, setGameLoaded] = useState(false);
 
-  useEffect(() => { resetGame(); }, [resetGame]);
+  useEffect(() => {
+    const initGame = async () => {
+      const saved = await hasSavedGame();
+      setHasSave(saved);
+      setIsLoading(false);
+    };
+    initGame();
+  }, [hasSavedGame]);
+
+  useEffect(() => {
+    if (isLoading || gameLoaded) return;
+    if (!hasSave) resetGame();
+  }, [isLoading, hasSave, gameLoaded, resetGame]);
+
+  useEffect(() => {
+    if (phase === 'ended' && !isLoading) {
+      deleteSave();
+    }
+  }, [phase, isLoading, deleteSave]);
 
   // 防止卡死：当 phase 是 event 但没有可用事件时，自动跳过
   useEffect(() => {
@@ -1197,6 +1223,16 @@ const SimulationPage: React.FC = () => {
       completeOption();
     }
   }, [phase, availableEvents, completeOption]);
+
+  const handleContinueGame = async () => {
+    await loadGame();
+    setGameLoaded(true);
+  };
+
+  const handleSave = async () => {
+    await saveGame();
+    addToast({ type: 'success', message: '💾 游戏已保存，下次进入可继续' });
+  };
 
   const currentEvent = phase === 'event' && availableEvents.length > 0 ? availableEvents[0] : null;
 
@@ -1221,18 +1257,45 @@ const SimulationPage: React.FC = () => {
         )}
       </div>
 
-      {phase !== 'setup' && phase !== 'ended' && (
+      {phase !== 'ended' && (
         <div className="w-72 border-l border-border-subtle bg-gray-50 overflow-y-auto p-4 hidden lg:block">
-          <div className="bg-white rounded-xl border border-border-subtle p-4 mb-4">
-            <h3 className="font-semibold text-ink mb-3">📋 人生状态</h3>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between"><span className="text-ink-muted">出生年</span><span className="font-medium">{birthYear}</span></div>
-              <div className="flex justify-between"><span className="text-ink-muted">年龄</span><span className="font-medium">{age}岁</span></div>
-              <div className="flex justify-between"><span className="text-ink-muted">寿命上限</span><span className="font-medium">{Math.round(remainingLife)}年</span></div>
-              <div className="flex justify-between"><span className="text-ink-muted">金币</span><span className="font-medium">💰 {gold}</span></div>
-              {cultivation && <div className="flex justify-between"><span className="text-ink-muted">境界</span><span className="font-medium text-brand">{CULTIVATION_REALM_NAMES[cultivation.realm] || cultivation.realm}</span></div>}
+          {phase === 'setup' ? (
+            <div className="bg-white rounded-xl border border-border-subtle p-4 mb-4">
+              <h3 className="font-semibold text-ink mb-3">💾 存档</h3>
+              {hasSave ? (
+                <button
+                  onClick={handleContinueGame}
+                  className="w-full px-4 py-3 bg-gold text-white rounded-lg font-medium hover:bg-gold/90 shadow-md transition-all flex items-center justify-center gap-2"
+                >
+                  <span>💾</span>
+                  <span>继续上次游戏</span>
+                </button>
+              ) : (
+                <p className="text-sm text-ink-muted text-center">暂无存档</p>
+              )}
             </div>
-          </div>
+          ) : (
+            <>
+            <div className="bg-white rounded-xl border border-border-subtle p-4 mb-4">
+              <h3 className="font-semibold text-ink mb-3">📋 人生状态</h3>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between"><span className="text-ink-muted">出生年</span><span className="font-medium">{birthYear}</span></div>
+                <div className="flex justify-between"><span className="text-ink-muted">年龄</span><span className="font-medium">{age}岁</span></div>
+                <div className="flex justify-between"><span className="text-ink-muted">寿命上限</span><span className="font-medium">{Math.round(remainingLife)}年</span></div>
+                <div className="flex justify-between"><span className="text-ink-muted">金币</span><span className="font-medium">💰 {gold}</span></div>
+                {cultivation && <div className="flex justify-between"><span className="text-ink-muted">境界</span><span className="font-medium text-brand">{CULTIVATION_REALM_NAMES[cultivation.realm] || cultivation.realm}</span></div>}
+              </div>
+            </div>
+            <button
+              onClick={handleSave}
+              className="w-full mb-4 px-4 py-2.5 bg-bg-elevated border border-border-subtle text-ink-muted font-medium text-sm rounded-xl hover:border-brand hover:text-brand transition-all flex items-center justify-center gap-2"
+            >
+              <span>💾</span>
+              <span>保存游戏</span>
+            </button>
+            </>
+          )}
+          {phase !== 'setup' && (
           <div className="bg-white rounded-xl border border-border-subtle p-4 mb-4">
             <h3 className="font-semibold text-ink mb-3">📊 属性</h3>
             <div className="space-y-2.5">
@@ -1245,6 +1308,8 @@ const SimulationPage: React.FC = () => {
               ))}
             </div>
           </div>
+          )}
+          {phase !== 'setup' && (
           <div className="bg-white rounded-xl border border-border-subtle p-4 mb-4">
             <h3 className="font-semibold text-ink mb-3">🃏 卡组 ({deck.length})</h3>
             <div className="grid grid-cols-3 gap-1">
@@ -1253,7 +1318,8 @@ const SimulationPage: React.FC = () => {
               ))}
             </div>
           </div>
-          {relics.length > 0 && (
+          )}
+          {relics.length > 0 && phase !== 'setup' && (
             <div className="bg-white rounded-xl border border-border-subtle p-4 mb-4">
               <h3 className="font-semibold text-ink mb-3">🏺 遗物 ({relics.length})</h3>
               <div className="grid grid-cols-3 gap-1">
@@ -1263,7 +1329,7 @@ const SimulationPage: React.FC = () => {
               </div>
             </div>
           )}
-          {hiddenTags.length > 0 && (
+          {hiddenTags.length > 0 && phase !== 'setup' && (
             <div className="bg-white rounded-xl border border-border-subtle p-4">
               <h3 className="font-semibold text-ink mb-3">🏷️ 标签</h3>
               <div className="flex flex-wrap gap-1">
