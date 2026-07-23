@@ -5,6 +5,13 @@ import {
   ERAS, STARTER_DECK, SCRIPT_1950_EVENTS, HIDDEN_TAGS,
   COMMON_ATTACK_CARDS, COMMON_SKILL_CARDS, RARE_CARDS, LEGENDARY_CARDS,
 } from '../data/simulationData';
+import {
+  getAgeStage,
+  getNormalMonsterVariant,
+  getEliteMonsterVariant,
+  createAnnualBoss,
+  createMonsterFromVariant,
+} from '../data/monsterMapping';
 import type {
   GameState, BirthYear, PlayerAttributes, GameEvent, EventOption,
   ChoiceRecord, LifeRecord, WorldState, GameMode, GamePhase,
@@ -70,7 +77,7 @@ function applyCardEffect(effect: { type: string; value: number; duration?: numbe
   return c;
 }
 
-function getEnemyPool(type: OptionType, era: number, yearInEra: number, rand: () => number): Enemy[] {
+function getEnemyPool(type: OptionType, era: number, yearInEra: number, rand: () => number, age?: number, currentYear?: number): Enemy[] {
   const totalYears = era * 10 + yearInEra;
   const multiplier = 1 + Math.floor(totalYears / 5) * 0.3;
   const mechanics: EnemyMechanic[] = [];
@@ -79,23 +86,176 @@ function getEnemyPool(type: OptionType, era: number, yearInEra: number, rand: ()
   if (totalYears >= 30) mechanics.push('regen');
   if (totalYears >= 40) mechanics.push('rage');
 
+  // 获取年龄段信息用于怪物名称映射
+  const resolvedAge = age ?? totalYears;
+  const resolvedYear = currentYear ?? (1950 + totalYears);
+  const ageStage = getAgeStage(resolvedAge);
+  void ageStage; // 保留供调试和日志使用
+
   const numEnemies = type === 'elite' || type === 'boss' ? 1 : rand() < 0.3 ? 2 : 1;
   const enemies: Enemy[] = [];
 
+  // 使用年龄映射获取怪物变体
+  const slimeVariant = getNormalMonsterVariant('slime', resolvedAge);
+  const ghostVariant = getNormalMonsterVariant('ghost', resolvedAge);
+  const golemVariant = getNormalMonsterVariant('golem', resolvedAge);
+  const wraithVariant = getNormalMonsterVariant('wraith', resolvedAge);
+  const academicVariant = getEliteMonsterVariant('academic', resolvedAge);
+  const burnoutVariant = getEliteMonsterVariant('burnout', resolvedAge);
+
   const enemyTemplates: Record<string, () => Enemy> = {
-    slime: () => ({ id: '', name: '拖延史莱姆', maxHealth: Math.floor(20 * multiplier), currentHealth: Math.floor(20 * multiplier), block: 0, intents: [{ type: 'attack', damage: Math.floor(4 * multiplier) }, { type: 'defend', block: 3 }, { type: 'attack', damage: Math.floor(6 * multiplier) }], currentIntentIndex: 0, statusEffects: [], icon: '🟢', isBoss: false, cardRewards: pickRandom(COMMON_ATTACK_CARDS, 1, rand).concat(pickRandom(COMMON_SKILL_CARDS, 1, rand)), goldReward: [5, 15], description: '拖延是时间最大的小偷', mechanics: [...mechanics] }),
-    ghost: () => ({ id: '', name: '焦虑幽灵', maxHealth: Math.floor(25 * multiplier), currentHealth: Math.floor(25 * multiplier), block: 0, intents: [{ type: 'attack', damage: Math.floor(3 * multiplier), hits: 2 }, { type: 'buff', effect: 'strength', value: 1 }, { type: 'attack', damage: Math.floor(8 * multiplier) }], currentIntentIndex: 0, statusEffects: [], icon: '👻', isBoss: false, cardRewards: pickRandom(COMMON_SKILL_CARDS, 2, rand).concat(pickRandom(RARE_CARDS, 1, rand)), goldReward: [8, 20], description: '焦虑让你无法集中注意力', mechanics: [...mechanics] }),
-    golem: () => ({ id: '', name: '责任傀儡', maxHealth: Math.floor(35 * multiplier), currentHealth: Math.floor(35 * multiplier), block: 5, intents: [{ type: 'defend', block: 8 }, { type: 'attack', damage: Math.floor(10 * multiplier) }, { type: 'attack', damage: Math.floor(6 * multiplier) }], currentIntentIndex: 0, statusEffects: [{ type: 'block', value: 5, duration: 99 }], icon: '🗿', isBoss: false, cardRewards: pickRandom(COMMON_ATTACK_CARDS, 1, rand).concat(pickRandom(COMMON_SKILL_CARDS, 1, rand)).concat(pickRandom(RARE_CARDS, 1, rand)), goldReward: [10, 25], description: '家庭、工作、社会责任...', mechanics: [...mechanics] }),
-    wraith: () => ({ id: '', name: '自我怀疑', maxHealth: Math.floor(18 * multiplier), currentHealth: Math.floor(18 * multiplier), block: 0, intents: [{ type: 'debuff', effect: 'weak', value: 2 }, { type: 'attack', damage: Math.floor(5 * multiplier) }, { type: 'debuff', effect: 'vulnerable', value: 2 }], currentIntentIndex: 0, statusEffects: [], icon: '👤', isBoss: false, cardRewards: pickRandom(COMMON_SKILL_CARDS, 2, rand).concat(pickRandom(RARE_CARDS, 1, rand)), goldReward: [5, 15], description: '内心的声音在质疑你', mechanics: [...mechanics] }),
-    midlife: () => ({ id: '', name: '中年危机', maxHealth: Math.floor(80 * multiplier), currentHealth: Math.floor(80 * multiplier), block: 0, intents: [{ type: 'attack', damage: Math.floor(15 * multiplier) }, { type: 'buff', effect: 'strength', value: 2 }, { type: 'attack', damage: Math.floor(10 * multiplier), hits: 2 }], currentIntentIndex: 0, statusEffects: [], icon: '👔', isBoss: false, cardRewards: pickRandom(RARE_CARDS, 2, rand).concat(pickRandom(LEGENDARY_CARDS, 1, rand)), goldReward: [25, 50], description: '上有老下有小', mechanics: [...mechanics] }),
-    burnout: () => ({ id: '', name: '过劳恶魔', maxHealth: Math.floor(65 * multiplier), currentHealth: Math.floor(65 * multiplier), block: 0, intents: [{ type: 'attack', damage: Math.floor(12 * multiplier) }, { type: 'debuff', effect: 'weak', value: 3 }, { type: 'attack', damage: Math.floor(8 * multiplier), hits: 2 }], currentIntentIndex: 0, statusEffects: [{ type: 'strength', value: 1, duration: 99 }], icon: '😈', isBoss: false, cardRewards: pickRandom(RARE_CARDS, 2, rand).concat(pickRandom(LEGENDARY_CARDS, 1, rand)), goldReward: [30, 60], description: '996的阴影笼罩着你', mechanics: [...mechanics] }),
-    boss: () => ({ id: '', name: '时代终结者', maxHealth: Math.floor(150 * multiplier), currentHealth: Math.floor(150 * multiplier), block: 10, intents: [{ type: 'attack', damage: Math.floor(20 * multiplier) }, { type: 'special', name: '审判', description: '造成巨额固定伤害' }, { type: 'debuff', effect: 'weak', value: 3 }], currentIntentIndex: 0, statusEffects: [{ type: 'block', value: 10, duration: 99 }], icon: '💀', isBoss: true, cardRewards: pickRandom(LEGENDARY_CARDS, 2, rand).concat(pickRandom(RARE_CARDS, 1, rand)), goldReward: [80, 150], description: '回顾你的一生', mechanics: [...mechanics, 'boss_aura'] as EnemyMechanic[] }),
+    slime: () => {
+      const partial = createMonsterFromVariant(slimeVariant, 'slime', resolvedAge, multiplier);
+      return {
+        id: '',
+        name: slimeVariant.name,
+        icon: slimeVariant.icon,
+        description: slimeVariant.description,
+        maxHealth: partial.maxHealth || Math.floor(20 * multiplier),
+        currentHealth: partial.currentHealth || Math.floor(20 * multiplier),
+        block: partial.block || 0,
+        intents: partial.intents || [{ type: 'attack', damage: Math.floor(4 * multiplier) }, { type: 'defend', block: 3 }, { type: 'attack', damage: Math.floor(6 * multiplier) }],
+        currentIntentIndex: 0,
+        statusEffects: [],
+        isBoss: false,
+        cardRewards: pickRandom(COMMON_ATTACK_CARDS, 1, rand).concat(pickRandom(COMMON_SKILL_CARDS, 1, rand)),
+        goldReward: [5, 15],
+        mechanics: [...mechanics],
+      };
+    },
+    ghost: () => {
+      const partial = createMonsterFromVariant(ghostVariant, 'ghost', resolvedAge, multiplier);
+      return {
+        id: '',
+        name: ghostVariant.name,
+        icon: ghostVariant.icon,
+        description: ghostVariant.description,
+        maxHealth: partial.maxHealth || Math.floor(25 * multiplier),
+        currentHealth: partial.currentHealth || Math.floor(25 * multiplier),
+        block: partial.block || 0,
+        intents: partial.intents || [{ type: 'attack', damage: Math.floor(3 * multiplier), hits: 2 }, { type: 'buff', effect: 'strength', value: 1 }, { type: 'attack', damage: Math.floor(8 * multiplier) }],
+        currentIntentIndex: 0,
+        statusEffects: [],
+        isBoss: false,
+        cardRewards: pickRandom(COMMON_SKILL_CARDS, 2, rand).concat(pickRandom(RARE_CARDS, 1, rand)),
+        goldReward: [8, 20],
+        mechanics: [...mechanics],
+      };
+    },
+    golem: () => {
+      const partial = createMonsterFromVariant(golemVariant, 'golem', resolvedAge, multiplier);
+      return {
+        id: '',
+        name: golemVariant.name,
+        icon: golemVariant.icon,
+        description: golemVariant.description,
+        maxHealth: partial.maxHealth || Math.floor(35 * multiplier),
+        currentHealth: partial.currentHealth || Math.floor(35 * multiplier),
+        block: partial.block || 5,
+        intents: partial.intents || [{ type: 'defend', block: 8 }, { type: 'attack', damage: Math.floor(10 * multiplier) }, { type: 'attack', damage: Math.floor(6 * multiplier) }],
+        currentIntentIndex: 0,
+        statusEffects: [{ type: 'block', value: 5, duration: 99 }],
+        isBoss: false,
+        cardRewards: pickRandom(COMMON_ATTACK_CARDS, 1, rand).concat(pickRandom(COMMON_SKILL_CARDS, 1, rand)).concat(pickRandom(RARE_CARDS, 1, rand)),
+        goldReward: [10, 25],
+        mechanics: [...mechanics],
+      };
+    },
+    wraith: () => {
+      const partial = createMonsterFromVariant(wraithVariant, 'wraith', resolvedAge, multiplier);
+      return {
+        id: '',
+        name: wraithVariant.name,
+        icon: wraithVariant.icon,
+        description: wraithVariant.description,
+        maxHealth: partial.maxHealth || Math.floor(18 * multiplier),
+        currentHealth: partial.currentHealth || Math.floor(18 * multiplier),
+        block: partial.block || 0,
+        intents: partial.intents || [{ type: 'debuff', effect: 'weak', value: 2 }, { type: 'attack', damage: Math.floor(5 * multiplier) }, { type: 'debuff', effect: 'vulnerable', value: 2 }],
+        currentIntentIndex: 0,
+        statusEffects: [],
+        isBoss: false,
+        cardRewards: pickRandom(COMMON_SKILL_CARDS, 2, rand).concat(pickRandom(RARE_CARDS, 1, rand)),
+        goldReward: [5, 15],
+        mechanics: [...mechanics],
+      };
+    },
+    academic: () => {
+      const ageMultiplier = 1 + (resolvedAge < 20 ? 0.8 : resolvedAge < 40 ? 1.0 : 1.2);
+      return {
+        id: '',
+        name: academicVariant.name,
+        icon: academicVariant.icon,
+        description: academicVariant.description,
+        maxHealth: Math.floor(80 * multiplier * ageMultiplier),
+        currentHealth: Math.floor(80 * multiplier * ageMultiplier),
+        block: 0,
+        intents: [
+          { type: 'attack', damage: Math.floor(15 * multiplier) },
+          { type: 'buff', effect: 'strength', value: 2 },
+          { type: 'attack', damage: Math.floor(10 * multiplier), hits: 2 },
+        ],
+        currentIntentIndex: 0,
+        statusEffects: [],
+        isBoss: false,
+        cardRewards: pickRandom(RARE_CARDS, 2, rand).concat(pickRandom(LEGENDARY_CARDS, 1, rand)),
+        goldReward: [25, 50],
+        mechanics: [...mechanics],
+      };
+    },
+    burnout: () => {
+      const ageMultiplier = 1 + (resolvedAge < 20 ? 0.8 : resolvedAge < 40 ? 1.0 : 1.2);
+      return {
+        id: '',
+        name: burnoutVariant.name,
+        icon: burnoutVariant.icon,
+        description: burnoutVariant.description,
+        maxHealth: Math.floor(65 * multiplier * ageMultiplier),
+        currentHealth: Math.floor(65 * multiplier * ageMultiplier),
+        block: 0,
+        intents: [
+          { type: 'attack', damage: Math.floor(12 * multiplier) },
+          { type: 'debuff', effect: 'weak', value: 3 },
+          { type: 'attack', damage: Math.floor(8 * multiplier), hits: 2 },
+        ],
+        currentIntentIndex: 0,
+        statusEffects: [{ type: 'strength', value: 1, duration: 99 }],
+        isBoss: false,
+        cardRewards: pickRandom(RARE_CARDS, 2, rand).concat(pickRandom(LEGENDARY_CARDS, 1, rand)),
+        goldReward: [30, 60],
+        mechanics: [...mechanics],
+      };
+    },
+    boss: () => {
+      // 使用年度Boss映射 - 根据年龄和年份生成不同的Boss
+      const bossPartial = createAnnualBoss(resolvedAge, resolvedYear, multiplier);
+      return {
+        id: '',
+        name: bossPartial.name || '时代终结者',
+        icon: bossPartial.icon || '💀',
+        description: bossPartial.description || '回顾你的一生',
+        maxHealth: bossPartial.maxHealth || Math.floor(150 * multiplier),
+        currentHealth: bossPartial.currentHealth || Math.floor(150 * multiplier),
+        block: bossPartial.block || 10,
+        intents: bossPartial.intents || [
+          { type: 'attack', damage: Math.floor(20 * multiplier) },
+          { type: 'special', name: '审判', description: '造成巨额固定伤害' },
+          { type: 'debuff', effect: 'weak', value: 3 },
+        ],
+        currentIntentIndex: 0,
+        statusEffects: [{ type: 'block', value: 10, duration: 99 }],
+        isBoss: true,
+        cardRewards: pickRandom(LEGENDARY_CARDS, 2, rand).concat(pickRandom(RARE_CARDS, 1, rand)),
+        goldReward: [80, 150],
+        mechanics: [...(bossPartial.mechanics || mechanics), 'boss_aura'] as EnemyMechanic[],
+      };
+    },
   };
 
   if (type === 'boss') {
     enemies.push(enemyTemplates.boss());
   } else if (type === 'elite') {
-    enemies.push(rand() < 0.5 ? enemyTemplates.midlife() : enemyTemplates.burnout());
+    enemies.push(rand() < 0.5 ? enemyTemplates.academic() : enemyTemplates.burnout());
   } else {
     const pool = [enemyTemplates.slime, enemyTemplates.ghost, enemyTemplates.golem, enemyTemplates.wraith];
     for (let i = 0; i < numEnemies; i++) {
@@ -319,7 +479,7 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
     switch (opt.type) {
       case 'combat': case 'elite': case 'boss': {
         const rand = seededRandom(s.seed + s.currentEra * 100 + s.currentMap.currentYearIndex * 10 + Date.now() % 100);
-        const enemies = getEnemyPool(opt.type, s.currentEra, year.eraIndex, rand).map((e) => ({ ...e, id: generateId(), currentHealth: e.maxHealth }));
+        const enemies = getEnemyPool(opt.type, s.currentEra, year.eraIndex, rand, s.age, s.currentYear).map((e) => ({ ...e, id: generateId(), currentHealth: e.maxHealth }));
         if (enemies.length > 0) get().startCombat(enemies);
         break;
       }
