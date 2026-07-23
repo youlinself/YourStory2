@@ -1195,6 +1195,36 @@ export const CULTIVATION_RELICS: LifeRelic[] = [
 ];
 
 // ==========================================
+// 奇遇奖励池
+// ==========================================
+export const WONDER_REWARD_POOL = {
+  cards: [
+    ...COMMON_ATTACK_CARDS,
+    ...COMMON_SKILL_CARDS,
+    ...RARE_CARDS.slice(0, 3),
+  ],
+  attributes: [
+    { energy: 3 },
+    { physique: 3 },
+    { health: 3 },
+    { iq: 3 },
+    { eq: 3 },
+    { wealth: 5 },
+    { network: 3 },
+    { fame: 2 },
+    { energy: 5, physique: 2 },
+    { iq: 3, eq: 3 },
+    { wealth: 8 },
+    { network: 5 },
+  ],
+  gold: [10, 15, 20, 25, 30],
+  relics: [
+    ...COMMON_RELICS,
+    ...RARE_RELICS.slice(0, 3),
+  ],
+};
+
+// ==========================================
 // 敌人数据库 - 人生怪物化
 // ==========================================
 

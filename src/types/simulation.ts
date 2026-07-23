@@ -351,6 +351,7 @@ export interface GameState {
   worldState: WorldState;
   seed: number;
   damageEventCounter: number;
+  lastCombatEnemies: Enemy[];
 }
 
 export interface WorldState {

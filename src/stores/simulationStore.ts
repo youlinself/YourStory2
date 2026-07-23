@@ -4,6 +4,7 @@ import { generateId } from '../utils';
 import {
   ERAS, STARTER_DECK, SCRIPT_1950_EVENTS, HIDDEN_TAGS,
   COMMON_ATTACK_CARDS, COMMON_SKILL_CARDS, RARE_CARDS, LEGENDARY_CARDS,
+  WONDER_REWARD_POOL,
 } from '../data/simulationData';
 import {
   getAgeStage,
@@ -27,7 +28,25 @@ const MAX_HAND_SIZE = 7;
 const BASE_DRAW_COUNT = 5;
 const BASE_ENERGY = 3;
 const YEARS_PER_ERA = 10;
-const OPTION_TYPES: OptionType[] = ['combat', 'elite', 'event', 'wonder', 'rest', 'shop'];
+const OPTION_WEIGHTS: Record<OptionType, number> = {
+  combat: 41,
+  elite: 20,
+  event: 15,
+  wonder: 8,
+  rest: 7,
+  shop: 9,
+  boss: 0,
+};
+
+function pickWeightedType(rand: () => number): OptionType {
+  const totalWeight = Object.values(OPTION_WEIGHTS).reduce((a, b) => a + b, 0);
+  let r = rand() * totalWeight;
+  for (const [type, weight] of Object.entries(OPTION_WEIGHTS)) {
+    r -= weight;
+    if (r <= 0) return type as OptionType;
+  }
+  return 'combat';
+}
 
 export { MAX_HAND_SIZE, BASE_DRAW_COUNT };
 
@@ -53,7 +72,7 @@ function pickRandom<T>(arr: T[], count: number, rand = Math.random): T[] { retur
 function deepClone<T>(o: T): T { return JSON.parse(JSON.stringify(o)); }
 
 function applyCardEffect(effect: { type: string; value: number; duration?: number }, combat: CombatState, targetIdx: number): CombatState {
-  const c = { ...combat, player: { ...combat.player }, enemies: combat.enemies.map((e) => ({ ...e, statusEffects: [...e.statusEffects] })) };
+  const c = { ...combat, player: { ...combat.player, statusEffects: [...combat.player.statusEffects] }, enemies: combat.enemies.map((e) => ({ ...e, statusEffects: [...e.statusEffects] })) };
   const t = c.enemies[targetIdx];
   switch (effect.type) {
     case 'damage': if (t) { const d = Math.max(0, effect.value - t.block); t.block = Math.max(0, t.block - effect.value); t.currentHealth -= d; } break;
@@ -321,11 +340,32 @@ export function getDamageEvents(): DamageEvent[] {
 }
 
 const initialState: GameState = {
-  phase: 'setup', mode: 'normal', birthYear: null, currentYear: 1950, currentEra: 0, age: 0,
-  maxLifespan: 70, remainingLife: 70, attributes: { ...initialAttributes }, baseAttributes: { ...initialAttributes }, remainingAttributePoints: 15,
-  hiddenTags: [], npcs: [], choiceHistory: [], lifeRecords: [], deck: [], relics: [], gold: 30,
-  combat: { ...initialCombatState }, currentMap: null, shop: null, cultivation: null,
-  worldState: { ...initialWorldState }, seed: Date.now(), damageEventCounter: 0,
+  phase: 'setup',
+  mode: 'normal',
+  birthYear: null,
+  currentYear: 1950,
+  currentEra: 0,
+  age: 0,
+  maxLifespan: 70,
+  remainingLife: 70,
+  attributes: { ...initialAttributes },
+  baseAttributes: { ...initialAttributes },
+  remainingAttributePoints: 15,
+  hiddenTags: [],
+  npcs: [],
+  choiceHistory: [],
+  lifeRecords: [],
+  deck: [],
+  relics: [],
+  gold: 30,
+  combat: { ...initialCombatState },
+  currentMap: null,
+  shop: null,
+  cultivation: null,
+  worldState: { ...initialWorldState },
+  seed: Date.now(),
+  damageEventCounter: 0,
+  lastCombatEnemies: [],
 };
 
 interface SimulationState extends GameState {
@@ -447,7 +487,7 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
       } else {
         options = [];
         for (let j = 0; j < 3; j++) {
-          const type = OPTION_TYPES[Math.floor(rand() * OPTION_TYPES.length)];
+          const type = pickWeightedType(rand);
           const opt: YearOption = { id: generateId(), type };
           options.push(opt);
         }
@@ -495,7 +535,37 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
         }
         break;
       }
-      case 'wonder': set({ phase: 'reward' }); break;
+      case 'wonder': {
+        const s = get();
+        if (s.lastCombatEnemies.length === 0) {
+          set({ combat: { ...s.combat, rewards: { cards: [], attribute: undefined, relic: undefined } }, phase: 'reward' });
+          break;
+        }
+        const allCardRewards: LifeCard[] = [];
+        const allRelicRewards: LifeRelic[] = [];
+        for (const enemy of s.lastCombatEnemies) {
+          for (const crd of enemy.cardRewards) {
+            allCardRewards.push({ ...crd, id: generateId() });
+          }
+          if (enemy.relicReward) {
+            allRelicRewards.push({ ...enemy.relicReward, id: generateId() });
+          }
+        }
+        const shuffledCards = shuffle(allCardRewards);
+        const shuffledRelics = shuffle(allRelicRewards);
+        const pickedCards = shuffledCards.slice(0, Math.min(3, shuffledCards.length));
+        const pickedRelic = shuffledRelics.length > 0 ? shuffledRelics[0] : undefined;
+        const wonderAttr = WONDER_REWARD_POOL.attributes[Math.floor(Math.random() * WONDER_REWARD_POOL.attributes.length)];
+        const attrReward = Math.random() < 0.5 ? wonderAttr : undefined;
+        set({
+          combat: {
+            ...s.combat,
+            rewards: { cards: pickedCards, attribute: attrReward, relic: pickedRelic },
+          },
+          phase: 'reward',
+        });
+        break;
+      }
       case 'shop': get().generateShop(); break;
       case 'rest': set({ phase: 'rest' }); break;
     }
@@ -556,6 +626,7 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
         currentEnemyIndex: 0, rewards: { cards: [], attribute: undefined }, availableBonuses: combatBonuses, log: [], selectedForDiscard: [],
       },
       phase: 'combat',
+      lastCombatEnemies: enemies,
     });
   },
 
@@ -569,7 +640,7 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
     const bonuses = getActiveBonuses(s.attributes);
     const damageBoost = 1 + bonuses.filter((b) => b.effect === 'damage_boost').reduce((sum, b) => sum + b.value, 0);
 
-    let c = { ...s.combat, player: { ...s.combat.player, hand: [...s.combat.player.hand] } };
+    let c = { ...s.combat, player: { ...s.combat.player, hand: [...s.combat.player.hand], statusEffects: [...s.combat.player.statusEffects] } };
     c.player.hand.splice(idx, 1);
     c.player.energy -= card.cost;
 
@@ -605,7 +676,7 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
 
     const blockGained = c.player.block - beforeBlock;
     if (blockGained > 0) {
-      triggerDamageEvent(blockGained, 'player', true);
+      triggerDamageEvent(blockGained, 'player_block_gained', true);
     }
     set({ damageEventCounter: get().damageEventCounter + 1 });
 
