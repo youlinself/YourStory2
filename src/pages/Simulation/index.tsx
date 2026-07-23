@@ -1457,11 +1457,80 @@ const ShopPhase: React.FC = () => {
 // ==========================================
 const RestPhase: React.FC = () => {
   const rest = useSimulationStore((s) => s.rest);
+  const combat = useSimulationStore((s) => s.combat);
+  const age = useSimulationStore((s) => s.age);
+  const remainingLife = useSimulationStore((s) => s.remainingLife);
+  const gold = useSimulationStore((s) => s.gold);
+  const attributes = useSimulationStore((s) => s.attributes);
+
+  const hpPercent = (combat.player.currentHealth / combat.player.maxHealth) * 100;
+
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] px-6">
       <span className="text-5xl mb-4">🛏️</span>
       <h2 className="text-xl font-bold text-ink mb-2">休息一下</h2>
-      <p className="text-ink-muted text-sm mb-6 text-center max-w-md">休息可以恢复30%的生命值，但会消耗1年寿命</p>
+      <p className="text-ink-muted text-sm mb-6 text-center max-w-md">休息可以恢复30%的生命值</p>
+
+      {/* 玩家状态面板 */}
+      <div className="w-full max-w-sm bg-white rounded-xl border border-border-subtle p-5 mb-6 shadow-sm">
+        <h3 className="text-sm font-semibold text-ink mb-4 flex items-center gap-2">
+          <span>📋</span>
+          <span>当前状态</span>
+        </h3>
+
+        {/* 生命值 */}
+        <div className="mb-4">
+          <div className="flex items-center justify-between mb-1.5">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs">❤️</span>
+              <span className="text-xs text-ink-muted">生命值</span>
+            </div>
+            <span className="text-xs font-mono font-semibold text-success">
+              {combat.player.currentHealth}/{combat.player.maxHealth}
+            </span>
+          </div>
+          <div className="h-2.5 bg-bg-subtle rounded-full overflow-hidden">
+            <div
+              className="h-full rounded-full transition-all duration-500"
+              style={{
+                width: `${hpPercent}%`,
+                background: 'linear-gradient(to right, #16a34a, #4ade80)',
+              }}
+            />
+          </div>
+          <p className="text-[10px] text-ink-faint mt-1">休息后恢复至 {Math.min(combat.player.maxHealth, combat.player.currentHealth + Math.floor(combat.player.maxHealth * 0.3))}</p>
+        </div>
+
+        {/* 基本信息 */}
+        <div className="grid grid-cols-3 gap-3 mb-4">
+          <div className="text-center p-2 rounded-lg bg-bg-subtle border border-border-subtle">
+            <div className="text-[10px] text-ink-muted mb-0.5">年龄</div>
+            <div className="text-sm font-bold text-ink">{age}岁</div>
+          </div>
+          <div className="text-center p-2 rounded-lg bg-bg-subtle border border-border-subtle">
+            <div className="text-[10px] text-ink-muted mb-0.5">寿命</div>
+            <div className="text-sm font-bold text-danger">{Math.round(remainingLife)}年</div>
+          </div>
+          <div className="text-center p-2 rounded-lg bg-bg-subtle border border-border-subtle">
+            <div className="text-[10px] text-ink-muted mb-0.5">金币</div>
+            <div className="text-sm font-bold text-gold">💰 {gold}</div>
+          </div>
+        </div>
+
+        {/* 属性概览 */}
+        <div className="border-t border-border-subtle pt-3">
+          <div className="text-xs text-ink-muted mb-2">属性概览</div>
+          <div className="grid grid-cols-4 gap-2">
+            {(Object.keys(attributes) as (keyof PlayerAttributes)[]).map((attr) => (
+              <div key={attr} className="text-center" title={`${ATTRIBUTE_NAMES[attr]}: ${attributes[attr]}`}>
+                <span className="text-base">{ATTRIBUTE_ICONS[attr]}</span>
+                <div className="text-[10px] font-mono text-ink">{attributes[attr]}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
       <button onClick={rest} className="px-6 py-2.5 bg-brand text-white rounded-lg font-medium hover:bg-brand/90 transition-colors">休息恢复</button>
     </div>
   );
