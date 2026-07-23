@@ -1432,6 +1432,48 @@ const SimulationPage: React.FC = () => {
     }
   }, [phase, availableEvents, completeOption]);
 
+  // 禁用复制：右键菜单 + 键盘快捷键
+  useEffect(() => {
+    const handleContextMenu = (e: MouseEvent) => {
+      e.preventDefault();
+      return false;
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // 拦截 Ctrl+C/X/A, Cmd+C/X/A, Ctrl+Insert, Shift+Insert
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'x' || e.key === 'a' || e.key === 'Insert')) {
+        e.preventDefault();
+        return false;
+      }
+      if (e.shiftKey && e.key === 'Insert') {
+        e.preventDefault();
+        return false;
+      }
+    };
+
+    const handleCopy = (e: ClipboardEvent) => {
+      e.preventDefault();
+      return false;
+    };
+
+    const handleSelectStart = (e: Event) => {
+      e.preventDefault();
+      return false;
+    };
+
+    document.addEventListener('contextmenu', handleContextMenu);
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('copy', handleCopy);
+    document.addEventListener('selectstart', handleSelectStart);
+
+    return () => {
+      document.removeEventListener('contextmenu', handleContextMenu);
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('copy', handleCopy);
+      document.removeEventListener('selectstart', handleSelectStart);
+    };
+  }, []);
+
   const handleContinueGame = async () => {
     await loadGame();
     setGameLoaded(true);

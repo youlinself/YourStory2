@@ -968,6 +968,7 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
 
     for (const e of c.enemies) {
       if (e.currentHealth <= 0) continue;
+      e.block = 0;
       if (e.currentHealth < e.maxHealth * 0.5 && e.mechanics.includes('rage')) {
         const existing = e.statusEffects.find((x) => x.type === 'rage');
         if (!existing) e.statusEffects.push({ type: 'strength', value: 2, duration: 99 });
@@ -1199,7 +1200,6 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
     const s = get();
     set({
       combat: { ...s.combat, player: { ...s.combat.player, currentHealth: Math.min(s.combat.player.maxHealth, s.combat.player.currentHealth + Math.floor(s.combat.player.maxHealth * 0.3)) } },
-      remainingLife: Math.max(0, s.remainingLife - 1),
     });
     get().completeOption();
   },

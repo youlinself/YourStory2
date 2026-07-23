@@ -89,11 +89,21 @@
 .text-sans { font-family: var(--font-sans); }
 
 /* 模拟人生页面禁止文本选中 */
-.simulation-page {
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  user-select: none;
+.simulation-page,
+.simulation-page * {
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  user-select: none !important;
+}
+
+/* Tooltip Portal 内容禁止选中（渲染在 body 下，脱离 simulation-page 容器） */
+.simulation-no-copy,
+.simulation-no-copy * {
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  user-select: none !important;
 }
 
 body {
