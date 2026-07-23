@@ -18,7 +18,7 @@ import type {
   ChoiceRecord, LifeRecord, WorldState, GameMode, GamePhase,
   LifeCard, LifeRelic, Enemy, CombatState, StatusEffect,
   YearOption, YearNode, OptionType, CultivationState, CultivationRealm, AttributeChange,
-  AttributeThresholdBonus, EnemyMechanic, CombatBonus,
+  AttributeThresholdBonus, EnemyMechanic, CombatBonus, WonderRewardOption, WonderRewardType,
 } from '../types/simulation';
 
 const STORAGE_KEY = 'simulation_game_v3';
@@ -69,6 +69,36 @@ function clamp(v: number, min = 0, max = 100) { return Math.max(min, Math.min(ma
 function seededRandom(seed: number) { let s = seed; return () => { s = (s * 1664525 + 1013904223) & 0xffffffff; return (s >>> 0) / 0xffffffff; }; }
 function shuffle<T>(arr: T[], rand = Math.random) { const a = [...arr]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
 function pickRandom<T>(arr: T[], count: number, rand = Math.random): T[] { return shuffle(arr, rand).slice(0, Math.min(count, arr.length)); }
+function generateWonderOptions(): WonderRewardOption[] {
+  const pool = WONDER_REWARD_POOL;
+  const types: WonderRewardType[] = ['card', 'card', 'card', 'card', 'attribute', 'attribute', 'attribute', 'relic', 'relic', 'gold'];
+  const result: WonderRewardOption[] = [];
+  const usedCardIds = new Set<string>();
+  const usedRelicIds = new Set<string>();
+  while (result.length < 3) {
+    const type = types[Math.floor(Math.random() * types.length)];
+    if (type === 'card') {
+      const available = pool.cards.filter(c => !usedCardIds.has(c.id));
+      if (available.length === 0) continue;
+      const card = available[Math.floor(Math.random() * available.length)];
+      usedCardIds.add(card.id);
+      result.push({ type: 'card', card: { ...card, id: generateId() } });
+    } else if (type === 'attribute') {
+      const attr = pool.attributes[Math.floor(Math.random() * pool.attributes.length)];
+      result.push({ type: 'attribute', attribute: { ...attr } });
+    } else if (type === 'relic') {
+      const available = pool.relics.filter(r => !usedRelicIds.has(r.id));
+      if (available.length === 0) continue;
+      const relic = available[Math.floor(Math.random() * available.length)];
+      usedRelicIds.add(relic.id);
+      result.push({ type: 'relic', relic: { ...relic, id: generateId() } });
+    } else {
+      const gold = pool.gold[Math.floor(Math.random() * pool.gold.length)];
+      result.push({ type: 'gold', gold });
+    }
+  }
+  return result;
+}
 function deepClone<T>(o: T): T { return JSON.parse(JSON.stringify(o)); }
 
 function applyCardEffect(effect: { type: string; value: number; duration?: number }, combat: CombatState, targetIdx: number): CombatState {
@@ -303,7 +333,7 @@ const initialAttributes: PlayerAttributes = { energy: 50, physique: 50, health: 
 const initialCombatState: CombatState = {
   isInCombat: false, phase: 'player_turn', currentTurn: 0,
   player: { currentHealth: 50, maxHealth: 50, block: 0, energy: BASE_ENERGY, maxEnergy: BASE_ENERGY, hand: [], drawPile: [], discardPile: [], exhaustPile: [], statusEffects: [] },
-  enemies: [], currentEnemyIndex: 0, rewards: { cards: [], attribute: undefined }, availableBonuses: [], log: [], burnLifeUsed: false, selectedForDiscard: [], requiredDiscardCount: 0,
+  enemies: [], currentEnemyIndex: 0, rewards: { mode: 'battle', cards: [], attribute: undefined, relic: undefined, wonderOptions: [] }, availableBonuses: [], log: [], burnLifeUsed: false, selectedForDiscard: [], requiredDiscardCount: 0,
 };
 
 const initialCultivationState: CultivationState = { realm: 'mortal', maxLifespan: 70, tribulationThreshold: 0, realmBonus: {} };
@@ -387,6 +417,7 @@ interface SimulationState extends GameState {
   activateBonus: (bonusId: string) => void;
   selectCardReward: (cardId: string) => void;
   selectAttributeReward: () => void;
+  selectWonderOption: (index: number) => void;
   endCombat: (victory: boolean) => void;
   makeChoice: (event: GameEvent, option: EventOption) => void;
   generateShop: () => void;
@@ -539,30 +570,11 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
       }
       case 'wonder': {
         const s = get();
-        if (s.lastCombatEnemies.length === 0) {
-          set({ combat: { ...s.combat, rewards: { cards: [], attribute: undefined, relic: undefined } }, phase: 'reward' });
-          break;
-        }
-        const allCardRewards: LifeCard[] = [];
-        const allRelicRewards: LifeRelic[] = [];
-        for (const enemy of s.lastCombatEnemies) {
-          for (const crd of enemy.cardRewards) {
-            allCardRewards.push({ ...crd, id: generateId() });
-          }
-          if (enemy.relicReward) {
-            allRelicRewards.push({ ...enemy.relicReward, id: generateId() });
-          }
-        }
-        const shuffledCards = shuffle(allCardRewards);
-        const shuffledRelics = shuffle(allRelicRewards);
-        const pickedCards = shuffledCards.slice(0, Math.min(3, shuffledCards.length));
-        const pickedRelic = shuffledRelics.length > 0 ? shuffledRelics[0] : undefined;
-        const wonderAttr = WONDER_REWARD_POOL.attributes[Math.floor(Math.random() * WONDER_REWARD_POOL.attributes.length)];
-        const attrReward = Math.random() < 0.5 ? wonderAttr : undefined;
+        const wonderOptions = generateWonderOptions();
         set({
           combat: {
             ...s.combat,
-            rewards: { cards: pickedCards, attribute: attrReward, relic: pickedRelic },
+            rewards: { mode: 'wonder', cards: [], attribute: undefined, relic: undefined, wonderOptions },
           },
           phase: 'reward',
         });
@@ -625,7 +637,7 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
           hand, drawPile, discardPile: [], exhaustPile: [], statusEffects: [],
         },
         enemies: enemies.map((e) => ({ ...e, id: generateId(), currentHealth: e.maxHealth, block: 0, statusEffects: [], currentIntentIndex: 0 })),
-        currentEnemyIndex: 0, rewards: { cards: [], attribute: undefined }, availableBonuses: combatBonuses, log: [], burnLifeUsed: false, selectedForDiscard: [], requiredDiscardCount: 0,
+        currentEnemyIndex: 0, rewards: { mode: 'battle', cards: [], attribute: undefined, relic: undefined, wonderOptions: [] }, availableBonuses: combatBonuses, log: [], burnLifeUsed: false, selectedForDiscard: [], requiredDiscardCount: 0,
       },
       phase: 'combat',
       lastCombatEnemies: enemies,
@@ -692,7 +704,7 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
       }
       const newRelics = relicReward ? [...s.relics, relicReward] : s.relics;
       set({ gold: s.gold + gold, relics: newRelics });
-      set({ combat: { ...c, phase: 'victory', rewards: { cards: cardRewards, attribute: undefined, relic: relicReward } }, phase: 'reward' });
+      set({ combat: { ...c, phase: 'victory', rewards: { mode: 'battle', cards: cardRewards, attribute: undefined, relic: relicReward, wonderOptions: [] } }, phase: 'reward' });
       return;
     }
 
@@ -866,7 +878,7 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
       }
       const newRelics = relicReward ? [...s.relics, relicReward] : s.relics;
       set({ gold: s.gold + gold, relics: newRelics });
-      set({ combat: { ...c, phase: 'victory', rewards: { cards: cardRewards, attribute: undefined, relic: relicReward } }, phase: 'reward' });
+      set({ combat: { ...c, phase: 'victory', rewards: { mode: 'battle', cards: cardRewards, attribute: undefined, relic: relicReward, wonderOptions: [] } }, phase: 'reward' });
       set({ damageEventCounter: get().damageEventCounter + 1 });
       return;
     }
@@ -934,7 +946,9 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
   endCombat: (victory) => {
     const s = get();
     if (victory) {
-      if (s.combat.rewards.cards.length > 0 || s.combat.rewards.attribute || s.combat.rewards.relic) set({ phase: 'reward' });
+      const hasBattleRewards = s.combat.rewards.cards.length > 0 || s.combat.rewards.attribute || s.combat.rewards.relic;
+      const hasWonderRewards = s.combat.rewards.wonderOptions.length > 0;
+      if (hasBattleRewards || hasWonderRewards) set({ phase: 'reward' });
       else get().completeOption();
     } else {
       set({ phase: 'ended' });
@@ -943,6 +957,25 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
 
   selectCardReward: (cardId) => { const s = get(); const card = s.combat.rewards.cards.find((c) => c.id === cardId); if (card) set({ deck: [...s.deck, { ...deepClone(card), id: generateId() }] }); get().completeOption(); },
   selectAttributeReward: () => { const s = get(); if (s.combat.rewards.attribute) { const newAttrs = { ...s.attributes }; for (const [k, v] of Object.entries(s.combat.rewards.attribute)) { newAttrs[k as keyof PlayerAttributes] = clamp(newAttrs[k as keyof PlayerAttributes] + (v || 0)); } set({ attributes: newAttrs }); } get().completeOption(); },
+  selectWonderOption: (index) => {
+    const s = get();
+    const option = s.combat.rewards.wonderOptions[index];
+    if (!option) { get().completeOption(); return; }
+    if (option.type === 'card' && option.card) {
+      set({ deck: [...s.deck, { ...deepClone(option.card), id: generateId() }] });
+    } else if (option.type === 'attribute' && option.attribute) {
+      const newAttrs = { ...s.attributes };
+      for (const [k, v] of Object.entries(option.attribute)) {
+        newAttrs[k as keyof PlayerAttributes] = clamp(newAttrs[k as keyof PlayerAttributes] + (v || 0));
+      }
+      set({ attributes: newAttrs });
+    } else if (option.type === 'gold' && option.gold) {
+      set({ gold: s.gold + option.gold });
+    } else if (option.type === 'relic' && option.relic) {
+      set({ relics: [...s.relics, { ...deepClone(option.relic), id: generateId() }] });
+    }
+    get().completeOption();
+  },
 
   makeChoice: (event, option) => {
     const s = get();

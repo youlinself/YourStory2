@@ -17,7 +17,7 @@ import Tooltip from '../../components/common/Tooltip';
 import { useToast } from '../../components/common';
 import FloatingDamage from '../../components/ui/FloatingDamage';
 import BuffDebuffBadge from '../../components/ui/BuffDebuffBadge';
-import type { BirthYear, PlayerAttributes, GameEvent, AttributeThresholdBonus, LifeCard, CardEffect, StatusEffect } from '../../types/simulation';
+import type { BirthYear, PlayerAttributes, GameEvent, AttributeThresholdBonus, LifeCard, CardEffect, StatusEffect, WonderRewardOption } from '../../types/simulation';
 
 const EFFECT_LABELS: Record<string, string> = {
   damage: '伤害',
@@ -1051,17 +1051,86 @@ const CombatPhaseView: React.FC = () => {
 
 // ==========================================
 // 战斗奖励/奇遇奖励
-// ==========================================
+// ============================================================
 const RewardPhase: React.FC = () => {
   const combat = useSimulationStore((s) => s.combat);
   const selectCardReward = useSimulationStore((s) => s.selectCardReward);
   const selectAttributeReward = useSimulationStore((s) => s.selectAttributeReward);
+  const selectWonderOption = useSimulationStore((s) => s.selectWonderOption);
   const completeOption = useSimulationStore((s) => s.completeOption);
   const [tab, setTab] = useState<'card' | 'attribute' | 'relic'>('card');
+
+  const isWonderMode = combat.rewards.mode === 'wonder';
+  const wonderOptions = combat.rewards.wonderOptions;
 
   const hasCards = combat.rewards.cards.length > 0;
   const hasAttribute = !!combat.rewards.attribute;
   const hasRelic = !!combat.rewards.relic;
+
+  const getWonderOptionLabel = (option: WonderRewardOption) => {
+    if (option.type === 'card' && option.card) return option.card.name;
+    if (option.type === 'attribute' && option.attribute) {
+      const entries = Object.entries(option.attribute).map(([k, v]) => `${ATTRIBUTE_NAMES[k] || k}+${v}`);
+      return entries.join(', ');
+    }
+    if (option.type === 'gold' && option.gold) return `${option.gold} 金币`;
+    if (option.type === 'relic' && option.relic) return option.relic.name;
+    return '未知奖励';
+  };
+
+  const getWonderOptionIcon = (option: WonderRewardOption) => {
+    if (option.type === 'card') return '🃏';
+    if (option.type === 'attribute') return '📊';
+    if (option.type === 'gold') return '💰';
+    if (option.type === 'relic') return '🏺';
+    return '❓';
+  };
+
+  const getWonderOptionDescription = (option: WonderRewardOption) => {
+    if (option.type === 'card' && option.card) return option.card.description;
+    if (option.type === 'attribute' && option.attribute) return '获得属性提升';
+    if (option.type === 'gold' && option.gold) return '获得金币';
+    if (option.type === 'relic' && option.relic) return option.relic.description;
+    return '';
+  };
+
+  if (isWonderMode) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] px-6">
+        <h2 className="text-xl font-bold text-ink mb-2">🌟 奇遇奖励</h2>
+        <p className="text-ink-muted text-sm mb-6">选择一项作为本次奇遇奖励</p>
+
+        <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          {wonderOptions.map((option, index) => (
+            <button
+              key={index}
+              onClick={() => selectWonderOption(index)}
+              className="bg-white rounded-xl border-2 border-border-subtle p-5 hover:border-brand hover:shadow-lg transition-all text-left group"
+            >
+              <div className="flex items-center gap-3 mb-3">
+                <span className="text-3xl">{getWonderOptionIcon(option)}</span>
+                <div>
+                  <h3 className="font-semibold text-ink group-hover:text-brand transition-colors">{getWonderOptionLabel(option)}</h3>
+                  <span className="text-xs text-ink-muted capitalize">{option.type === 'card' ? '卡牌' : option.type === 'attribute' ? '属性' : option.type === 'gold' ? '金币' : '遗物'}</span>
+                </div>
+              </div>
+              <p className="text-sm text-ink-muted">{getWonderOptionDescription(option)}</p>
+              {option.type === 'card' && option.card && (
+                <div className="mt-3 pointer-events-none">
+                  <CardDetail card={option.card} width={120} />
+                </div>
+              )}
+              {option.type === 'relic' && option.relic && (
+                <div className="mt-2 text-xs text-ink-muted">
+                  <span className="px-2 py-0.5 bg-gray-100 rounded">{RARITY_NAMES[option.relic.rarity] || option.relic.rarity}</span>
+                </div>
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] px-6">

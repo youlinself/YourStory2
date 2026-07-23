@@ -172,6 +172,16 @@ export interface EraMap {
 
 export type CombatPhase = 'player_turn' | 'discard_selection' | 'enemy_turn' | 'victory' | 'defeat';
 
+export type WonderRewardType = 'card' | 'attribute' | 'gold' | 'relic';
+
+export interface WonderRewardOption {
+  type: WonderRewardType;
+  card?: LifeCard;
+  attribute?: Partial<PlayerAttributes>;
+  gold?: number;
+  relic?: LifeRelic;
+}
+
 export interface CombatState {
   isInCombat: boolean;
   phase: CombatPhase;
@@ -191,9 +201,11 @@ export interface CombatState {
   enemies: Enemy[];
   currentEnemyIndex: number;
   rewards: {
+    mode: 'battle' | 'wonder';
     attribute?: Partial<PlayerAttributes>;
     cards: LifeCard[];
     relic?: LifeRelic;
+    wonderOptions: WonderRewardOption[];
   };
   availableBonuses: CombatBonus[];
   log: CombatLogEntry[];
