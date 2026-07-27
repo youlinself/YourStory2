@@ -27,6 +27,9 @@ import {
   ATTRIBUTE_NAMES,
 } from '../../data/simulationData';
 import type { LifeCard, CardEffect } from '../../types/simulation';
+import SimBattle from './SimBattle';
+
+type ThinkTankTab = 'cards' | 'battle';
 
 const EFFECT_LABELS: Record<string, string> = {
   damage: '伤害',
@@ -80,6 +83,16 @@ interface CardCategory {
   description: string;
   cards: LifeCard[];
 }
+
+const ThinkTankPage: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<ThinkTankTab>('cards');
+
+  if (activeTab === 'battle') {
+    return <SimBattle />;
+  }
+
+  return <CardsLibrary onSwitchToBattle={() => setActiveTab('battle')} />;
+};
 
 const CardDetailModal: React.FC<{ card: LifeCard; onClose: () => void }> = ({ card, onClose }) => {
   const rarityStyle = RARITY_COLORS[card.rarity] || RARITY_COLORS.common;
@@ -233,7 +246,7 @@ const CardCard: React.FC<{ card: LifeCard; onClick: () => void }> = ({ card, onC
     <button
       onClick={onClick}
       className="group relative rounded-xl p-4 text-left transition-all hover:scale-[1.02] hover:shadow-lg border bg-white"
-      style={{ borderColor: `var(--color-border-subtle)` }}
+      style={{ borderColor: 'var(--color-border-subtle)' }}
     >
       <div className="flex items-center justify-between mb-2">
         <span className="text-xs font-bold px-2 py-0.5 rounded bg-brand/10 text-brand">
@@ -256,7 +269,7 @@ const CardCard: React.FC<{ card: LifeCard; onClick: () => void }> = ({ card, onC
   );
 };
 
-const ThinkTankPage: React.FC = () => {
+const CardsLibrary: React.FC<{ onSwitchToBattle: () => void }> = ({ onSwitchToBattle }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedType, setSelectedType] = useState<string>('all');
   const [selectedRarity, setSelectedRarity] = useState<string>('all');
@@ -332,12 +345,27 @@ const ThinkTankPage: React.FC = () => {
   return (
     <div className="flex flex-col h-full">
       <div className="p-6 border-b border-border-subtle bg-white">
-        <div className="flex items-center gap-3 mb-2">
-          <span className="text-3xl">🏛️</span>
-          <div>
-            <h1 className="text-2xl font-bold text-ink">智库</h1>
-            <p className="text-sm text-ink-muted">探索所有已设计的卡牌及其使用效果</p>
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-3">
+            <span className="text-3xl">🏛️</span>
+            <div>
+              <h1 className="text-2xl font-bold text-ink">智库</h1>
+              <p className="text-sm text-ink-muted">探索所有已设计的卡牌及其使用效果</p>
+            </div>
           </div>
+        </div>
+        <div className="mt-4 flex items-center gap-2">
+          <button
+            className="px-4 py-2 rounded-lg text-sm font-medium bg-brand text-white transition-all"
+          >
+            📚 卡牌库
+          </button>
+          <button
+            onClick={onSwitchToBattle}
+            className="px-4 py-2 rounded-lg text-sm font-medium text-ink-muted hover:bg-gray-100 transition-all"
+          >
+            ⚔️ 模拟战斗
+          </button>
         </div>
         <div className="mt-4 flex items-center gap-4 text-sm">
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-brand/10">

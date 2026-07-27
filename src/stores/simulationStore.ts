@@ -4,7 +4,7 @@ import { generateId } from '../utils';
 import {
   ERAS, STARTER_DECK, SCRIPT_1950_EVENTS, HIDDEN_TAGS,
   COMMON_ATTACK_CARDS, COMMON_SKILL_CARDS, RARE_CARDS, LEGENDARY_CARDS,
-  WONDER_REWARD_POOL, ATTRIBUTE_TIER_CARDS, calculateDamage,
+  WONDER_REWARD_POOL, ATTRIBUTE_TIER_CARDS,
 } from '../data/simulationData';
 import {
   getAgeStage,
@@ -13,6 +13,10 @@ import {
   createAnnualBoss,
   createMonsterFromVariant,
 } from '../data/monsterMapping';
+import {
+  applyCardEffect,
+  executeEnemyTurn,
+} from '../combat/combatEngine';
 import type {
   GameState, BirthYear, PlayerAttributes, GameEvent, EventOption,
   ChoiceRecord, LifeRecord, WorldState, GameMode, GamePhase,
@@ -225,36 +229,6 @@ function generateWonderOptions(): WonderRewardOption[] {
   return result;
 }
 function deepClone<T>(o: T): T { return JSON.parse(JSON.stringify(o)); }
-
-function applyCardEffect(effect: { type: string; value: number; duration?: number }, combat: CombatState, targetIdx: number): CombatState {
-  const c = { ...combat, player: { ...combat.player, statusEffects: [...combat.player.statusEffects] }, enemies: combat.enemies.map((e) => ({ ...e, statusEffects: [...e.statusEffects] })) };
-  const t = c.enemies[targetIdx];
-  switch (effect.type) {
-    case 'damage': if (t) { 
-      const damage = calculateDamage(effect.value, c.player.statusEffects, t.statusEffects);
-      const d = Math.max(0, damage - t.block); 
-      t.block = Math.max(0, t.block - damage); 
-      t.currentHealth -= d; 
-    } break;
-    case 'block': c.player.block += effect.value; break;
-    case 'heal': c.player.currentHealth = Math.min(c.player.maxHealth, c.player.currentHealth + effect.value); break;
-    case 'draw': for (let i = 0; i < effect.value; i++) { if (c.player.drawPile.length > 0) c.player.hand.push(c.player.drawPile.shift()!); } break;
-    case 'gain_energy': c.player.energy += effect.value; break;
-    case 'vulnerable': if (t) { const e = t.statusEffects.find((s) => s.type === 'vulnerable'); if (e) e.value += effect.value; else t.statusEffects.push({ type: 'vulnerable', value: effect.value, duration: effect.duration || 2 }); } break;
-    case 'weak': if (t) { const e = t.statusEffects.find((s) => s.type === 'weak'); if (e) e.value += effect.value; else t.statusEffects.push({ type: 'weak', value: effect.value, duration: effect.duration || 2 }); } break;
-    case 'poison': if (t) { const e = t.statusEffects.find((s) => s.type === 'poison'); if (e) e.value += effect.value; else t.statusEffects.push({ type: 'poison', value: effect.value, duration: effect.duration || 3 }); } break;
-    case 'cure': c.player.statusEffects = c.player.statusEffects.filter((s) => s.type !== 'weak' && s.type !== 'vulnerable' && s.type !== 'poison'); break;
-    case 'shield': c.player.statusEffects.push({ type: 'shields', value: effect.value, duration: 99 }); break;
-    case 'thorns': c.player.statusEffects.push({ type: 'thorns', value: effect.value, duration: effect.duration || 99 }); break;
-    case 'rage': c.player.statusEffects.push({ type: 'rage', value: effect.value, duration: effect.duration || 99 }); break;
-    case 'strength': c.player.statusEffects.push({ type: 'strength', value: effect.value, duration: effect.duration || 99 }); break;
-    case 'dexterity': c.player.statusEffects.push({ type: 'dexterity', value: effect.value, duration: effect.duration || 99 }); break;
-    case 'regen': c.player.statusEffects.push({ type: 'regen', value: effect.value, duration: effect.duration || 99 }); break;
-    case 'lifesteal':
-      break;
-  }
-  return c;
-}
 
 function getEnemyPool(type: OptionType, era: number, yearInEra: number, rand: () => number, age?: number, currentYear?: number): Enemy[] {
   const totalYears = era * 10 + yearInEra;
@@ -990,61 +964,9 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
     c.player.energy = c.player.maxEnergy;
 
     const bonuses = getActiveBonuses(s.attributes);
-    const interruptChance = bonuses.filter((b) => b.effect === 'interrupt_chance').reduce((sum, b) => sum + b.value, 0);
 
-    for (const e of c.enemies) {
-      if (e.currentHealth <= 0) continue;
-      e.block = 0;
-      if (e.currentHealth < e.maxHealth * 0.5 && e.mechanics.includes('rage')) {
-        const existing = e.statusEffects.find((x) => x.type === 'rage');
-        if (!existing) e.statusEffects.push({ type: 'strength', value: 2, duration: 99 });
-      }
-      if (e.mechanics.includes('regen')) {
-        e.currentHealth = Math.min(e.maxHealth, e.currentHealth + 5);
-      }
-
-      const intent = e.intents[e.currentIntentIndex % e.intents.length];
-      if (intent.type === 'attack') {
-        if (Math.random() < interruptChance) { e.currentIntentIndex = (e.currentIntentIndex + 1) % e.intents.length; continue; }
-        const hits = intent.hits || (e.mechanics.includes('double_attack') ? 2 : 1);
-        const shield = e.mechanics.includes('shield') ? 0.75 : 1;
-        let baseDmg = Math.floor(intent.damage * shield);
-        for (let i = 0; i < hits; i++) {
-          const dmg = calculateDamage(baseDmg, e.statusEffects, c.player.statusEffects);
-          const blocked = Math.min(c.player.block, dmg);
-          const d = Math.max(0, dmg - c.player.block);
-          c.player.block = Math.max(0, c.player.block - dmg);
-          c.player.currentHealth -= d;
-          if (blocked > 0) {
-            triggerDamageEvent(blocked, 'player_block', true);
-          }
-          if (d > 0) {
-            triggerDamageEvent(d, 'player');
-          }
-          const sh = c.player.statusEffects.find((x) => x.type === 'shields');
-          if (sh && sh.value > 0) { const ab = Math.min(sh.value, d); sh.value -= ab; c.player.currentHealth += ab; if (ab > 0) triggerDamageEvent(ab, 'player_heal', true); }
-          const th = c.player.statusEffects.find((x) => x.type === 'thorns');
-          if (th && e.currentHealth > 0) e.currentHealth -= th.value;
-        }
-      } else if (intent.type === 'defend') {
-        e.block += intent.block;
-      } else if (intent.type === 'buff') {
-        const existing = e.statusEffects.find((x) => x.type === intent.effect);
-        if (existing) existing.value += intent.value;
-        else e.statusEffects.push({ type: intent.effect as any, value: intent.value, duration: 99 });
-      } else if (intent.type === 'debuff') {
-        const debuffRed = bonuses.filter((b) => b.effect === 'debuff_reduction').reduce((sum, b) => sum + b.value, 0);
-        c.player.statusEffects.push({ type: intent.effect as any, value: intent.value, duration: Math.max(1, 2 - debuffRed) });
-      }
-      e.currentIntentIndex = (e.currentIntentIndex + 1) % e.intents.length;
-    }
-
-    for (const eff of c.player.statusEffects) {
-      if (eff.type === 'poison') c.player.currentHealth -= eff.value;
-      else if (eff.type === 'regen') c.player.currentHealth = Math.min(c.player.maxHealth, c.player.currentHealth + eff.value);
-      eff.duration--;
-    }
-    c.player.statusEffects = c.player.statusEffects.filter((x) => x.duration > 0);
+    // 使用共享的敌人行动逻辑
+    c = executeEnemyTurn(c);
 
     if (c.player.currentHealth <= 0) {
       set({ combat: { ...c, phase: 'defeat' }, phase: 'ended' });

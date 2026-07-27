@@ -26,6 +26,7 @@ function App() {
               <Route path="/autobiography" element={<Autobiography />} />
               <Route path="/simulation" element={<Simulation />} />
               <Route path="/thinktank" element={<ThinkTank />} />
+              <Route path="/thinktank/battle" element={<ThinkTank />} />
               <Route path="/settings" element={<Settings />} />
             </Route>
           </Routes>
