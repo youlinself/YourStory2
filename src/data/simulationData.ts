@@ -340,14 +340,12 @@ export const LEGENDARY_CARDS: LifeCard[] = [
     name: '命运抉择',
     type: 'skill',
     rarity: 'legendary',
-    cost: 3,
+    cost: 1,
     target: 'self',
     effects: [
-      { type: 'draw', value: 3 },
-      { type: 'gain_energy', value: 2 },
-      { type: 'gain_max_energy', value: 1 },
+      { type: 'choice', value: 0 },
     ],
-    description: '在人生的十字路口，你做出了正确的选择',
+    description: '在人生的十字路口，做出你的选择：+2当前精力 或 +1最大精力',
     icon: '💫',
     tags: ['命运'],
     ageRange: [18, 80], // 成年后可触发

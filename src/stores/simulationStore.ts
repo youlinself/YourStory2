@@ -19,6 +19,7 @@ import type {
   LifeCard, LifeRelic, Enemy, CombatState, StatusEffect,
   YearOption, YearNode, OptionType, CultivationState, CultivationRealm, AttributeChange,
   AttributeThresholdBonus, EnemyMechanic, CombatBonus, WonderRewardOption, WonderRewardType,
+  PendingChoice,
 } from '../types/simulation';
 
 const STORAGE_KEY = 'simulation_game_v3';
@@ -527,6 +528,7 @@ const initialState: GameState = {
   lastCombatEnemies: [],
   attributeCardsGranted: false,
   cardRemovalCount: 0,
+  pendingChoice: null,
 };
 
 interface SimulationState extends GameState {
@@ -572,6 +574,7 @@ interface SimulationState extends GameState {
   confirmDiscard: () => void;
   exileCard: (cardId: string) => void;
   removeCardFromDeck: (cardId: string) => void;
+  resolveChoice: (choiceId: string) => void;
 }
 
 const useSimulationStore = create<SimulationState>((set, get) => ({
@@ -830,7 +833,23 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
     const enemyBlocksBefore = c.enemies.map(e => e.block);
     const effectiveTargetIdx = targetIdx !== undefined ? targetIdx : c.currentEnemyIndex;
     const lifestealEff = card.effects.find((e) => e.type === 'lifesteal');
-    const otherEffects = card.effects.filter((e) => e.type !== 'lifesteal');
+    const choiceEff = card.effects.find((e) => e.type === 'choice');
+    const otherEffects = card.effects.filter((e) => e.type !== 'lifesteal' && e.type !== 'choice');
+
+    if (choiceEff) {
+      const pendingChoice: PendingChoice = {
+        cardId: card.id,
+        cardName: card.name,
+        options: [
+          { id: 'energy', label: '+2 当前精力', description: '立即恢复2点精力', icon: '⚡' },
+          { id: 'max_energy', label: '+1 最大精力', description: '永久增加1点最大精力', icon: '🔋' },
+        ],
+      };
+      c.player.discardPile.push(card);
+      set({ combat: c, pendingChoice });
+      return;
+    }
+
     for (const eff of otherEffects) {
       const modifiedEff = eff.type === 'damage' ? { ...eff, value: Math.floor(eff.value * damageBoost) } : eff;
       c = applyCardEffect(modifiedEff, c, effectiveTargetIdx);
@@ -1120,6 +1139,21 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
       cardRemovalCount: s.cardRemovalCount + 1,
       shop: { ...s.shop, cardRemovalUsed: true },
     });
+  },
+
+  resolveChoice: (choiceId: string) => {
+    const s = get();
+    if (!s.pendingChoice) return;
+    let c = { ...s.combat, player: { ...s.combat.player } };
+    switch (choiceId) {
+      case 'energy':
+        c.player.energy += 2;
+        break;
+      case 'max_energy':
+        c.player.maxEnergy += 1;
+        break;
+    }
+    set({ combat: c, pendingChoice: null });
   },
 
   endCombat: (victory) => {

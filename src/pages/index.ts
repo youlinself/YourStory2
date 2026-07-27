@@ -4,3 +4,4 @@ export { default as DialogueAgent } from './DialogueAgent';
 export { default as Settings } from './Settings';
 export { default as Autobiography } from './Autobiography';
 export { default as Simulation } from './Simulation';
+export { default as ThinkTank } from './ThinkTank';

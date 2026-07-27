@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
+import { useNavigate } from 'react-router-dom';
 import useSimulationStore, { getEffectDisplayValue, MAX_HAND_SIZE, BASE_DRAW_COUNT, getAttributeTierInfo } from '../../stores/simulationStore';
 
 import {
@@ -239,6 +240,7 @@ const ModeSelectPhase: React.FC = () => {
   const mode = useSimulationStore((s) => s.mode);
   const selectedEra = ERAS.find((e) => e.year === selectedYear);
   const { addToast } = useToast();
+  const navigate = useNavigate();
 
   const handleAiToggle = () => {
     addToast({ type: 'info', message: '✨ 敬请期待' });
@@ -272,6 +274,13 @@ const ModeSelectPhase: React.FC = () => {
             <span className="toggle-slider" />
           </label>
         </div>
+        <button
+          onClick={() => navigate('/thinktank')}
+          className="mt-4 px-6 py-2.5 bg-white border border-border-subtle rounded-xl text-ink-muted hover:border-brand hover:text-brand transition-all flex items-center gap-2 text-sm"
+        >
+          <span>🏛️</span>
+          <span>智库 - 查看所有卡牌</span>
+        </button>
       </div>
     );
   }
@@ -1613,6 +1622,8 @@ const SimulationPage: React.FC = () => {
   const saveGame = useSimulationStore((s) => s.saveGame);
   const completeOption = useSimulationStore((s) => s.completeOption);
   const availableEvents = useSimulationStore(useShallow((s) => s.getAvailableEvents()));
+  const pendingChoice = useSimulationStore((s) => s.pendingChoice);
+  const resolveChoice = useSimulationStore((s) => s.resolveChoice);
   const [hasSave, setHasSave] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [gameLoaded, setGameLoaded] = useState(false);
@@ -1890,6 +1901,36 @@ const SimulationPage: React.FC = () => {
                 ))}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* 命运抉择弹窗 */}
+      {pendingChoice && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-bg-elevated rounded-2xl p-6 max-w-md w-full shadow-2xl border border-border-subtle">
+            <div className="text-center mb-6">
+              <div className="text-4xl mb-3">💫</div>
+              <h3 className="text-xl font-bold text-ink mb-2">{pendingChoice.cardName}</h3>
+              <p className="text-sm text-ink-muted">在人生的十字路口，做出你的选择</p>
+            </div>
+            <div className="space-y-3">
+              {pendingChoice.options.map((option) => (
+                <button
+                  key={option.id}
+                  onClick={() => resolveChoice(option.id)}
+                  className="w-full p-4 rounded-xl border border-border-subtle bg-bg-secondary hover:bg-bg-primary hover:border-brand transition-all text-left group"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl group-hover:scale-110 transition-transform">{option.icon}</span>
+                    <div>
+                      <div className="font-semibold text-ink group-hover:text-brand transition-colors">{option.label}</div>
+                      <div className="text-xs text-ink-muted">{option.description}</div>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       )}

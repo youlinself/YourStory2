@@ -48,7 +48,7 @@ export interface CardEffect {
   type: 'damage' | 'block' | 'heal' | 'draw' | 'gain_energy' | 'gain_max_energy'
     | 'gain_attribute' | 'lose_attribute' | 'vulnerable' | 'weak' | 'poison'
     | 'cure' | 'shield' | 'thorns' | 'rage' | 'stealth' | 'lifedrain' | 'lifesteal'
-    | 'regen' | 'strength' | 'dexterity';
+    | 'regen' | 'strength' | 'dexterity' | 'choice';
   value: number;
   attribute?: keyof PlayerAttributes;
   duration?: number;
@@ -111,7 +111,7 @@ export interface StatusEffect {
   duration: number;
 }
 
-export type EnemyMechanic = 'double_attack' | 'shield' | 'regen' | 'rage' | 'summon';
+export type EnemyMechanic = 'double_attack' | 'shield' | 'regen' | 'rage' | 'summon' | 'boss_aura';
 
 export interface Enemy {
   id: string;
@@ -342,6 +342,17 @@ export interface AttributeThresholdBonus {
   cardId?: string;
 }
 
+export interface PendingChoice {
+  cardId: string;
+  cardName: string;
+  options: {
+    id: string;
+    label: string;
+    description: string;
+    icon: string;
+  }[];
+}
+
 export interface GameState {
   phase: GamePhase;
   mode: GameMode;
@@ -371,6 +382,7 @@ export interface GameState {
   lastCombatEnemies: Enemy[];
   attributeCardsGranted: boolean;
   cardRemovalCount: number;
+  pendingChoice: PendingChoice | null;
 }
 
 export interface WorldState {
