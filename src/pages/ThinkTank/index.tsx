@@ -88,7 +88,7 @@ const ThinkTankPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<ThinkTankTab>('cards');
 
   if (activeTab === 'battle') {
-    return <SimBattle />;
+    return <SimBattle onBack={() => setActiveTab('cards')} />;
   }
 
   return <CardsLibrary onSwitchToBattle={() => setActiveTab('battle')} />;

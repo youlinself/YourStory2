@@ -15,8 +15,8 @@ import {
   CULTIVATION_REALM_NAMES,
   RARITY_NAMES,
   ATTRIBUTE_TIER_CARDS,
-  calculateDamage,
 } from '../../data/simulationData';
+import { calculateDamage } from '../../combat/combatEngine';
 import Tooltip from '../../components/common/Tooltip';
 import { useToast } from '../../components/common';
 import FloatingDamage from '../../components/ui/FloatingDamage';

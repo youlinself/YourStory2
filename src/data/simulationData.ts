@@ -6,7 +6,6 @@ import type {
   Enemy,
   CultivationRealm,
   GameEvent,
-  StatusEffect,
   EnemyMechanic,
   PlayerAttributes,
 } from '../types/simulation';
@@ -343,7 +342,26 @@ export const LEGENDARY_CARDS: LifeCard[] = [
     cost: 1,
     target: 'self',
     effects: [
-      { type: 'choice', value: 0 },
+      {
+        type: 'choice',
+        value: 0,
+        choices: [
+          {
+            id: 'energy',
+            label: '+2 当前精力',
+            description: '立即恢复2点精力',
+            icon: '⚡',
+            effects: [{ type: 'gain_energy', value: 2 }],
+          },
+          {
+            id: 'max_energy',
+            label: '+1 最大精力',
+            description: '永久增加1点最大精力',
+            icon: '🔋',
+            effects: [{ type: 'gain_max_energy', value: 1 }],
+          },
+        ],
+      },
     ],
     description: '在人生的十字路口，做出你的选择：+2当前精力 或 +1最大精力',
     icon: '💫',
@@ -3404,23 +3422,4 @@ export function calculateEnemyDamage(intent: { type: string; damage?: number; hi
   return Math.max(0, damage);
 }
 
-// 计算实际伤害（考虑各种加成）
-export function calculateDamage(baseDamage: number, attackerEffects: StatusEffect[], defenderEffects: StatusEffect[]): number {
-  let damage = baseDamage;
 
-  // 攻击者加成
-  const strength = attackerEffects.find((e) => e.type === 'strength');
-  if (strength) damage += strength.value;
-  const rage = attackerEffects.find((e) => e.type === 'rage');
-  if (rage) damage = Math.floor(damage * 1.5);
-  const weak = attackerEffects.find((e) => e.type === 'weak');
-  if (weak) damage = Math.max(0, damage - weak.value);
-
-  // 防御者加成
-  const vulnerable = defenderEffects.find((e) => e.type === 'vulnerable');
-  if (vulnerable) damage = Math.floor(damage * 1.25);
-  const intangible = defenderEffects.find((e) => e.type === 'intangible');
-  if (intangible) damage = 1;
-
-  return Math.max(0, damage);
-}

@@ -44,6 +44,14 @@ export type CardType = 'attack' | 'skill' | 'power' | 'curse';
 export type CardRarity = 'common' | 'uncommon' | 'rare' | 'legendary';
 export type CardTarget = 'enemy' | 'self' | 'all' | 'none';
 
+export interface ChoiceOption {
+  id: string;
+  label: string;
+  description: string;
+  icon: string;
+  effects: CardEffect[];
+}
+
 export interface CardEffect {
   type: 'damage' | 'block' | 'heal' | 'draw' | 'gain_energy' | 'gain_max_energy'
     | 'gain_attribute' | 'lose_attribute' | 'vulnerable' | 'weak' | 'poison'
@@ -52,6 +60,7 @@ export interface CardEffect {
   value: number;
   attribute?: keyof PlayerAttributes;
   duration?: number;
+  choices?: ChoiceOption[];
 }
 
 export type AgeRange = [number, number] | null; // null 表示全年龄段可用
@@ -345,12 +354,8 @@ export interface AttributeThresholdBonus {
 export interface PendingChoice {
   cardId: string;
   cardName: string;
-  options: {
-    id: string;
-    label: string;
-    description: string;
-    icon: string;
-  }[];
+  cardIcon?: string;
+  options: ChoiceOption[];
 }
 
 export interface GameState {

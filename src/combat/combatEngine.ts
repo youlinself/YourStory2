@@ -24,7 +24,7 @@ export function calculateDamage(base: number, attackerEffects: StatusEffect[], d
   const weak = attackerEffects.find((e) => e.type === 'weak');
   if (weak) dmg = Math.floor(dmg * 0.75);
   const rage = attackerEffects.find((e) => e.type === 'rage');
-  if (rage) dmg = Math.floor(dmg * (1 + rage.value));
+  if (rage) dmg = Math.floor(dmg * (1 + rage.value * 0.1));
   const vulnerable = defenderEffects.find((e) => e.type === 'vulnerable');
   if (vulnerable) dmg = Math.floor(dmg * (1 + 0.25 * vulnerable.value));
   return Math.max(0, dmg);
@@ -115,8 +115,15 @@ export function executeEnemyTurn(combat: CombatState): CombatState {
       const hits = intent.hits || 1;
       for (let i = 0; i < hits; i++) {
         const dmg = calculateDamage(intent.damage, e.statusEffects, c.player.statusEffects);
-        const d = Math.max(0, dmg - c.player.block);
-        c.player.block = Math.max(0, c.player.block - dmg);
+        let remainingDmg = dmg;
+        const shields = c.player.statusEffects.find((x) => x.type === 'shields');
+        if (shields && shields.value > 0) {
+          const absorb = Math.min(shields.value, remainingDmg);
+          shields.value -= absorb;
+          remainingDmg -= absorb;
+        }
+        const d = Math.max(0, remainingDmg - c.player.block);
+        c.player.block = Math.max(0, c.player.block - remainingDmg);
         c.player.currentHealth -= d;
         const th = c.player.statusEffects.find((x) => x.type === 'thorns');
         if (th && e.currentHealth > 0) e.currentHealth -= th.value;

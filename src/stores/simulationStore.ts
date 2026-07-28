@@ -808,20 +808,22 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
     const effectiveTargetIdx = targetIdx !== undefined ? targetIdx : c.currentEnemyIndex;
     const lifestealEff = card.effects.find((e) => e.type === 'lifesteal');
     const choiceEff = card.effects.find((e) => e.type === 'choice');
-    const otherEffects = card.effects.filter((e) => e.type !== 'lifesteal' && e.type !== 'choice');
+    const gainAttrEffects = card.effects.filter((e) => e.type === 'gain_attribute');
+    const loseAttrEffects = card.effects.filter((e) => e.type === 'lose_attribute');
+    const otherEffects = card.effects.filter((e) => e.type !== 'lifesteal' && e.type !== 'choice' && e.type !== 'gain_attribute' && e.type !== 'lose_attribute');
 
     if (choiceEff) {
-      const pendingChoice: PendingChoice = {
-        cardId: card.id,
-        cardName: card.name,
-        options: [
-          { id: 'energy', label: '+2 当前精力', description: '立即恢复2点精力', icon: '⚡' },
-          { id: 'max_energy', label: '+1 最大精力', description: '永久增加1点最大精力', icon: '🔋' },
-        ],
-      };
-      c.player.discardPile.push(card);
-      set({ combat: c, pendingChoice });
-      return;
+      const choices = choiceEff.choices || [];
+      if (choices.length > 0) {
+        const pendingChoice: PendingChoice = {
+          cardId: card.id,
+          cardName: card.name,
+          options: choices,
+        };
+        c.player.discardPile.push(card);
+        set({ combat: c, pendingChoice });
+        return;
+      }
     }
 
     for (const eff of otherEffects) {
@@ -834,6 +836,24 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
       if (healAmount > 0) {
         c.player.currentHealth = Math.min(c.player.maxHealth, c.player.currentHealth + healAmount);
       }
+    }
+    if (gainAttrEffects.length > 0) {
+      const newAttrs = { ...s.attributes };
+      for (const eff of gainAttrEffects) {
+        if (eff.attribute) {
+          newAttrs[eff.attribute] = Math.min(100, newAttrs[eff.attribute] + eff.value);
+        }
+      }
+      set({ attributes: newAttrs });
+    }
+    if (loseAttrEffects.length > 0) {
+      const newAttrs = { ...s.attributes };
+      for (const eff of loseAttrEffects) {
+        if (eff.attribute) {
+          newAttrs[eff.attribute] = Math.max(0, newAttrs[eff.attribute] - eff.value);
+        }
+      }
+      set({ attributes: newAttrs });
     }
     c.player.discardPile.push(card);
 
@@ -864,7 +884,7 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
       }
       const newRelics = relicReward ? [...s.relics, relicReward] : s.relics;
       set({ gold: s.gold + gold, relics: newRelics });
-      set({ combat: { ...c, phase: 'victory', rewards: { mode: 'battle', cards: cardRewards, attribute: undefined, relic: relicReward, wonderOptions: [] } }, phase: 'reward' });
+      set({ combat: { ...c, phase: 'victory', rewards: { mode: 'battle', cards: cardRewards, attribute: undefined, relic: relicReward, wonderOptions: [] } }, phase: 'reward', pendingChoice: null });
       return;
     }
 
@@ -969,7 +989,7 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
     c = executeEnemyTurn(c);
 
     if (c.player.currentHealth <= 0) {
-      set({ combat: { ...c, phase: 'defeat' }, phase: 'ended' });
+      set({ combat: { ...c, phase: 'defeat' }, phase: 'ended', pendingChoice: null });
       set({ damageEventCounter: get().damageEventCounter + 1 });
       return;
     }
@@ -983,7 +1003,7 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
       }
       const newRelics = relicReward ? [...s.relics, relicReward] : s.relics;
       set({ gold: s.gold + gold, relics: newRelics });
-      set({ combat: { ...c, phase: 'victory', rewards: { mode: 'battle', cards: cardRewards, attribute: undefined, relic: relicReward, wonderOptions: [] } }, phase: 'reward' });
+      set({ combat: { ...c, phase: 'victory', rewards: { mode: 'battle', cards: cardRewards, attribute: undefined, relic: relicReward, wonderOptions: [] } }, phase: 'reward', pendingChoice: null });
       set({ damageEventCounter: get().damageEventCounter + 1 });
       return;
     }
@@ -1066,14 +1086,29 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
   resolveChoice: (choiceId: string) => {
     const s = get();
     if (!s.pendingChoice) return;
-    let c = { ...s.combat, player: { ...s.combat.player } };
-    switch (choiceId) {
-      case 'energy':
-        c.player.energy += 2;
-        break;
-      case 'max_energy':
-        c.player.maxEnergy += 1;
-        break;
+    let c = { ...s.combat, player: { ...s.combat.player, statusEffects: [...s.combat.player.statusEffects] } };
+    const selectedOption = s.pendingChoice.options.find((o) => o.id === choiceId);
+    if (selectedOption) {
+      const gainAttrEffects = selectedOption.effects.filter((e) => e.type === 'gain_attribute');
+      const loseAttrEffects = selectedOption.effects.filter((e) => e.type === 'lose_attribute');
+      const otherEffects = selectedOption.effects.filter((e) => e.type !== 'gain_attribute' && e.type !== 'lose_attribute');
+      for (const eff of otherEffects) {
+        c = applyCardEffect(eff, c, c.currentEnemyIndex);
+      }
+      if (gainAttrEffects.length > 0 || loseAttrEffects.length > 0) {
+        const newAttrs = { ...s.attributes };
+        for (const eff of gainAttrEffects) {
+          if (eff.attribute) {
+            newAttrs[eff.attribute] = Math.min(100, newAttrs[eff.attribute] + eff.value);
+          }
+        }
+        for (const eff of loseAttrEffects) {
+          if (eff.attribute) {
+            newAttrs[eff.attribute] = Math.max(0, newAttrs[eff.attribute] - eff.value);
+          }
+        }
+        set({ attributes: newAttrs });
+      }
     }
     set({ combat: c, pendingChoice: null });
   },

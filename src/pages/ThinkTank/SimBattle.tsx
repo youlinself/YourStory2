@@ -28,7 +28,7 @@ import {
   ELITE_ENEMIES,
   BOSS_ENEMIES,
 } from '../../data/simulationData';
-import type { LifeCard, Enemy } from '../../types/simulation';
+import type { LifeCard, Enemy, ChoiceOption } from '../../types/simulation';
 import {
   CombatState,
   generateId,
@@ -40,14 +40,6 @@ import {
   getIntentColor,
   getIntentDescription,
 } from '../../combat/combatEngine';
-
-// 抉择选项类型
-interface ChoiceOption {
-  id: string;
-  label: string;
-  description: string;
-  icon: string;
-}
 
 // 待处理抉择状态
 interface PendingChoice {
@@ -115,7 +107,7 @@ const DIFFICULTY_CONFIG: Record<Difficulty, {
   },
 };
 
-const SimBattle: React.FC = () => {
+const SimBattle: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
   const navigate = useNavigate();
   const [step, setStep] = useState<'select' | 'difficulty' | 'combat' | 'result'>('select');
   const [selectedCards, setSelectedCards] = useState<LifeCard[]>([]);
@@ -123,6 +115,15 @@ const SimBattle: React.FC = () => {
   const [combat, setCombat] = useState<CombatState | null>(null);
   const [selectedTarget, setSelectedTarget] = useState<number>(0);
   const [pendingChoice, setPendingChoice] = useState<PendingChoice | null>(null);
+
+  // 返回智库
+  const handleBack = useCallback(() => {
+    if (onBack) {
+      onBack();
+    } else {
+      navigate('/thinktank');
+    }
+  }, [onBack, navigate]);
 
   const allCards = useMemo(() => {
     const cardMap = new Map<string, LifeCard>();
@@ -235,19 +236,18 @@ const SimBattle: React.FC = () => {
     const otherEffects = card.effects.filter((e) => e.type !== 'choice');
 
     if (choiceEff) {
-      // 显示抉择弹窗
-      setPendingChoice({
-        cardId: card.id,
-        cardName: card.name,
-        cardIcon: card.icon,
-        options: [
-          { id: 'energy', label: '+2 当前精力', description: '立即恢复2点精力', icon: '⚡' },
-          { id: 'max_energy', label: '+1 最大精力', description: '永久增加1点最大精力', icon: '🔋' },
-        ],
-      });
-      c.player.discardPile.push(card);
-      setCombat(c);
-      return;
+      const choices = choiceEff.choices || [];
+      if (choices.length > 0) {
+        setPendingChoice({
+          cardId: card.id,
+          cardName: card.name,
+          cardIcon: card.icon,
+          options: choices,
+        });
+        c.player.discardPile.push(card);
+        setCombat(c);
+        return;
+      }
     }
 
     const targetIdx = selectedTarget;
@@ -259,6 +259,7 @@ const SimBattle: React.FC = () => {
     if (c.enemies.every((e) => e.currentHealth <= 0)) {
       c.phase = 'victory';
       c.log = [...c.log, { turn: c.currentTurn, actor: 'system', action: '🎉 胜利！', timestamp: Date.now() }];
+      setPendingChoice(null);
     }
 
     setCombat(c);
@@ -267,20 +268,14 @@ const SimBattle: React.FC = () => {
   // 处理抉择结果
   const resolveChoice = useCallback((choiceId: string) => {
     if (!combat || !pendingChoice) return;
-    let c = { ...combat };
-
-    switch (choiceId) {
-      case 'energy':
-        c.player.energy = Math.min(c.player.maxEnergy, c.player.energy + 2);
-        c.log = [...c.log, { turn: c.currentTurn, actor: 'player', action: '选择：+2 当前精力', timestamp: Date.now() }];
-        break;
-      case 'max_energy':
-        c.player.maxEnergy += 1;
-        c.player.energy += 1;
-        c.log = [...c.log, { turn: c.currentTurn, actor: 'player', action: '选择：+1 最大精力', timestamp: Date.now() }];
-        break;
+    let c = { ...combat, player: { ...combat.player, statusEffects: [...combat.player.statusEffects] } };
+    const selectedOption = pendingChoice.options.find((o) => o.id === choiceId);
+    if (selectedOption) {
+      for (const eff of selectedOption.effects) {
+        c = applyCardEffect(eff, c, c.currentEnemyIndex);
+      }
+      c.log = [...c.log, { turn: c.currentTurn, actor: 'player', action: `选择：${selectedOption.label}`, timestamp: Date.now() }];
     }
-
     setPendingChoice(null);
     setCombat(c);
   }, [combat, pendingChoice]);
@@ -297,6 +292,7 @@ const SimBattle: React.FC = () => {
     if (c.player.currentHealth <= 0) {
       c.phase = 'defeat';
       c.log = [...c.log, { turn: c.currentTurn, actor: 'system', action: '💀 失败...', timestamp: Date.now() }];
+      setPendingChoice(null);
       setCombat(c);
       setStep('result');
       return;
@@ -305,6 +301,7 @@ const SimBattle: React.FC = () => {
     if (c.enemies.every((e) => e.currentHealth <= 0)) {
       c.phase = 'victory';
       c.log = [...c.log, { turn: c.currentTurn, actor: 'system', action: '🎉 胜利！', timestamp: Date.now() }];
+      setPendingChoice(null);
       setCombat(c);
       setStep('result');
       return;
@@ -327,7 +324,7 @@ const SimBattle: React.FC = () => {
       <div className="flex flex-col h-full">
         <div className="p-6 border-b border-border-subtle bg-white">
           <div className="flex items-center gap-3 mb-2">
-            <button onClick={() => navigate('/thinktank')} className="text-ink-muted hover:text-ink">
+            <button onClick={handleBack} className="text-ink-muted hover:text-ink">
               ← 返回智库
             </button>
           </div>
@@ -753,7 +750,7 @@ const SimBattle: React.FC = () => {
             再来一局
           </button>
           <button
-            onClick={() => navigate('/thinktank')}
+            onClick={handleBack}
             className="px-6 py-2.5 bg-white border border-border-subtle rounded-lg text-ink-muted hover:border-brand hover:text-brand transition-all"
           >
             返回智库
