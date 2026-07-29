@@ -1,4 +1,4 @@
-﻿import type {
+import type {
   EraDefinition,
   HiddenTag,
   LifeCard,
@@ -3421,5 +3421,8 @@ export function calculateEnemyDamage(intent: { type: string; damage?: number; hi
   if (strength) damage += strength.value * hits;
   return Math.max(0, damage);
 }
+
+// 年代事件路由 - 从 eraEvents.ts 导出
+export { getEventsByBirthYear } from './eraEvents';
 
 

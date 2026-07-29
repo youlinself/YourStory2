@@ -1,10 +1,13 @@
-﻿import { create } from 'zustand';
+import { create } from 'zustand';
 import { StorageService } from '../services';
 import { generateId } from '../utils';
 import {
-  ERAS, STARTER_DECK, SCRIPT_1950_EVENTS, HIDDEN_TAGS,
+  ERAS, STARTER_DECK, HIDDEN_TAGS,
   COMMON_ATTACK_CARDS, COMMON_SKILL_CARDS, RARE_CARDS, LEGENDARY_CARDS,
   WONDER_REWARD_POOL, ATTRIBUTE_TIER_CARDS,
+} from '../data/simulationData';
+import {
+  getEventsByBirthYear,
 } from '../data/simulationData';
 import {
   getAgeStage,
@@ -1301,7 +1304,9 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
 
   getAvailableEvents: () => {
     const s = get();
-    return SCRIPT_1950_EVENTS.filter((event) => {
+    if (!s.birthYear) return [];
+    const events = getEventsByBirthYear(s.birthYear);
+    return events.filter((event) => {
       if (!event.ageRange) return true;
       const [minAge, maxAge] = event.ageRange;
       return s.age >= minAge && s.age <= maxAge;
