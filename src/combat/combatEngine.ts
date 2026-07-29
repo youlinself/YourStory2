@@ -19,8 +19,8 @@ export function shuffle<T>(array: T[]): T[] {
 
 export function calculateDamage(base: number, attackerEffects: StatusEffect[], defenderEffects: StatusEffect[]): number {
   let dmg = base;
-  const strength = attackerEffects.find((e) => e.type === 'strength');
-  if (strength) dmg += strength.value;
+  const totalStrength = attackerEffects.filter((e) => e.type === 'strength').reduce((sum, e) => sum + e.value, 0);
+  dmg += totalStrength;
   const weak = attackerEffects.find((e) => e.type === 'weak');
   if (weak) dmg = Math.floor(dmg * 0.75);
   const rage = attackerEffects.find((e) => e.type === 'rage');
@@ -80,12 +80,42 @@ export function applyCardEffect(effect: CardEffect, combat: CombatState, targetI
     case 'cure':
       c.player.statusEffects = c.player.statusEffects.filter((s) => s.type !== 'weak' && s.type !== 'vulnerable' && s.type !== 'poison');
       break;
-    case 'shield': c.player.statusEffects.push({ type: 'shields', value: effect.value, duration: 99 }); break;
-    case 'thorns': c.player.statusEffects.push({ type: 'thorns', value: effect.value, duration: effect.duration || 99 }); break;
-    case 'rage': c.player.statusEffects.push({ type: 'rage', value: effect.value, duration: effect.duration || 99 }); break;
-    case 'strength': c.player.statusEffects.push({ type: 'strength', value: effect.value, duration: effect.duration || 99 }); break;
-    case 'dexterity': c.player.statusEffects.push({ type: 'dexterity', value: effect.value, duration: effect.duration || 99 }); break;
-    case 'regen': c.player.statusEffects.push({ type: 'regen', value: effect.value, duration: effect.duration || 99 }); break;
+    case 'shield': {
+      const existing = c.player.statusEffects.find((s) => s.type === 'shields');
+      if (existing) existing.value += effect.value;
+      else c.player.statusEffects.push({ type: 'shields', value: effect.value, duration: effect.duration || Infinity });
+      break;
+    }
+    case 'thorns': {
+      const existing = c.player.statusEffects.find((s) => s.type === 'thorns');
+      if (existing) existing.value += effect.value;
+      else c.player.statusEffects.push({ type: 'thorns', value: effect.value, duration: effect.duration || Infinity });
+      break;
+    }
+    case 'rage': {
+      const existing = c.player.statusEffects.find((s) => s.type === 'rage');
+      if (existing) existing.value += effect.value;
+      else c.player.statusEffects.push({ type: 'rage', value: effect.value, duration: effect.duration || Infinity });
+      break;
+    }
+    case 'strength': {
+      const existing = c.player.statusEffects.find((s) => s.type === 'strength');
+      if (existing) existing.value += effect.value;
+      else c.player.statusEffects.push({ type: 'strength', value: effect.value, duration: effect.duration || Infinity });
+      break;
+    }
+    case 'dexterity': {
+      const existing = c.player.statusEffects.find((s) => s.type === 'dexterity');
+      if (existing) existing.value += effect.value;
+      else c.player.statusEffects.push({ type: 'dexterity', value: effect.value, duration: effect.duration || Infinity });
+      break;
+    }
+    case 'regen': {
+      const existing = c.player.statusEffects.find((s) => s.type === 'regen');
+      if (existing) existing.value += effect.value;
+      else c.player.statusEffects.push({ type: 'regen', value: effect.value, duration: effect.duration || Infinity });
+      break;
+    }
     case 'choice':
       // choice 效果由调用方处理（显示抉择弹窗）
       break;
@@ -99,11 +129,11 @@ export function executeEnemyTurn(combat: CombatState): CombatState {
     player: {
       ...combat.player,
       hand: [...combat.player.hand],
-      statusEffects: [...combat.player.statusEffects],
+      statusEffects: combat.player.statusEffects.map((e) => ({ ...e })),
       drawPile: [...combat.player.drawPile],
       discardPile: [...combat.player.discardPile],
     },
-    enemies: combat.enemies.map((e) => ({ ...e, statusEffects: [...e.statusEffects] })),
+    enemies: combat.enemies.map((e) => ({ ...e, statusEffects: e.statusEffects.map((se) => ({ ...se })) })),
   };
 
   for (const e of c.enemies) {
@@ -133,7 +163,7 @@ export function executeEnemyTurn(combat: CombatState): CombatState {
     } else if (intent.type === 'buff') {
       const existing = e.statusEffects.find((x) => x.type === intent.effect);
       if (existing) existing.value += intent.value;
-      else e.statusEffects.push({ type: intent.effect as StatusEffect['type'], value: intent.value, duration: 99 });
+      else e.statusEffects.push({ type: intent.effect as StatusEffect['type'], value: intent.value, duration: Infinity });
     } else if (intent.type === 'debuff') {
       c.player.statusEffects.push({ type: intent.effect as StatusEffect['type'], value: intent.value, duration: 2 });
     }
@@ -194,11 +224,11 @@ export function getIntentColor(intent: EnemyIntent): string {
 
 export function getIntentDescription(intent: EnemyIntent, enemy: EnemyState): string {
   const weakValue = enemy.statusEffects.find((x) => x.type === 'weak')?.value || 0;
-  const strengthValue = enemy.statusEffects.find((x) => x.type === 'strength')?.value || 0;
+  const totalStrengthValue = enemy.statusEffects.filter((x) => x.type === 'strength').reduce((sum, x) => sum + x.value, 0);
   switch (intent.type) {
     case 'attack': {
       let actualDmg = calculateDamage(intent.damage, enemy.statusEffects, []);
-      if (strengthValue > 0) actualDmg += strengthValue;
+      if (totalStrengthValue > 0) actualDmg += totalStrengthValue;
       if (weakValue > 0) actualDmg = Math.floor(actualDmg * 0.75);
       return `攻击 ${actualDmg} 伤害${intent.hits ? ` ×${intent.hits}` : ''}`;
     }

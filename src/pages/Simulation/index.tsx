@@ -45,6 +45,7 @@ const EFFECT_LABELS: Record<string, string> = {
   regen: '回复/回合',
   lifedrain: '吸取',
   lifesteal: '吸血',
+  choice: '抉择',
 };
 
 const RELIC_EFFECT_LABELS: Record<string, string> = {
@@ -108,6 +109,7 @@ const formatEffectLabel = (type: string, display: number): string => {
   if (type === 'cure') return '净化';
   if (type === 'stealth') return '潜行';
   if (type === 'regen') return `回复${display}/回合`;
+  if (type === 'choice') return label;
   return `${label}${display}`;
 };
 
@@ -1726,7 +1728,13 @@ const SimulationPage: React.FC = () => {
             <h2 className="text-2xl font-bold text-ink mb-2">🕯️ 游戏结束</h2>
             <p className="text-ink-muted mb-4">你活了 {age} 岁</p>
             <p className="text-sm text-ink-muted mb-6">卡牌数: {deck.length} | 遗物数: {relics.length}</p>
-            {cultivation && <p className="text-sm text-brand">境界: {CULTIVATION_REALM_NAMES[cultivation.realm] || cultivation.realm}</p>}
+            {cultivation && <p className="text-sm text-brand mb-6">境界: {CULTIVATION_REALM_NAMES[cultivation.realm] || cultivation.realm}</p>}
+            <button
+              onClick={resetGame}
+              className="px-6 py-2.5 bg-brand text-white rounded-lg font-medium hover:bg-brand-hover transition-all"
+            >
+              🔄 重新开始
+            </button>
           </div>
         )}
       </div>

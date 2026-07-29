@@ -1,4 +1,4 @@
-import { create } from 'zustand';
+﻿import { create } from 'zustand';
 import { StorageService } from '../services';
 import { generateId } from '../utils';
 import {
@@ -228,7 +228,18 @@ function generateWonderOptions(): WonderRewardOption[] {
   }
   return result;
 }
-function deepClone<T>(o: T): T { return JSON.parse(JSON.stringify(o)); }
+function deepClone<T>(o: T): T {
+  if (o === Infinity || o === -Infinity) return o;
+  if (typeof o !== 'object' || o === null) return o;
+  if (Array.isArray(o)) return o.map(item => deepClone(item)) as T;
+  const result: Record<string, unknown> = {};
+  for (const key in o) {
+    if (Object.prototype.hasOwnProperty.call(o, key)) {
+      result[key] = deepClone((o as Record<string, unknown>)[key]);
+    }
+  }
+  return result as T;
+}
 
 function getEnemyPool(type: OptionType, era: number, yearInEra: number, rand: () => number, age?: number, currentYear?: number): Enemy[] {
   const totalYears = era * 10 + yearInEra;
@@ -307,7 +318,7 @@ function getEnemyPool(type: OptionType, era: number, yearInEra: number, rand: ()
         block: partial.block || 5,
         intents: partial.intents || [{ type: 'defend', block: 8 }, { type: 'attack', damage: Math.floor(10 * multiplier) }, { type: 'attack', damage: Math.floor(6 * multiplier) }],
         currentIntentIndex: 0,
-        statusEffects: [{ type: 'block', value: 5, duration: 99 }],
+        statusEffects: [{ type: 'block', value: 5, duration: Infinity }],
         isBoss: false,
         cardRewards: pickRandom(COMMON_ATTACK_CARDS, 1, rand).concat(pickRandom(COMMON_SKILL_CARDS, 1, rand)).concat(pickRandom(RARE_CARDS, 1, rand)),
         goldReward: [10, 25],
@@ -372,7 +383,7 @@ function getEnemyPool(type: OptionType, era: number, yearInEra: number, rand: ()
           { type: 'attack', damage: Math.floor(8 * multiplier), hits: 2 },
         ],
         currentIntentIndex: 0,
-        statusEffects: [{ type: 'strength', value: 1, duration: 99 }],
+        statusEffects: [{ type: 'strength', value: 1, duration: Infinity }],
         isBoss: false,
         cardRewards: pickRandom(RARE_CARDS, 2, rand).concat(pickRandom(LEGENDARY_CARDS, 1, rand)),
         goldReward: [30, 60],
@@ -396,7 +407,7 @@ function getEnemyPool(type: OptionType, era: number, yearInEra: number, rand: ()
           { type: 'debuff', effect: 'weak', value: 3 },
         ],
         currentIntentIndex: 0,
-        statusEffects: [{ type: 'block', value: 10, duration: 99 }],
+        statusEffects: [{ type: 'block', value: 10, duration: Infinity }],
         isBoss: true,
         cardRewards: pickRandom(LEGENDARY_CARDS, 2, rand).concat(pickRandom(RARE_CARDS, 1, rand)),
         goldReward: [80, 150],
@@ -959,10 +970,14 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
 
   confirmDiscard: () => {
     const s = get();
+    const originalPhase = s.combat.phase;
+    if (originalPhase !== 'player_turn' && originalPhase !== 'discard_selection') return;
     let c = deepClone(s.combat);
+    c.phase = 'enemy_turn';
+    set({ combat: c });
 
     let retainedCards: LifeCard[] = [];
-    if (c.phase === 'discard_selection') {
+    if (originalPhase === 'discard_selection') {
       const selectedIds = c.selectedForDiscard;
       const toDiscard: LifeCard[] = [];
       for (const card of c.player.hand) {
@@ -985,7 +1000,6 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
 
     const bonuses = getActiveBonuses(s.attributes);
 
-    // 使用共享的敌人行动逻辑
     c = executeEnemyTurn(c);
 
     if (c.player.currentHealth <= 0) {
