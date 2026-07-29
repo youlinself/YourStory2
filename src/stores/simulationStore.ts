@@ -4,11 +4,13 @@ import { generateId } from '../utils';
 import {
   ERAS, STARTER_DECK, HIDDEN_TAGS,
   COMMON_ATTACK_CARDS, COMMON_SKILL_CARDS, RARE_CARDS, LEGENDARY_CARDS,
-  WONDER_REWARD_POOL, ATTRIBUTE_TIER_CARDS,
+  WONDER_REWARD_POOL, ATTRIBUTE_TIER_CARDS, CULTIVATION_REALM_NAMES,
+  SCRIPT_CULTIVATION_EVENTS,
+  COMMON_RELICS, RARE_RELICS, EPIC_RELICS, BOSS_RELICS,
 } from '../data/simulationData';
 import {
   getEventsByBirthYear,
-} from '../data/simulationData';
+} from '../data/eraEvents';
 import {
   getAgeStage,
   getNormalMonsterVariant,
@@ -19,6 +21,10 @@ import {
 import {
   applyCardEffect,
   executeEnemyTurn,
+  createTribulationState,
+  executeTribulationStage,
+  getTribulationReward,
+  type ApplyCardEffectResult,
 } from '../combat/combatEngine';
 import type {
   GameState, BirthYear, PlayerAttributes, GameEvent, EventOption,
@@ -26,7 +32,7 @@ import type {
   LifeCard, LifeRelic, Enemy, CombatState, StatusEffect,
   YearOption, YearNode, OptionType, CultivationState, CultivationRealm, AttributeChange,
   AttributeThresholdBonus, EnemyMechanic, CombatBonus, WonderRewardOption, WonderRewardType,
-  PendingChoice,
+  PendingChoice, ShopItem,
 } from '../types/simulation';
 
 const STORAGE_KEY = 'simulation_game_v3';
@@ -199,6 +205,73 @@ function getActiveBonuses(attrs: PlayerAttributes): AttributeThresholdBonus[] {
 
 function clamp(v: number, min = 0, max = 100) { return Math.max(min, Math.min(max, v)); }
 function seededRandom(seed: number) { let s = seed; return () => { s = (s * 1664525 + 1013904223) & 0xffffffff; return (s >>> 0) / 0xffffffff; }; }
+
+function generateShopItems(rand: () => number, era: number, discount: number, age: number): ShopItem[] {
+  const items: ShopItem[] = [];
+
+  const itemCount = 4 + Math.floor(rand() * 3);
+
+  for (let i = 0; i < itemCount; i++) {
+    const isRelic = rand() < 0.25;
+
+    if (isRelic) {
+      const rarityRoll = rand();
+      let pool: LifeRelic[];
+      if (rarityRoll < 0.5) {
+        pool = COMMON_RELICS;
+      } else if (rarityRoll < 0.8) {
+        pool = RARE_RELICS;
+      } else {
+        pool = EPIC_RELICS;
+      }
+      const relic = pool[Math.floor(rand() * pool.length)];
+      const basePrice = relic.rarity === 'common' ? 50 : relic.rarity === 'rare' ? 100 : 180;
+      items.push({
+        relic: { ...relic, id: generateId() },
+        price: Math.floor(basePrice * (1 - discount)),
+        isPurchased: false,
+      });
+    } else {
+      const rarityRoll = rand();
+      let pool: LifeCard[];
+      let basePrice: number;
+
+      if (rarityRoll < 0.55) {
+        pool = [...COMMON_ATTACK_CARDS, ...COMMON_SKILL_CARDS];
+        basePrice = 25;
+      } else if (rarityRoll < 0.85) {
+        pool = RARE_CARDS.filter((c) => !c.ageRange || (age >= c.ageRange[0] && age <= c.ageRange[1]));
+        basePrice = 60;
+      } else {
+        pool = LEGENDARY_CARDS.filter((c) => !c.ageRange || (age >= c.ageRange[0] && age <= c.ageRange[1]));
+        basePrice = 120;
+      }
+
+      if (pool.length === 0) {
+        pool = [...COMMON_ATTACK_CARDS, ...COMMON_SKILL_CARDS];
+        basePrice = 25;
+      }
+
+      const card = pool[Math.floor(rand() * pool.length)];
+      items.push({
+        card: { ...card, id: generateId() },
+        price: Math.floor(basePrice * (1 - discount)),
+        isPurchased: false,
+      });
+    }
+  }
+
+  if (era >= 5 && rand() < 0.3) {
+    const bossRelic = BOSS_RELICS[Math.floor(rand() * BOSS_RELICS.length)];
+    items.push({
+      relic: { ...bossRelic, id: generateId() },
+      price: Math.floor(250 * (1 - discount)),
+      isPurchased: false,
+    });
+  }
+
+  return items;
+}
 function shuffle<T>(arr: T[], rand = Math.random) { const a = [...arr]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
 function pickRandom<T>(arr: T[], count: number, rand = Math.random): T[] { return shuffle(arr, rand).slice(0, Math.min(count, arr.length)); }
 function generateWonderOptions(): WonderRewardOption[] {
@@ -445,7 +518,7 @@ function generateCombatBonuses(remainingLife: number): CombatBonus[] {
   return bonuses.filter((b) => b.lifeCost < remainingLife);
 }
 
-const initialWorldState: WorldState = { industryEvolution: {}, socialClimate: 50, techProgress: 30, customEvents: [] };
+const initialWorldState: WorldState = { industryEvolution: {}, socialClimate: 50, techProgress: 30, customEvents: [], unlockedEvents: [], lockedEvents: [] };
 const initialAttributes: PlayerAttributes = { energy: 18, physique: 18, health: 18, iq: 18, eq: 18, wealth: 16, network: 16, fame: 16 };
 
 const initialCombatState: CombatState = {
@@ -510,6 +583,12 @@ const initialState: GameState = {
   currentMap: null,
   shop: null,
   cultivation: null,
+  tribulation: {
+    isActive: false,
+    currentStage: 0,
+    totalStages: 0,
+    tribulationType: null,
+  },
   worldState: { ...initialWorldState },
   seed: Date.now(),
   damageEventCounter: 0,
@@ -538,13 +617,17 @@ interface SimulationState extends GameState {
   activateBonus: (bonusId: string) => void;
   selectCardReward: (cardId: string) => void;
   selectAttributeReward: () => void;
+  skipRewardWithGold: () => void;
   selectWonderOption: (index: number) => void;
   endCombat: (victory: boolean) => void;
   makeChoice: (event: GameEvent, option: EventOption) => void;
   generateShop: () => void;
+  refreshShop: () => void;
   buyShopItem: (index: number) => void;
   rest: () => void;
-  attemptBreakthrough: () => void;
+  attemptBreakthrough: () => { success: boolean; message: string; newRealm?: CultivationRealm; lifespanGain?: number };
+  triggerTribulation: (type: 'golden_core' | 'nascent' | 'ascension') => { success: boolean; message: string; totalStages?: number };
+  executeTribulationCombat: () => { success: boolean; message: string; goldReward?: number; lifespanBonus?: number; nextStage?: number; stageName?: string } | void;
   saveGame: () => Promise<void>;
   loadGame: () => Promise<void>;
   deleteSave: () => Promise<void>;
@@ -556,6 +639,10 @@ interface SimulationState extends GameState {
   getDrawCount: () => number;
   getEnergy: () => number;
   getShopDiscount: () => number;
+  getEffectiveAttributes: () => PlayerAttributes;
+  getCombatDamageBoost: () => number;
+  getStartBlock: () => number;
+  getInterruptChance: () => number;
   getActiveAttributeBonuses: () => AttributeThresholdBonus[];
   getAttributeTierInfo: (attr: keyof PlayerAttributes, value: number) => AttributeTierInfo;
   toggleDiscardSelection: (cardId: string) => void;
@@ -842,7 +929,8 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
 
     for (const eff of otherEffects) {
       const modifiedEff = eff.type === 'damage' ? { ...eff, value: Math.floor(eff.value * damageBoost) } : eff;
-      c = applyCardEffect(modifiedEff, c, effectiveTargetIdx);
+      const result: ApplyCardEffectResult = applyCardEffect(modifiedEff, c, effectiveTargetIdx);
+      c = result.combat;
     }
     if (lifestealEff && lifestealEff.value > 0) {
       const totalDamage = beforeHealth.reduce((sum, h, i) => sum + Math.max(0, h - c.enemies[i].currentHealth), 0);
@@ -1110,7 +1198,8 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
       const loseAttrEffects = selectedOption.effects.filter((e) => e.type === 'lose_attribute');
       const otherEffects = selectedOption.effects.filter((e) => e.type !== 'gain_attribute' && e.type !== 'lose_attribute');
       for (const eff of otherEffects) {
-        c = applyCardEffect(eff, c, c.currentEnemyIndex);
+        const result = applyCardEffect(eff, c, c.currentEnemyIndex);
+        c = result.combat;
       }
       if (gainAttrEffects.length > 0 || loseAttrEffects.length > 0) {
         const newAttrs = { ...s.attributes };
@@ -1144,6 +1233,7 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
 
   selectCardReward: (cardId) => { const s = get(); const card = s.combat.rewards.cards.find((c) => c.id === cardId); if (card) set({ deck: [...s.deck, { ...deepClone(card), id: generateId() }] }); get().completeOption(); },
   selectAttributeReward: () => { const s = get(); if (s.combat.rewards.attribute) { const newAttrs = { ...s.attributes }; for (const [k, v] of Object.entries(s.combat.rewards.attribute)) { newAttrs[k as keyof PlayerAttributes] = clamp(newAttrs[k as keyof PlayerAttributes] + (v || 0)); } set({ attributes: newAttrs }); } get().completeOption(); },
+  skipRewardWithGold: () => { const s = get(); set({ gold: s.gold + 10 }); get().completeOption(); },
   selectWonderOption: (index) => {
     const s = get();
     const option = s.combat.rewards.wonderOptions[index];
@@ -1190,6 +1280,22 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
     const lr: LifeRecord = { id: generateId(), era: s.currentEra, year: s.currentYear, title: event.title, content: outcome.description, attributeChanges: changes, timestamp: Date.now() };
     const ws = { ...s.worldState };
     if (event.isMilestone && success) ws.customEvents.push(outcome.description);
+    const newUnlocked = new Set(ws.unlockedEvents);
+    const newLocked = new Set(ws.lockedEvents);
+    if (outcome.unlockEvents) {
+      for (const eventId of outcome.unlockEvents) {
+        newUnlocked.add(eventId);
+        newLocked.delete(eventId);
+      }
+    }
+    if (outcome.lockEvents) {
+      for (const eventId of outcome.lockEvents) {
+        newLocked.add(eventId);
+        newUnlocked.delete(eventId);
+      }
+    }
+    ws.unlockedEvents = Array.from(newUnlocked);
+    ws.lockedEvents = Array.from(newLocked);
     let ph = s.phase;
     if (life <= 0 || attrs.health <= 0) ph = 'ended';
     set({ attributes: attrs, remainingLife: life, gold, deck, relics, choiceHistory: [...s.choiceHistory, rec], lifeRecords: [...s.lifeRecords, lr], worldState: ws, phase: ph });
@@ -1202,12 +1308,29 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
     const s = get();
     const discount = get().getShopDiscount();
     const rand = seededRandom(s.seed + s.currentEra * 1000 + Date.now());
-    const items: { card?: LifeCard; relic?: LifeRelic; price: number }[] = [];
-    for (let i = 0; i < 3 + Math.floor(rand() * 2); i++) {
-      const card: LifeCard = { id: generateId(), name: '战斗卡牌', type: 'attack', rarity: 'common', cost: 1, target: 'enemy', effects: [{ type: 'damage', value: 6 }], description: '造成6点伤害', icon: '⚔️', tags: ['攻击'] };
-      items.push({ card, price: 25 });
-    }
-    set({ shop: { items: items.map((it) => ({ ...it, price: Math.floor(it.price * (1 - discount)), isPurchased: false })), refreshCost: 25, era: s.currentEra, cardRemovalUsed: false }, phase: 'shop' });
+    const items = generateShopItems(rand, s.currentEra, discount, s.age);
+    set({ shop: { items, refreshCost: 25, era: s.currentEra, cardRemovalUsed: false, refreshCount: 0 }, phase: 'shop' });
+  },
+
+  refreshShop: () => {
+    const s = get();
+    if (!s.shop) return;
+    const currentRefreshCount = s.shop.refreshCount;
+    const baseCost = s.shop.refreshCost;
+    const refreshCost = baseCost + currentRefreshCount * 15;
+    if (s.gold < refreshCost) return;
+    const discount = get().getShopDiscount();
+    const rand = seededRandom(s.seed + s.currentEra * 1000 + Date.now() + currentRefreshCount);
+    const items = generateShopItems(rand, s.currentEra, discount, s.age);
+    set({
+      gold: s.gold - refreshCost,
+      shop: {
+        ...s.shop,
+        items,
+        refreshCount: currentRefreshCount + 1,
+        cardRemovalUsed: false,
+      },
+    });
   },
 
   buyShopItem: (idx) => {
@@ -1232,11 +1355,194 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
 
   attemptBreakthrough: () => {
     const s = get();
-    if (!s.cultivation) return;
+    if (!s.cultivation) return { success: false, message: '未开启修仙模式' };
+
     const realms: CultivationRealm[] = ['mortal', 'qi_refining', 'foundation', 'golden_core', 'nascent', 'spirit', 'void', 'integration', 'mahayana', 'tribulation'];
     const ci = realms.indexOf(s.cultivation.realm);
-    if (ci >= realms.length - 1) return;
-    if (Object.values(s.attributes).reduce((a, b) => a + b, 0) < 100 * (ci + 1)) return;
+
+    if (ci >= realms.length - 1) return { success: false, message: '已达最高境界' };
+
+    const nextRealm = realms[ci + 1];
+    const totalAttributes = Object.values(s.attributes).reduce((a, b) => a + b, 0);
+    const requiredAttributes = 100 * (ci + 1);
+
+    if (totalAttributes < requiredAttributes) {
+      return { success: false, message: `属性不足，需要总属性 ${requiredAttributes}，当前 ${totalAttributes}` };
+    }
+
+    const realmBonusMap: Record<CultivationRealm, Partial<Record<keyof PlayerAttributes, number>>> = {
+      mortal: {},
+      qi_refining: { energy: 5, health: 3 },
+      foundation: { energy: 8, health: 5, physique: 3 },
+      golden_core: { energy: 12, health: 8, physique: 5, iq: 3 },
+      nascent: { energy: 15, health: 10, physique: 8, iq: 5, eq: 3 },
+      spirit: { energy: 18, health: 12, physique: 10, iq: 8, eq: 5, network: 3 },
+      void: { energy: 22, health: 15, physique: 12, iq: 10, eq: 8, network: 5, wealth: 3 },
+      integration: { energy: 25, health: 18, physique: 15, iq: 12, eq: 10, network: 8, wealth: 5, fame: 3 },
+      mahayana: { energy: 30, health: 22, physique: 18, iq: 15, eq: 12, network: 10, wealth: 8, fame: 5 },
+      tribulation: { energy: 35, health: 25, physique: 20, iq: 18, eq: 15, network: 12, wealth: 10, fame: 8 },
+    };
+
+    const lifespanExtension: Record<CultivationRealm, number> = {
+      mortal: 0,
+      qi_refining: 20,
+      foundation: 40,
+      golden_core: 80,
+      nascent: 120,
+      spirit: 180,
+      void: 250,
+      integration: 350,
+      mahayana: 500,
+      tribulation: 700,
+    };
+
+    const newRealmBonus = realmBonusMap[nextRealm];
+    const newLifespan = s.cultivation.maxLifespan + lifespanExtension[nextRealm];
+    const newTribulationThreshold = ci >= 2 ? s.cultivation.tribulationThreshold + 1 : 0;
+
+    const newCultivation: CultivationState = {
+      realm: nextRealm,
+      maxLifespan: newLifespan,
+      tribulationThreshold: newTribulationThreshold,
+      realmBonus: newRealmBonus,
+    };
+
+    const newMaxHealth = get().getEffectiveMaxHealth();
+    const newCombat = {
+      ...s.combat,
+      player: {
+        ...s.combat.player,
+        maxHealth: newMaxHealth,
+        currentHealth: newMaxHealth,
+      },
+    };
+
+    const breakthroughRecord: LifeRecord = {
+      id: generateId(),
+      era: s.currentEra,
+      year: s.currentYear,
+      title: `突破至${CULTIVATION_REALM_NAMES[nextRealm]}境界`,
+      content: `历经艰辛，终于突破${CULTIVATION_REALM_NAMES[s.cultivation.realm]}，踏入${CULTIVATION_REALM_NAMES[nextRealm]}境界！寿元增加${lifespanExtension[nextRealm]}年。`,
+      attributeChanges: [],
+      timestamp: Date.now(),
+    };
+
+    set({
+      cultivation: newCultivation,
+      maxLifespan: newLifespan,
+      combat: newCombat,
+      lifeRecords: [...s.lifeRecords, breakthroughRecord],
+    });
+
+    return {
+      success: true,
+      message: `突破成功！踏入${CULTIVATION_REALM_NAMES[nextRealm]}境界，寿元增加${lifespanExtension[nextRealm]}年`,
+      newRealm: nextRealm,
+      lifespanGain: lifespanExtension[nextRealm],
+    };
+  },
+
+  triggerTribulation: (type: 'golden_core' | 'nascent' | 'ascension') => {
+    const s = get();
+    if (!s.cultivation) return { success: false, message: '未开启修仙模式' };
+
+    const tribulationState = createTribulationState(type);
+    const currentStage = tribulationState.stages[0];
+
+    const tribulationRecord: LifeRecord = {
+      id: generateId(),
+      era: s.currentEra,
+      year: s.currentYear,
+      title: `天劫降临：${currentStage.stageName}`,
+      content: `第${currentStage.stage}/${tribulationState.totalStages}劫即将开始，威力倍增，务必小心！`,
+      attributeChanges: [],
+      timestamp: Date.now(),
+    };
+
+    set({
+      tribulation: {
+        isActive: true,
+        currentStage: 1,
+        totalStages: tribulationState.totalStages,
+        tribulationType: type,
+      },
+      lifeRecords: [...s.lifeRecords, tribulationRecord],
+    });
+
+    return {
+      success: true,
+      message: `天劫降临！共${tribulationState.totalStages}劫，当前：${currentStage.stageName}`,
+      totalStages: tribulationState.totalStages,
+    };
+  },
+
+  executeTribulationCombat: () => {
+    const s = get();
+    if (!s.tribulation.isActive || !s.cultivation) return;
+
+    const tribulationState = createTribulationState(s.tribulation.tribulationType || 'golden_core');
+    const currentStageData = tribulationState.stages[s.tribulation.currentStage - 1];
+
+    const newCombat = executeTribulationStage(s.combat, currentStageData);
+
+    set({ combat: newCombat });
+
+    if (newCombat.player.currentHealth <= 0) {
+      set({
+        tribulation: { ...s.tribulation, isActive: false },
+        phase: 'ended',
+      });
+      return { success: false, message: '渡劫失败，身死道消' };
+    }
+
+    if (s.tribulation.currentStage >= s.tribulation.totalStages) {
+      const reward = getTribulationReward(tribulationState);
+      const newLifespan = s.maxLifespan + reward.lifespanBonus;
+
+      const successRecord: LifeRecord = {
+        id: generateId(),
+        era: s.currentEra,
+        year: s.currentYear,
+        title: '渡劫成功',
+        content: `成功渡过${s.tribulation.totalStages}重天劫，获得${reward.gold}金币，寿元增加${reward.lifespanBonus}年！`,
+        attributeChanges: [],
+        timestamp: Date.now(),
+      };
+
+      set({
+        tribulation: {
+          isActive: false,
+          currentStage: 0,
+          totalStages: 0,
+          tribulationType: null,
+        },
+        gold: s.gold + reward.gold,
+        maxLifespan: newLifespan,
+        lifeRecords: [...s.lifeRecords, successRecord],
+      });
+
+      return {
+        success: true,
+        message: `渡劫成功！获得${reward.gold}金币，寿元增加${reward.lifespanBonus}年`,
+        goldReward: reward.gold,
+        lifespanBonus: reward.lifespanBonus,
+      };
+    }
+
+    set({
+      tribulation: {
+        ...s.tribulation,
+        currentStage: s.tribulation.currentStage + 1,
+      },
+    });
+
+    const nextStage = tribulationState.stages[s.tribulation.currentStage];
+    return {
+      success: true,
+      message: `第${s.tribulation.currentStage}劫已过，下一劫：${nextStage.stageName}`,
+      nextStage: s.tribulation.currentStage,
+      stageName: nextStage.stageName,
+    };
   },
 
   saveGame: async () => {
@@ -1305,23 +1611,57 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
   getAvailableEvents: () => {
     const s = get();
     if (!s.birthYear) return [];
+
+    const unlockedSet = new Set(s.worldState.unlockedEvents);
+    const lockedSet = new Set(s.worldState.lockedEvents);
+
+    const filterEvents = (events: GameEvent[]): GameEvent[] => {
+      return events.filter((event) => {
+        if (event.ageRange) {
+          const [minAge, maxAge] = event.ageRange;
+          if (s.age < minAge || s.age > maxAge) return false;
+        }
+        if (event.triggerCondition && !event.triggerCondition(s)) return false;
+        if (event.id && lockedSet.has(event.id)) return false;
+        return true;
+      }).map((event) => {
+        if (event.id && unlockedSet.has(event.id)) {
+          return { ...event, isMilestone: true };
+        }
+        return event;
+      });
+    };
+
+    if (s.age > 110 && s.cultivation) {
+      return filterEvents(SCRIPT_CULTIVATION_EVENTS);
+    }
+
     const events = getEventsByBirthYear(s.birthYear);
-    return events.filter((event) => {
-      if (!event.ageRange) return true;
-      const [minAge, maxAge] = event.ageRange;
-      return s.age >= minAge && s.age <= maxAge;
-    });
+    return filterEvents(events);
   },
   checkHiddenTags: () => { const s = get(); const tags = new Set(s.hiddenTags); for (const t of HIDDEN_TAGS) if (!tags.has(t.id) && t.condition(s)) tags.add(t.id); return Array.from(tags); },
 
   getEffectiveMaxHealth: () => {
     const s = get();
-    let h = s.attributes.health;
+    const effectiveAttrs = get().getEffectiveAttributes();
+    let h = effectiveAttrs.health;
     const bonuses = getActiveBonuses(s.attributes);
     for (const b of bonuses) if (b.effect === 'max_health_bonus') h += b.value;
     for (const r of s.relics) for (const e of r.effects) if (e.type === 'max_health_bonus') h += e.value;
     if (s.cultivation) h += (s.cultivation.realmBonus.physique || 0) * 2;
     return Math.max(30, h);
+  },
+
+  getEffectiveAttributes: (): PlayerAttributes => {
+    const s = get();
+    const base = { ...s.attributes };
+    if (!s.cultivation) return base;
+    const bonus = s.cultivation.realmBonus;
+    (Object.keys(bonus) as Array<keyof PlayerAttributes>).forEach((key) => {
+      const value = bonus[key];
+      if (value) base[key] += value;
+    });
+    return base;
   },
 
   getDrawCount: () => { const s = get(); let b = 0; for (const r of s.relics) for (const e of r.effects) if (e.type === 'card_draw_bonus') b += e.value; return b; },
@@ -1332,7 +1672,10 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
     const bonuses = getActiveBonuses(s.attributes);
     for (const b of bonuses) if (b.effect === 'energy_bonus') e += b.value;
     for (const r of s.relics) for (const ef of r.effects) if (ef.type === 'energy_bonus') e += ef.value;
-    if (s.cultivation && s.cultivation.realm !== 'mortal') e += 1;
+    if (s.cultivation) {
+      e += Math.floor((s.cultivation.realmBonus.energy || 0) / 3);
+      if (s.cultivation.realm !== 'mortal') e += 1;
+    }
     return e;
   },
 
@@ -1342,7 +1685,38 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
     const bonuses = getActiveBonuses(s.attributes);
     for (const b of bonuses) if (b.effect === 'shop_discount') d += b.value;
     for (const r of s.relics) for (const e of r.effects) if (e.type === 'discount') d += e.value;
+    if (s.cultivation) d += (s.cultivation.realmBonus.wealth || 0) * 0.01;
     return Math.min(0.5, d);
+  },
+
+  getCombatDamageBoost: () => {
+    const s = get();
+    let boost = 1;
+    const bonuses = getActiveBonuses(s.attributes);
+    for (const b of bonuses) if (b.effect === 'damage_boost') boost += b.value * 0.01;
+    if (s.cultivation) {
+      const iqBonus = s.cultivation.realmBonus.iq || 0;
+      boost += iqBonus * 0.005;
+    }
+    return boost;
+  },
+
+  getStartBlock: () => {
+    const s = get();
+    let block = 0;
+    const bonuses = getActiveBonuses(s.attributes);
+    for (const b of bonuses) if (b.effect === 'start_block') block += b.value;
+    if (s.cultivation) block += Math.floor((s.cultivation.realmBonus.physique || 0) / 2);
+    return block;
+  },
+
+  getInterruptChance: () => {
+    const s = get();
+    let chance = 0;
+    const bonuses = getActiveBonuses(s.attributes);
+    for (const b of bonuses) if (b.effect === 'interrupt_chance') chance += b.value;
+    if (s.cultivation) chance += (s.cultivation.realmBonus.fame || 0) * 0.002;
+    return Math.min(0.5, chance);
   },
 
   getActiveAttributeBonuses: () => getActiveBonuses(get().attributes),

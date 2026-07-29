@@ -1167,6 +1167,30 @@ const CombatPhaseView: React.FC = () => {
                 </div>
               </div>
             )}
+            {/* 战斗日志 */}
+            {combat.log.length > 0 && (
+              <div className="mt-3">
+                <div className="text-[10px] text-ink-muted mb-2">📜 战斗日志</div>
+                <div className="max-h-32 overflow-y-auto space-y-1 pr-1 bg-bg-subtle rounded-lg p-2">
+                  {combat.log.slice(-10).map((entry, i) => (
+                    <div
+                      key={i}
+                      className={`text-[10px] leading-tight ${
+                        entry.actor === 'player' ? 'text-brand' :
+                        entry.actor === 'system' ? 'text-ink-faint italic' :
+                        'text-danger'
+                      }`}
+                    >
+                      <span className="text-ink-faint mr-1">[T{entry.turn}]</span>
+                      {entry.actor !== 'system' && entry.actor !== 'player' && (
+                        <span className="font-medium">{entry.actor}: </span>
+                      )}
+                      {entry.action}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* 燃烧生命 */}
@@ -1246,6 +1270,7 @@ const RewardPhase: React.FC = () => {
   const combat = useSimulationStore((s) => s.combat);
   const selectCardReward = useSimulationStore((s) => s.selectCardReward);
   const selectAttributeReward = useSimulationStore((s) => s.selectAttributeReward);
+  const skipRewardWithGold = useSimulationStore((s) => s.skipRewardWithGold);
   const selectWonderOption = useSimulationStore((s) => s.selectWonderOption);
   const completeOption = useSimulationStore((s) => s.completeOption);
   const [tab, setTab] = useState<'card' | 'attribute' | 'relic'>('card');
@@ -1320,10 +1345,10 @@ const RewardPhase: React.FC = () => {
         </div>
 
         <button
-          onClick={completeOption}
+          onClick={skipRewardWithGold}
           className="px-6 py-2.5 bg-gray-100 text-ink-muted rounded-lg font-medium hover:bg-gray-200 hover:text-ink transition-colors"
         >
-          跳过奖励 →
+          跳过奖励 → 💰+10
         </button>
       </div>
     );
@@ -1392,10 +1417,10 @@ const RewardPhase: React.FC = () => {
 
       {(hasCards || hasAttribute || hasRelic) && (
         <button
-          onClick={completeOption}
+          onClick={skipRewardWithGold}
           className="px-6 py-2.5 bg-gray-100 text-ink-muted rounded-lg font-medium hover:bg-gray-200 hover:text-ink transition-colors"
         >
-          跳过奖励 →
+          跳过奖励 → 💰+10
         </button>
       )}
     </div>
@@ -1413,34 +1438,84 @@ const ShopPhase: React.FC = () => {
   const buyShopItem = useSimulationStore((s) => s.buyShopItem);
   const removeCardFromDeck = useSimulationStore((s) => s.removeCardFromDeck);
   const completeOption = useSimulationStore((s) => s.completeOption);
+  const refreshShop = useSimulationStore((s) => s.refreshShop);
   const [showRemoveModal, setShowRemoveModal] = useState(false);
   if (!shop) return null;
 
   const removalCost = 50 + cardRemovalCount * 50;
   const canRemoveCard = !shop.cardRemovalUsed && gold >= removalCost && deck.length > 0;
+  const refreshCost = shop.refreshCost + shop.refreshCount * 15;
+  const canRefresh = gold >= refreshCost;
 
   return (
     <div className="p-4 max-w-2xl mx-auto">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-ink">🏪 商店</h2>
-        <span className="text-sm">💰 {gold} 金币</span>
+        <div className="flex items-center gap-3">
+          <span className="text-sm">💰 {gold} 金币</span>
+          <button
+            onClick={refreshShop}
+            disabled={!canRefresh}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5 ${
+              canRefresh
+                ? 'bg-secondary text-white hover:bg-secondary/90'
+                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+            }`}
+          >
+            <span>🔄</span>
+            <span>刷新</span>
+            <span className="text-xs opacity-80">💰{refreshCost}</span>
+          </button>
+        </div>
       </div>
+      {shop.refreshCount > 0 && (
+        <div className="mb-3 text-xs text-ink-muted text-center">
+          已刷新 {shop.refreshCount} 次 · 下次刷新费用递增
+        </div>
+      )}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        {shop.items.map((item, idx) => (
-          <div key={idx} className={`p-4 rounded-lg border ${item.isPurchased ? 'opacity-50 bg-gray-50' : 'border-border-subtle'}`}>
-            <div className="flex items-center gap-2 mb-2">
-              {item.card && <span className="text-2xl">{item.card.icon}</span>}
-              {item.relic && <span className="text-2xl">{item.relic.icon}</span>}
-              <div><div className="font-medium text-sm">{item.card?.name || item.relic?.name}</div><div className="text-xs text-ink-muted">{item.card?.description || item.relic?.description}</div></div>
+        {shop.items.map((item, idx) => {
+          const rarity = item.card?.rarity || item.relic?.rarity;
+          const rarityColors: Record<string, string> = {
+            common: 'border-gray-300 bg-gray-50/50',
+            uncommon: 'border-green-400 bg-green-50/50',
+            rare: 'border-blue-400 bg-blue-50/50',
+            legendary: 'border-yellow-400 bg-yellow-50/50',
+            boss: 'border-purple-400 bg-purple-50/50',
+          };
+          const rarityLabels: Record<string, string> = {
+            common: '普通',
+            uncommon: '优秀',
+            rare: '稀有',
+            legendary: '传说',
+            boss: 'Boss',
+          };
+          const borderClass = rarityColors[rarity || 'common'] || rarityColors.common;
+
+          return (
+            <div key={idx} className={`p-4 rounded-lg border-2 ${item.isPurchased ? 'opacity-50 bg-gray-100 !border-gray-200' : borderClass}`}>
+              <div className="flex items-center gap-2 mb-2">
+                {item.card && <span className="text-2xl">{item.card.icon}</span>}
+                {item.relic && <span className="text-2xl">{item.relic.icon}</span>}
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-sm">{item.card?.name || item.relic?.name}</span>
+                    <span className={`text-xs px-1.5 py-0.5 rounded ${rarity === 'legendary' ? 'bg-yellow-200 text-yellow-800' : rarity === 'rare' ? 'bg-blue-200 text-blue-800' : rarity === 'uncommon' ? 'bg-green-200 text-green-800' : rarity === 'boss' ? 'bg-purple-200 text-purple-800' : 'bg-gray-200 text-gray-600'}`}>
+                      {rarityLabels[rarity || 'common']}
+                    </span>
+                  </div>
+                  <div className="text-xs text-ink-muted">{item.card?.description || item.relic?.description}</div>
+                </div>
+              </div>
+              <div className="flex items-center justify-between mt-3 pt-2 border-t border-border-subtle/30">
+                <span className="text-sm font-bold text-brand">💰 {item.price}</span>
+                {!item.isPurchased ? (
+                  <button onClick={() => buyShopItem(idx)} disabled={gold < item.price} className={`px-3 py-1 rounded text-sm ${gold >= item.price ? 'bg-brand text-white hover:bg-brand/90' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}>购买</button>
+                ) : <span className="text-xs text-gray-400">已购买</span>}
+              </div>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-bold text-brand">💰 {item.price}</span>
-              {!item.isPurchased ? (
-                <button onClick={() => buyShopItem(idx)} disabled={gold < item.price} className={`px-3 py-1 rounded text-sm ${gold >= item.price ? 'bg-brand text-white hover:bg-brand/90' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}>购买</button>
-              ) : <span className="text-xs text-gray-400">已购买</span>}
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* 卡牌删除服务 */}
@@ -1598,6 +1673,120 @@ const RestPhase: React.FC = () => {
       </div>
 
       <button onClick={rest} className="px-6 py-2.5 bg-brand text-white rounded-lg font-medium hover:bg-brand/90 transition-colors">休息恢复</button>
+    </div>
+  );
+};
+
+// ==========================================
+// 修仙突破面板组件
+// ==========================================
+interface CultivationBreakthroughPanelProps {
+  cultivation: {
+    realm: string;
+    maxLifespan: number;
+    tribulationThreshold: number;
+    realmBonus: Partial<Record<string, number>>;
+  };
+  age: number;
+}
+
+const CULTIVATION_REALM_ORDER = ['mortal', 'qi_refining', 'foundation', 'golden_core', 'nascent', 'spirit', 'void', 'integration', 'mahayana', 'tribulation'];
+
+const CultivationBreakthroughPanel: React.FC<CultivationBreakthroughPanelProps> = ({ cultivation, age }) => {
+  const attemptBreakthrough = useSimulationStore((s) => s.attemptBreakthrough);
+  const attributes = useSimulationStore((s) => s.attributes);
+  const { addToast } = useToast();
+  const [isAnimating, setIsAnimating] = useState(false);
+
+  const currentRealmIndex = CULTIVATION_REALM_ORDER.indexOf(cultivation.realm);
+  const nextRealm = currentRealmIndex < CULTIVATION_REALM_ORDER.length - 1 ? CULTIVATION_REALM_ORDER[currentRealmIndex + 1] : null;
+  const totalAttributes = Object.values(attributes).reduce((a, b) => a + b, 0);
+  const requiredAttributes = 100 * (currentRealmIndex + 1);
+  const canBreakthrough = totalAttributes >= requiredAttributes && age > 110;
+
+  const realmNames: Record<string, string> = {
+    mortal: '凡人',
+    qi_refining: '炼气',
+    foundation: '筑基',
+    golden_core: '金丹',
+    nascent: '元婴',
+    spirit: '化神',
+    void: '炼虚',
+    integration: '合体',
+    mahayana: '大乘',
+    tribulation: '渡劫',
+  };
+
+  const handleBreakthrough = () => {
+    if (!canBreakthrough) return;
+    setIsAnimating(true);
+
+    setTimeout(() => {
+      const result = attemptBreakthrough();
+      if (result?.success) {
+        addToast({ type: 'success', message: result.message });
+      } else {
+        addToast({ type: 'error', message: result?.message || '突破失败' });
+      }
+      setIsAnimating(false);
+    }, 1000);
+  };
+
+  if (!nextRealm) {
+    return (
+      <div className="text-sm text-ink-muted text-center py-2">
+        已达最高境界
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="text-xs text-ink-muted">
+        <div className="flex justify-between mb-1">
+          <span>当前境界</span>
+          <span className="text-brand font-medium">{realmNames[cultivation.realm] || cultivation.realm}</span>
+        </div>
+        <div className="flex justify-between mb-1">
+          <span>下一境界</span>
+          <span className="text-gold font-medium">{realmNames[nextRealm] || nextRealm}</span>
+        </div>
+        <div className="flex justify-between mb-1">
+          <span>寿元</span>
+          <span>{cultivation.maxLifespan}年</span>
+        </div>
+        <div className="flex justify-between">
+          <span>属性需求</span>
+          <span className={canBreakthrough ? 'text-green-600' : 'text-red-500'}>
+            {totalAttributes} / {requiredAttributes}
+          </span>
+        </div>
+      </div>
+
+      {isAnimating && (
+        <div className="flex items-center justify-center py-2">
+          <div className="animate-spin w-6 h-6 border-2 border-brand border-t-transparent rounded-full" />
+          <span className="ml-2 text-sm text-brand">突破中...</span>
+        </div>
+      )}
+
+      <button
+        onClick={handleBreakthrough}
+        disabled={!canBreakthrough || isAnimating}
+        className={`w-full py-2 rounded-lg font-medium text-sm transition-all ${
+          canBreakthrough && !isAnimating
+            ? 'bg-gradient-to-r from-brand to-purple-600 text-white hover:shadow-lg'
+            : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+        }`}
+      >
+        {canBreakthrough ? '尝试突破' : age <= 110 ? '需110岁后突破' : '属性不足'}
+      </button>
+
+      {!canBreakthrough && age > 110 && (
+        <p className="text-xs text-ink-muted text-center">
+          还需 {requiredAttributes - totalAttributes} 点总属性
+        </p>
+      )}
     </div>
   );
 };
@@ -1768,6 +1957,14 @@ const SimulationPage: React.FC = () => {
                 {cultivation && <div className="flex justify-between"><span className="text-ink-muted">境界</span><span className="font-medium text-brand">{CULTIVATION_REALM_NAMES[cultivation.realm] || cultivation.realm}</span></div>}
               </div>
             </div>
+
+            {/* 修仙突破面板 */}
+            {cultivation && cultivation.realm !== 'tribulation' && (
+              <div className="bg-white rounded-xl border border-border-subtle p-4 mb-4">
+                <h3 className="font-semibold text-ink mb-3">☯️ 境界突破</h3>
+                <CultivationBreakthroughPanel cultivation={cultivation} age={age} />
+              </div>
+            )}
             <button
               onClick={handleSave}
               className="w-full mb-4 px-4 py-2.5 bg-bg-elevated border border-border-subtle text-ink-muted font-medium text-sm rounded-xl hover:border-brand hover:text-brand transition-all flex items-center justify-center gap-2"

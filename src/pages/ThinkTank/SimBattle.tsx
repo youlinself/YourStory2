@@ -252,7 +252,8 @@ const SimBattle: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
 
     const targetIdx = selectedTarget;
     for (const eff of otherEffects) {
-      c = applyCardEffect(eff, c, targetIdx);
+      const result = applyCardEffect(eff, c, targetIdx);
+      c = result.combat;
     }
     c.player.discardPile.push(card);
 
@@ -272,7 +273,8 @@ const SimBattle: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
     const selectedOption = pendingChoice.options.find((o) => o.id === choiceId);
     if (selectedOption) {
       for (const eff of selectedOption.effects) {
-        c = applyCardEffect(eff, c, c.currentEnemyIndex);
+        const result = applyCardEffect(eff, c, c.currentEnemyIndex);
+        c = result.combat;
       }
       c.log = [...c.log, { turn: c.currentTurn, actor: 'player', action: `选择：${selectedOption.label}`, timestamp: Date.now() }];
     }

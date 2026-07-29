@@ -300,6 +300,7 @@ export interface ShopState {
   refreshCost: number;
   era: number;
   cardRemovalUsed: boolean;
+  refreshCount: number;
 }
 
 export type GamePhase =
@@ -381,6 +382,12 @@ export interface GameState {
   currentMap: EraMap | null;
   shop: ShopState | null;
   cultivation: CultivationState | null;
+  tribulation: {
+    isActive: boolean;
+    currentStage: number;
+    totalStages: number;
+    tribulationType: 'golden_core' | 'nascent' | 'ascension' | null;
+  };
   worldState: WorldState;
   seed: number;
   damageEventCounter: number;
@@ -395,6 +402,8 @@ export interface WorldState {
   socialClimate: number;
   techProgress: number;
   customEvents: string[];
+  unlockedEvents: string[];
+  lockedEvents: string[];
 }
 
 export interface SaveMetadata {

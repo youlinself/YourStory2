@@ -3320,6 +3320,671 @@ export function getCultivationRealm(age: number): CultivationRealm | null {
   return 'tribulation';
 }
 
+// ==========================================
+// 修仙专属事件（110岁+）
+// ==========================================
+export const SCRIPT_CULTIVATION_EVENTS: GameEvent[] = [
+  // ---- 炼气期 (111-130岁) ----
+  {
+    id: 'cultivation_qi_sensing',
+    type: 'world_event',
+    era: 11,
+    ageRange: [111, 115],
+    title: '感应天地',
+    baseText: '你感受到天地间弥漫的灵气，这是前所未有的体验。',
+    options: [
+      {
+        id: 'qi_meditate',
+        text: '静心感悟',
+        successRate: { energy: 0.5, iq: 0.3 },
+        successOutcome: {
+          description: '你成功感应到灵气，体内真元初现。',
+          attributeChanges: { energy: 5 },
+        },
+        failureOutcome: {
+          description: '感悟失败，但心境有所提升。',
+          attributeChanges: { eq: 2 },
+        },
+      },
+      {
+        id: 'qi_seek_master',
+        text: '寻访名师',
+        successRate: { network: 0.4, eq: 0.3 },
+        successOutcome: {
+          description: '你遇到一位老者，他传授你基础吐纳之法。',
+          attributeChanges: { iq: 5 },
+        },
+        failureOutcome: {
+          description: '寻访未果，但途中见闻颇丰。',
+          attributeChanges: { network: 3 },
+        },
+      },
+    ],
+  },
+  {
+    id: 'cultivation_first_technique',
+    type: 'world_event',
+    era: 11,
+    ageRange: [116, 120],
+    title: '初学功法',
+    baseText: '你决定开始修炼一门基础功法。',
+    options: [
+      {
+        id: 'technique_body',
+        text: '炼体之术',
+        successRate: { physique: 0.5, energy: 0.3 },
+        successOutcome: {
+          description: '你的肉身强度大幅提升。',
+          attributeChanges: { physique: 8 },
+        },
+        failureOutcome: {
+          description: '修炼过度，需要时间恢复。',
+          attributeChanges: { health: -3 },
+        },
+      },
+      {
+        id: 'technique_mind',
+        text: '心法修炼',
+        successRate: { iq: 0.5, eq: 0.3 },
+        successOutcome: {
+          description: '你的精神力更加凝聚。',
+          attributeChanges: { iq: 6 },
+        },
+        failureOutcome: {
+          description: '心法深奥，一时难以领悟。',
+          attributeChanges: {},
+        },
+      },
+    ],
+  },
+  {
+    id: 'cultivation_qi_refining_challenge',
+    type: 'fixed',
+    era: 11,
+    ageRange: [121, 130],
+    title: '炼气考验',
+    baseText: '一只妖兽出现在你面前，这是炼气期的考验。',
+    options: [
+      {
+        id: 'qi_fight',
+        text: '迎战',
+        successRate: { physique: 0.5, energy: 0.4 },
+        successOutcome: {
+          description: '你成功击退了妖兽，获得妖丹。',
+          attributeChanges: { wealth: 50 },
+        },
+        failureOutcome: {
+          description: '战斗艰难，但积累了经验。',
+          attributeChanges: { physique: 3 },
+        },
+      },
+      {
+        id: 'qi_flee',
+        text: '暂避锋芒',
+        successRate: { eq: 0.6 },
+        successOutcome: {
+          description: '你选择战略性撤退。',
+          attributeChanges: { eq: 2 },
+        },
+        failureOutcome: {
+          description: '撤退时有些狼狈。',
+          attributeChanges: {},
+        },
+      },
+    ],
+  },
+
+  // ---- 筑基期 (131-160岁) ----
+  {
+    id: 'cultivation_foundation_establishment',
+    type: 'world_event',
+    era: 12,
+    ageRange: [131, 140],
+    title: '筑基机缘',
+    baseText: '你感到筑基的契机已经到来，需要寻找一处灵地闭关。',
+    options: [
+      {
+        id: 'foundation_cave',
+        text: '洞府闭关',
+        successRate: { health: 0.5, energy: 0.4 },
+        successOutcome: {
+          description: '洞府灵气充沛，筑基成功！',
+          attributeChanges: { health: 10 },
+        },
+        failureOutcome: {
+          description: '洞府灵气不足，但有所收获。',
+          attributeChanges: { energy: 5 },
+        },
+      },
+      {
+        id: 'foundation_herb',
+        text: '寻找灵药',
+        successRate: { network: 0.4, wealth: 0.3 },
+        successOutcome: {
+          description: '你找到一株百年灵药。',
+          attributeChanges: { wealth: 80 },
+        },
+        failureOutcome: {
+          description: '灵药难寻，但历练丰富。',
+          attributeChanges: { network: 5 },
+        },
+      },
+    ],
+  },
+  {
+    id: 'cultivation_inner_demon',
+    type: 'world_event',
+    era: 12,
+    ageRange: [141, 150],
+    title: '心魔试炼',
+    baseText: '修炼路上，心魔来袭，这是每个修士必须面对的考验。',
+    options: [
+      {
+        id: 'demon_confront',
+        text: '直面心魔',
+        successRate: { eq: 0.5, iq: 0.3 },
+        successOutcome: {
+          description: '你战胜了心魔，道心更加坚定。',
+          attributeChanges: { eq: 10 },
+        },
+        failureOutcome: {
+          description: '心魔强大，你受了些内伤。',
+          attributeChanges: { health: -5 },
+        },
+      },
+      {
+        id: 'demon_mediate',
+        text: '冥想化解',
+        successRate: { iq: 0.5, eq: 0.4 },
+        successOutcome: {
+          description: '心魔逐渐消散，心境提升。',
+          attributeChanges: { iq: 8 },
+        },
+        failureOutcome: {
+          description: '化解过程漫长，但终有所得。',
+          attributeChanges: { energy: 4 },
+        },
+      },
+    ],
+  },
+  {
+    id: 'cultivation_tribulation_hint',
+    type: 'world_event',
+    era: 12,
+    ageRange: [151, 160],
+    title: '天劫预兆',
+    baseText: '天空偶尔闪过异象，你知道天劫正在酝酿。',
+    options: [
+      {
+        id: 'tribulation_prepare',
+        text: '积极准备',
+        successRate: { wealth: 0.5, energy: 0.3 },
+        successOutcome: {
+          description: '你做好了充分准备。',
+          attributeChanges: { wealth: 100 },
+        },
+        failureOutcome: {
+          description: '准备过程中有所感悟。',
+          attributeChanges: { iq: 5 },
+        },
+      },
+      {
+        id: 'tribulation_accept',
+        text: '顺其自然',
+        successRate: { eq: 0.6 },
+        successOutcome: {
+          description: '你保持平常心，继续修炼。',
+          attributeChanges: { eq: 5 },
+        },
+        failureOutcome: {
+          description: '心中略有不安。',
+          attributeChanges: {},
+        },
+      },
+    ],
+  },
+
+  // ---- 金丹期 (161-200岁) ----
+  {
+    id: 'cultivation_golden_core_formation',
+    type: 'world_event',
+    era: 13,
+    ageRange: [161, 175],
+    title: '结丹机缘',
+    baseText: '你感到结丹的时机已到，需要寻找一处安全之地。',
+    options: [
+      {
+        id: 'core_secluded',
+        text: '深山闭关',
+        successRate: { physique: 0.5, health: 0.4 },
+        successOutcome: {
+          description: '金丹大成，实力大增！',
+          attributeChanges: { physique: 15 },
+        },
+        failureOutcome: {
+          description: '结丹过程艰难，但终有所成。',
+          attributeChanges: { energy: 8 },
+        },
+      },
+      {
+        id: 'core_enlightenment',
+        text: '红尘悟道',
+        successRate: { eq: 0.5, network: 0.3 },
+        successOutcome: {
+          description: '你从人间烟火中悟得真谛。',
+          attributeChanges: { eq: 12 },
+        },
+        failureOutcome: {
+          description: '红尘纷扰，难以静心。',
+          attributeChanges: { network: 8 },
+        },
+      },
+    ],
+  },
+  {
+    id: 'cultivation_sect_contest',
+    type: 'fixed',
+    era: 13,
+    ageRange: [176, 190],
+    title: '宗门大比',
+    baseText: '修仙宗门举办大比，各路修士齐聚一堂。',
+    options: [
+      {
+        id: 'contest_participate',
+        text: '参加大比',
+        successRate: { physique: 0.5, fame: 0.3 },
+        successOutcome: {
+          description: '你在大比中表现出色，获得奖励。',
+          attributeChanges: { fame: 15 },
+        },
+        failureOutcome: {
+          description: '虽未获胜，但积累了战斗经验。',
+          attributeChanges: { physique: 8 },
+        },
+      },
+      {
+        id: 'contest_observe',
+        text: '旁观学习',
+        successRate: { iq: 0.5 },
+        successOutcome: {
+          description: '你从观摩中获益良多。',
+          attributeChanges: { iq: 10 },
+        },
+        failureOutcome: {
+          description: '观摩时有些分心。',
+          attributeChanges: {},
+        },
+      },
+    ],
+  },
+  {
+    id: 'cultivation_nascent_preparation',
+    type: 'world_event',
+    era: 13,
+    ageRange: [191, 200],
+    title: '元婴之秘',
+    baseText: '你开始研究元婴境界的奥秘，为将来做准备。',
+    options: [
+      {
+        id: 'nascent_research',
+        text: '钻研古籍',
+        successRate: { iq: 0.5, energy: 0.3 },
+        successOutcome: {
+          description: '你领悟了元婴的初步奥秘。',
+          attributeChanges: { iq: 12 },
+        },
+        failureOutcome: {
+          description: '古籍深奥，需要更多时间。',
+          attributeChanges: { energy: 6 },
+        },
+      },
+      {
+        id: 'nascent_practice',
+        text: '实践探索',
+        successRate: { physique: 0.5, eq: 0.3 },
+        successOutcome: {
+          description: '你在实践中获得宝贵经验。',
+          attributeChanges: { physique: 10 },
+        },
+        failureOutcome: {
+          description: '实践过程中遇到瓶颈。',
+          attributeChanges: { eq: 5 },
+        },
+      },
+    ],
+  },
+
+  // ---- 元婴期 (201-260岁) ----
+  {
+    id: 'cultivation_nascent_birth',
+    type: 'world_event',
+    era: 14,
+    ageRange: [201, 220],
+    title: '元婴出世',
+    baseText: '你感到元婴即将成形，这是修仙路上的重要里程碑。',
+    options: [
+      {
+        id: 'nascent_peaceful',
+        text: '顺其自然',
+        successRate: { health: 0.5, eq: 0.4 },
+        successOutcome: {
+          description: '元婴顺利成形，与本体完美融合。',
+          attributeChanges: { health: 20 },
+        },
+        failureOutcome: {
+          description: '孕育过程漫长，但终有所成。',
+          attributeChanges: { energy: 10 },
+        },
+      },
+      {
+        id: 'nascent_force',
+        text: '催动真元',
+        successRate: { energy: 0.5, iq: 0.3 },
+        successOutcome: {
+          description: '元婴快速成形，但稍显不稳。',
+          attributeChanges: { iq: 15 },
+        },
+        failureOutcome: {
+          description: '催动过度，需要调息恢复。',
+          attributeChanges: { health: -8 },
+        },
+      },
+    ],
+  },
+  {
+    id: 'cultivation_spirit_realm',
+    type: 'world_event',
+    era: 14,
+    ageRange: [221, 240],
+    title: '化神契机',
+    baseText: '元婴已成，你开始触摸化神境界的门槛。',
+    options: [
+      {
+        id: 'spirit_meditate',
+        text: '长期闭关',
+        successRate: { iq: 0.5, energy: 0.4 },
+        successOutcome: {
+          description: '你成功突破到化神期。',
+          attributeChanges: { iq: 18 },
+        },
+        failureOutcome: {
+          description: '闭关虽未突破，但根基更加稳固。',
+          attributeChanges: { physique: 12 },
+        },
+      },
+      {
+        id: 'spirit_adventure',
+        text: '外出历练',
+        successRate: { eq: 0.5, network: 0.3 },
+        successOutcome: {
+          description: '历练让你心境大增。',
+          attributeChanges: { eq: 15 },
+        },
+        failureOutcome: {
+          description: '历练途中遭遇危险，但化险为夷。',
+          attributeChanges: { network: 10 },
+        },
+      },
+    ],
+  },
+  {
+    id: 'cultivation_void_touch',
+    type: 'world_event',
+    era: 14,
+    ageRange: [241, 260],
+    title: '炼虚感悟',
+    baseText: '化神之后，你开始感悟天地虚空的奥秘。',
+    options: [
+      {
+        id: 'void_observe',
+        text: '观察天地',
+        successRate: { iq: 0.5, eq: 0.3 },
+        successOutcome: {
+          description: '你对虚空有了更深的理解。',
+          attributeChanges: { iq: 15 },
+        },
+        failureOutcome: {
+          description: '天地奥秘深邃，需要更多时间。',
+          attributeChanges: { energy: 8 },
+        },
+      },
+      {
+        id: 'void_experiment',
+        text: '虚空实验',
+        successRate: { fame: 0.4, physique: 0.3 },
+        successOutcome: {
+          description: '你成功打开一道空间裂缝。',
+          attributeChanges: { fame: 20 },
+        },
+        failureOutcome: {
+          description: '实验失败，但积累了经验。',
+          attributeChanges: { physique: 8 },
+        },
+      },
+    ],
+  },
+
+  // ---- 合体期 (261-340岁) ----
+  {
+    id: 'cultivation_integration_path',
+    type: 'world_event',
+    era: 15,
+    ageRange: [261, 280],
+    title: '合体之道',
+    baseText: '炼虚之后，你开始探索合体境界的奥秘。',
+    options: [
+      {
+        id: 'integration_body_spirit',
+        text: '形神合一',
+        successRate: { physique: 0.5, health: 0.4 },
+        successOutcome: {
+          description: '形神合一，实力大增。',
+          attributeChanges: { physique: 18 },
+        },
+        failureOutcome: {
+          description: '融合过程艰难，但有所进展。',
+          attributeChanges: { health: 10 },
+        },
+      },
+      {
+        id: 'integration_nature',
+        text: '天人合一',
+        successRate: { eq: 0.5, iq: 0.3 },
+        successOutcome: {
+          description: '你感受到天地的脉动。',
+          attributeChanges: { eq: 18 },
+        },
+        failureOutcome: {
+          description: '天道深邃，难以捉摸。',
+          attributeChanges: { iq: 10 },
+        },
+      },
+    ],
+  },
+  {
+    id: 'cultivation_mahayana_preparation',
+    type: 'world_event',
+    era: 15,
+    ageRange: [281, 320],
+    title: '大乘之路',
+    baseText: '合体之后，你开始为大乘境界做准备。',
+    options: [
+      {
+        id: 'mahayana_compassion',
+        text: '慈悲为怀',
+        successRate: { eq: 0.5, network: 0.3 },
+        successOutcome: {
+          description: '你的心境更加平和。',
+          attributeChanges: { eq: 20 },
+        },
+        failureOutcome: {
+          description: '慈悲之道需要更多修行。',
+          attributeChanges: { network: 12 },
+        },
+      },
+      {
+        id: 'mahayana_wisdom',
+        text: '智慧法门',
+        successRate: { iq: 0.5, energy: 0.3 },
+        successOutcome: {
+          description: '你对大乘有了更深的理解。',
+          attributeChanges: { iq: 20 },
+        },
+        failureOutcome: {
+          description: '智慧法门深奥，需要时间。',
+          attributeChanges: { energy: 10 },
+        },
+      },
+    ],
+  },
+  {
+    id: 'cultivation_tribulation_approach',
+    type: 'world_event',
+    era: 15,
+    ageRange: [321, 340],
+    title: '劫数将至',
+    baseText: '你感应到飞升之劫即将来临，这是最后的考验。',
+    options: [
+      {
+        id: 'tribulation_calm',
+        text: '泰然处之',
+        successRate: { eq: 0.6 },
+        successOutcome: {
+          description: '你心境如水，等待最后考验。',
+          attributeChanges: { eq: 15 },
+        },
+        failureOutcome: {
+          description: '心中略有不安。',
+          attributeChanges: {},
+        },
+      },
+      {
+        id: 'tribulation_active',
+        text: '主动应劫',
+        successRate: { fame: 0.4, physique: 0.3 },
+        successOutcome: {
+          description: '你成功提前渡劫，获得意外收获。',
+          attributeChanges: { fame: 30 },
+        },
+        failureOutcome: {
+          description: '天劫威力超出预期，艰难渡过。',
+          attributeChanges: { health: -15 },
+        },
+      },
+    ],
+  },
+
+  // ---- 大乘期/渡劫期 (341岁+) ----
+  {
+    id: 'cultivation_ascension_preparation',
+    type: 'world_event',
+    era: 16,
+    ageRange: [341, 400],
+    title: '飞升准备',
+    baseText: '大乘圆满，你开始为飞升仙界做准备。',
+    options: [
+      {
+        id: 'ascension_artifacts',
+        text: '炼制法宝',
+        successRate: { wealth: 0.5, iq: 0.3 },
+        successOutcome: {
+          description: '你成功炼制出一件护身法宝。',
+          attributeChanges: { wealth: 200 },
+        },
+        failureOutcome: {
+          description: '炼制失败，但积累了经验。',
+          attributeChanges: { iq: 12 },
+        },
+      },
+      {
+        id: 'ascension_pills',
+        text: '炼制仙丹',
+        successRate: { energy: 0.5, iq: 0.3 },
+        successOutcome: {
+          description: '仙丹炼成，修为大增。',
+          attributeChanges: { energy: 20 },
+        },
+        failureOutcome: {
+          description: '炼丹失败，但丹方已熟记。',
+          attributeChanges: { iq: 10 },
+        },
+      },
+    ],
+  },
+  {
+    id: 'cultivation_final_tribulation',
+    type: 'fixed',
+    era: 16,
+    ageRange: [401, 500],
+    title: '九九飞升劫',
+    baseText: '飞升之劫来临，这是修仙路上最艰难的考验。',
+    options: [
+      {
+        id: 'final_face',
+        text: '正面应对',
+        successRate: { physique: 0.5, fame: 0.3 },
+        successOutcome: {
+          description: '你成功渡过飞升之劫！',
+          attributeChanges: { fame: 50 },
+        },
+        failureOutcome: {
+          description: '天劫威力巨大，你受了重伤。',
+          attributeChanges: { health: -20 },
+        },
+      },
+      {
+        id: 'final_avoid',
+        text: '巧妙化解',
+        successRate: { iq: 0.5, eq: 0.3 },
+        successOutcome: {
+          description: '你巧妙化解了天劫。',
+          attributeChanges: { iq: 25 },
+        },
+        failureOutcome: {
+          description: '化解失败，只能硬抗。',
+          attributeChanges: { physique: -10 },
+        },
+      },
+    ],
+  },
+  {
+    id: 'cultivation_immortal_ascension',
+    type: 'world_event',
+    era: 16,
+    ageRange: [501, 600],
+    title: '飞升成仙',
+    baseText: '历经万千劫难，你终于迎来飞升的时刻。',
+    options: [
+      {
+        id: 'immortal_ascend',
+        text: '飞升仙界',
+        successRate: { health: 0.5, eq: 0.4 },
+        successOutcome: {
+          description: '你成功飞升成仙，超脱凡尘！',
+          attributeChanges: { health: 50 },
+        },
+        failureOutcome: {
+          description: '飞升时机未到，继续修炼。',
+          attributeChanges: { energy: 20 },
+        },
+      },
+      {
+        id: 'immortal_stay',
+        text: '留在人间',
+        successRate: { eq: 0.6 },
+        successOutcome: {
+          description: '你选择留在人间，守护这片土地。',
+          attributeChanges: { eq: 30 },
+        },
+        failureOutcome: {
+          description: '心中略有遗憾。',
+          attributeChanges: {},
+        },
+      },
+    ],
+  },
+];
+
 // 根据时代获取敌人池（支持年龄过滤）
 export function getEnemyPool(era: number, age?: number): Enemy[] {
   // 110岁+ 进入修仙模式
@@ -3422,7 +4087,6 @@ export function calculateEnemyDamage(intent: { type: string; damage?: number; hi
   return Math.max(0, damage);
 }
 
-// 年代事件路由 - 从 eraEvents.ts 导出
-export { getEventsByBirthYear } from './eraEvents';
+
 
 
