@@ -148,8 +148,12 @@ const SimBattle: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
 
   const addCard = useCallback((card: LifeCard) => {
     if (selectedCards.length >= 8) return;
-    setSelectedCards((prev) => [...prev, { ...card, id: generateId() }]);
-  }, [selectedCards.length]);
+    setSelectedCards((prev) => {
+      const isDuplicate = prev.some((c) => c.id === card.id);
+      if (isDuplicate) return prev;
+      return [...prev, { ...card, id: generateId() }];
+    });
+  }, []);
 
   const removeCard = useCallback((index: number) => {
     setSelectedCards((prev) => prev.filter((_, i) => i !== index));
@@ -383,28 +387,41 @@ const SimBattle: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
           <div className="flex-1 overflow-y-auto p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-semibold text-ink">选择卡牌</h3>
-              <span className="text-xs text-ink-muted">点击添加 · 最多8张 · 可重复</span>
+              <span className="text-xs text-ink-muted">点击添加 · 最多8张 · 不可重复</span>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-              {allCards.map((card) => (
-                <button
-                  key={card.id}
-                  onClick={() => addCard(card)}
-                  disabled={selectedCards.length >= 8}
-                  className={`p-3 rounded-xl border text-left transition-all hover:scale-[1.02] hover:shadow-md disabled:opacity-40 disabled:cursor-not-allowed ${
-                    selectedCards.length >= 8 ? 'bg-gray-50' : 'bg-white hover:border-brand'
-                  }`}
-                  style={{ borderColor: 'var(--color-border-subtle)' }}
-                >
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-bold text-brand">{card.cost}⚡</span>
-                    <span className="text-[10px] text-ink-faint">{RARITY_NAMES[card.rarity]}</span>
-                  </div>
-                  <div className="text-2xl mb-1">{card.icon}</div>
-                  <div className="text-xs font-medium text-ink truncate">{card.name}</div>
-                  <div className="text-[10px] text-ink-faint line-clamp-2 mt-0.5">{card.description}</div>
-                </button>
-              ))}
+              {allCards.map((card) => {
+                const isSelected = selectedCards.some((c) => c.id === card.id);
+                const isDisabled = selectedCards.length >= 8 && !isSelected;
+                return (
+                  <button
+                    key={card.id}
+                    onClick={() => addCard(card)}
+                    disabled={isDisabled}
+                    className={`relative p-3 rounded-xl border text-left transition-all hover:scale-[1.02] hover:shadow-md disabled:opacity-40 disabled:cursor-not-allowed ${
+                      isSelected
+                        ? 'bg-brand/10 border-brand ring-2 ring-brand/30'
+                        : isDisabled
+                        ? 'bg-gray-50'
+                        : 'bg-white hover:border-brand'
+                    }`}
+                    style={{ borderColor: isSelected ? 'var(--color-brand)' : 'var(--color-border-subtle)' }}
+                  >
+                    {isSelected && (
+                      <div className="absolute top-1 right-1 w-5 h-5 bg-brand rounded-full flex items-center justify-center">
+                        <span className="text-white text-xs">✓</span>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-bold text-brand">{card.cost}⚡</span>
+                      <span className="text-[10px] text-ink-faint">{RARITY_NAMES[card.rarity]}</span>
+                    </div>
+                    <div className="text-2xl mb-1">{card.icon}</div>
+                    <div className="text-xs font-medium text-ink truncate">{card.name}</div>
+                    <div className="text-[10px] text-ink-faint line-clamp-2 mt-0.5">{card.description}</div>
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>

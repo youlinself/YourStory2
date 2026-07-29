@@ -305,9 +305,17 @@ const CardsLibrary: React.FC<{ onSwitchToBattle: () => void }> = ({ onSwitchToBa
     let cards: LifeCard[] = [];
 
     if (selectedCategory === 'all') {
+      const cardMap = new Map<string, LifeCard>();
       categories.forEach((cat) => {
-        if (cat.id !== 'all') cards = [...cards, ...cat.cards];
+        if (cat.id !== 'all') {
+          cat.cards.forEach((card) => {
+            if (!cardMap.has(card.id)) {
+              cardMap.set(card.id, card);
+            }
+          });
+        }
       });
+      cards = Array.from(cardMap.values());
     } else {
       const category = categories.find((c) => c.id === selectedCategory);
       cards = category ? [...category.cards] : [];
@@ -335,11 +343,17 @@ const CardsLibrary: React.FC<{ onSwitchToBattle: () => void }> = ({ onSwitchToBa
   }, [selectedCategory, selectedType, selectedRarity, searchQuery, categories]);
 
   const totalCards = useMemo(() => {
-    let count = 0;
+    const cardMap = new Map<string, LifeCard>();
     categories.forEach((cat) => {
-      if (cat.id !== 'all') count += cat.cards.length;
+      if (cat.id !== 'all') {
+        cat.cards.forEach((card) => {
+          if (!cardMap.has(card.id)) {
+            cardMap.set(card.id, card);
+          }
+        });
+      }
     });
-    return count;
+    return cardMap.size;
   }, [categories]);
 
   return (
