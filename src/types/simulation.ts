@@ -395,6 +395,9 @@ export interface GameState {
   attributeCardsGranted: boolean;
   cardRemovalCount: number;
   pendingChoice: PendingChoice | null;
+  aiEnabled: boolean;
+  aiGeneratedEvent: GameEvent | null;
+  aiLoading: boolean;
 }
 
 export interface WorldState {

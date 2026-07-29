@@ -21,6 +21,7 @@ import Tooltip from '../../components/common/Tooltip';
 import { useToast } from '../../components/common';
 import FloatingDamage from '../../components/ui/FloatingDamage';
 import BuffDebuffBadge from '../../components/ui/BuffDebuffBadge';
+import LifeSummary from './LifeSummary';
 import type { BirthYear, PlayerAttributes, GameEvent, AttributeThresholdBonus, LifeCard, CardEffect, StatusEffect, WonderRewardOption } from '../../types/simulation';
 
 const EFFECT_LABELS: Record<string, string> = {
@@ -240,12 +241,19 @@ const ModeSelectPhase: React.FC = () => {
   const selectMode = useSimulationStore((s) => s.selectMode);
   const startGame = useSimulationStore((s) => s.startGame);
   const mode = useSimulationStore((s) => s.mode);
+  const aiEnabled = useSimulationStore((s) => s.aiEnabled);
+  const toggleAI = useSimulationStore((s) => s.toggleAI);
   const selectedEra = ERAS.find((e) => e.year === selectedYear);
   const { addToast } = useToast();
   const navigate = useNavigate();
 
   const handleAiToggle = () => {
-    addToast({ type: 'info', message: '✨ 敬请期待' });
+    toggleAI();
+    if (!aiEnabled) {
+      addToast({ type: 'success', message: '🤖 AI大模型模式已开启 - 事件将由AI动态生成' });
+    } else {
+      addToast({ type: 'info', message: '🔄 AI大模型模式已关闭' });
+    }
   };
 
   if (step === 'mode') {
@@ -270,12 +278,17 @@ const ModeSelectPhase: React.FC = () => {
           <label className="toggle-switch">
             <input
               type="checkbox"
-              checked={false}
+              checked={aiEnabled}
               onChange={handleAiToggle}
             />
             <span className="toggle-slider" />
           </label>
         </div>
+        {aiEnabled && (
+          <p className="mt-2 text-xs text-brand">
+            ✨ AI将根据你的属性、年龄和经历动态生成专属事件
+          </p>
+        )}
         <button
           onClick={() => navigate('/thinktank')}
           className="mt-4 px-6 py-2.5 bg-white border border-border-subtle rounded-xl text-ink-muted hover:border-brand hover:text-brand transition-all flex items-center gap-2 text-sm"
@@ -660,6 +673,7 @@ const EventPhase: React.FC<{ event: GameEvent }> = ({ event }) => {
   const hiddenTags = useSimulationStore((s) => s.hiddenTags);
   const choiceHistory = useSimulationStore((s) => s.choiceHistory);
   const getSuccessRate = useSimulationStore((s) => s.getSuccessRate);
+  const aiLoading = useSimulationStore((s) => s.aiLoading);
 
   const getDisplayText = () => {
     let text = event.baseText;
@@ -672,9 +686,26 @@ const EventPhase: React.FC<{ event: GameEvent }> = ({ event }) => {
 
   const displayText = getDisplayText();
 
+  if (aiLoading) {
+    return (
+      <div className="bg-white rounded-xl border border-border-subtle p-6 shadow-sm max-w-lg mx-auto">
+        <div className="flex flex-col items-center justify-center py-8">
+          <div className="animate-spin w-10 h-10 border-3 border-brand border-t-transparent rounded-full mb-4" />
+          <p className="text-ink-muted text-sm">🤖 AI正在为你生成专属事件...</p>
+          <p className="text-ink-faint text-xs mt-2">请稍候</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-white rounded-xl border border-border-subtle p-6 shadow-sm max-w-lg mx-auto">
-      <h3 className="text-lg font-semibold text-ink mb-3">{event.title}</h3>
+      <h3 className="text-lg font-semibold text-ink mb-3">
+        {event.title}
+        {event.id.startsWith('ai_event_') && (
+          <span className="ml-2 text-xs bg-brand/10 text-brand px-2 py-0.5 rounded-full">AI生成</span>
+        )}
+      </h3>
       <p className="text-ink-muted text-sm leading-relaxed mb-6">{displayText}</p>
       <div className="space-y-3">
         {event.options.length === 0 ? (
@@ -1913,18 +1944,7 @@ const SimulationPage: React.FC = () => {
         {phase === 'shop' && <ShopPhase />}
         {phase === 'rest' && <RestPhase />}
         {phase === 'ended' && (
-          <div className="p-6 text-center">
-            <h2 className="text-2xl font-bold text-ink mb-2">🕯️ 游戏结束</h2>
-            <p className="text-ink-muted mb-4">你活了 {age} 岁</p>
-            <p className="text-sm text-ink-muted mb-6">卡牌数: {deck.length} | 遗物数: {relics.length}</p>
-            {cultivation && <p className="text-sm text-brand mb-6">境界: {CULTIVATION_REALM_NAMES[cultivation.realm] || cultivation.realm}</p>}
-            <button
-              onClick={resetGame}
-              className="px-6 py-2.5 bg-brand text-white rounded-lg font-medium hover:bg-brand-hover transition-all"
-            >
-              🔄 重新开始
-            </button>
-          </div>
+          <LifeSummary onRestart={resetGame} />
         )}
       </div>
 

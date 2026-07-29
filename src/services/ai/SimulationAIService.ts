@@ -1,0 +1,140 @@
+import AIService from './AIService';
+import useAIStore from '../../stores/aiStore';
+import type { GameEvent, PlayerAttributes, ChoiceRecord } from '../../types/simulation';
+
+interface AIEventPrompt {
+  age: number;
+  birthYear: number;
+  attributes: PlayerAttributes;
+  choiceHistory: ChoiceRecord[];
+  era: number;
+}
+
+export class SimulationAIService {
+  private aiService: AIService | null = null;
+
+  private getAIService(): AIService | null {
+    if (this.aiService) return this.aiService;
+
+    const aiSettings = useAIStore.getState();
+    if (!aiSettings.apiKey) return null;
+
+    this.aiService = new AIService({
+      apiKey: aiSettings.apiKey,
+      model: aiSettings.model,
+      baseUrl: aiSettings.baseUrl,
+      vendor: aiSettings.vendor,
+      temperature: aiSettings.temperature,
+      maxOutputTokens: aiSettings.maxOutputTokens,
+      customModelName: aiSettings.customModelName,
+      testUrl: aiSettings.testUrl,
+    });
+
+    return this.aiService;
+  }
+
+  async generateEvent(prompt: AIEventPrompt): Promise<GameEvent | null> {
+    const service = this.getAIService();
+    if (!service) return null;
+
+    const userPrompt = this.buildPrompt(prompt);
+
+    try {
+      const response = await service.generateResponse(userPrompt, []);
+      const cleaned = response.replace(/```json\s*|\s*```/g, '').trim();
+      const parsed = JSON.parse(cleaned);
+
+      return this.validateAndFormatEvent(parsed, prompt.era);
+    } catch (error) {
+      console.error('AI事件生成失败:', error);
+      return null;
+    }
+  }
+
+  private buildPrompt(prompt: AIEventPrompt): string {
+    const eraNames = ['童年', '少年', '青年', '壮年', '中年', '暮年', '老年', '耄耋', '期颐', '修仙'];
+    const eraName = eraNames[prompt.era] || '人生';
+
+    const attrSummary = Object.entries(prompt.attributes)
+      .map(([key, value]) => `${this.getAttributeName(key)}:${value}`)
+      .join(', ');
+
+    const recentChoices = prompt.choiceHistory
+      .slice(-3)
+      .map((c) => `- ${c.description}(${c.success ? '成功' : '失败'})`)
+      .join('\n');
+
+    return `玩家状态：
+- 年龄：${prompt.age}岁（${prompt.birthYear + prompt.age}年）
+- 年代：${eraName}时期
+- 属性：${attrSummary}
+- 近期经历：${recentChoices || '无'}
+
+请生成一个适合该玩家的年度事件：`;
+  }
+
+  private validateAndFormatEvent(parsed: any, era: number): GameEvent | null {
+    if (!parsed.title || !parsed.baseText || !Array.isArray(parsed.options)) {
+      return null;
+    }
+
+    const options = parsed.options.slice(0, 3).map((opt: any, index: number) => ({
+      id: opt.id || `ai_option_${index}`,
+      text: opt.text || `选项${index + 1}`,
+      successRate: opt.successRate || { energy: 0.5 },
+      successOutcome: {
+        description: opt.successOutcome?.description || '成功',
+        attributeChanges: this.sanitizeAttributeChanges(opt.successOutcome?.attributeChanges || {}),
+      },
+      failureOutcome: {
+        description: opt.failureOutcome?.description || '失败',
+        attributeChanges: this.sanitizeAttributeChanges(opt.failureOutcome?.attributeChanges || {}),
+      },
+    }));
+
+    return {
+      id: parsed.id || `ai_event_${Date.now()}`,
+      type: 'random',
+      era,
+      title: parsed.title,
+      baseText: parsed.baseText,
+      options,
+      triggerCondition: undefined,
+    };
+  }
+
+  private sanitizeAttributeChanges(changes: Record<string, number>): Partial<PlayerAttributes> {
+    const validAttrs = ['energy', 'physique', 'health', 'iq', 'eq', 'wealth', 'network', 'fame'];
+    const result: Partial<PlayerAttributes> = {};
+
+    for (const [key, value] of Object.entries(changes)) {
+      if (validAttrs.includes(key) && typeof value === 'number') {
+        const clampedValue = Math.max(-5, Math.min(5, value));
+        result[key as keyof PlayerAttributes] = clampedValue;
+      }
+    }
+
+    return result;
+  }
+
+  private getAttributeName(key: string): string {
+    const names: Record<string, string> = {
+      energy: '精力',
+      physique: '体魄',
+      health: '健康',
+      iq: '智商',
+      eq: '情商',
+      wealth: '财富',
+      network: '人脉',
+      fame: '名望',
+    };
+    return names[key] || key;
+  }
+
+  isAvailable(): boolean {
+    const aiSettings = useAIStore.getState();
+    return !!aiSettings.apiKey;
+  }
+}
+
+export const simulationAIService = new SimulationAIService();

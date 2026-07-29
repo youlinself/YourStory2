@@ -26,6 +26,7 @@ import {
   getTribulationReward,
   type ApplyCardEffectResult,
 } from '../combat/combatEngine';
+import { simulationAIService } from '../services/ai/SimulationAIService';
 import type {
   GameState, BirthYear, PlayerAttributes, GameEvent, EventOption,
   ChoiceRecord, LifeRecord, WorldState, GameMode, GamePhase,
@@ -596,6 +597,9 @@ const initialState: GameState = {
   attributeCardsGranted: false,
   cardRemovalCount: 0,
   pendingChoice: null,
+  aiEnabled: false,
+  aiGeneratedEvent: null,
+  aiLoading: false,
 };
 
 interface SimulationState extends GameState {
@@ -650,6 +654,8 @@ interface SimulationState extends GameState {
   exileCard: (cardId: string) => void;
   removeCardFromDeck: (cardId: string) => void;
   resolveChoice: (choiceId: string) => void;
+  toggleAI: () => void;
+  generateAIEvent: () => Promise<void>;
 }
 
 const useSimulationStore = create<SimulationState>((set, get) => ({
@@ -802,14 +808,21 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
         break;
       }
       case 'event': {
-        // 检查当前年龄是否有可用事件
-        const availableEvents = get().getAvailableEvents();
-        const currentEvent = availableEvents.find(e => e.options.length > 0);
-        if (currentEvent) {
-          set({ phase: 'event' });
+        // AI大模型模式：生成AI事件
+        const currentState = get();
+        if (currentState.aiEnabled && simulationAIService.isAvailable()) {
+          set({ phase: 'event', aiGeneratedEvent: null, aiLoading: true });
+          get().generateAIEvent();
         } else {
-          // 没有可用事件，自动跳过
-          get().completeOption();
+          // 检查当前年龄是否有可用事件
+          const availableEvents = get().getAvailableEvents();
+          const currentEvent = availableEvents.find(e => e.options.length > 0);
+          if (currentEvent) {
+            set({ phase: 'event' });
+          } else {
+            // 没有可用事件，自动跳过
+            get().completeOption();
+          }
         }
         break;
       }
@@ -1636,6 +1649,11 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
       return filterEvents(SCRIPT_CULTIVATION_EVENTS);
     }
 
+    // AI大模型模式：如果有AI生成的事件，优先使用
+    if (s.aiEnabled && s.aiGeneratedEvent) {
+      return [s.aiGeneratedEvent];
+    }
+
     const events = getEventsByBirthYear(s.birthYear);
     return filterEvents(events);
   },
@@ -1721,6 +1739,38 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
 
   getActiveAttributeBonuses: () => getActiveBonuses(get().attributes),
   getAttributeTierInfo: (attr, value) => getAttributeTierInfo(attr, value),
+
+  toggleAI: () => {
+    const s = get();
+    set({ aiEnabled: !s.aiEnabled });
+  },
+
+  generateAIEvent: async () => {
+    const s = get();
+    if (!s.birthYear || !s.aiEnabled) return;
+
+    set({ aiLoading: true });
+
+    try {
+      const event = await simulationAIService.generateEvent({
+        age: s.age,
+        birthYear: s.birthYear,
+        attributes: s.attributes,
+        choiceHistory: s.choiceHistory,
+        era: s.currentEra,
+      });
+
+      if (event) {
+        set({ aiGeneratedEvent: event, aiLoading: false });
+      } else {
+        // AI生成失败，回退到普通事件
+        set({ aiLoading: false, aiGeneratedEvent: null });
+      }
+    } catch (error) {
+      console.error('AI事件生成错误:', error);
+      set({ aiLoading: false, aiGeneratedEvent: null });
+    }
+  },
 }));
 
 export function getEffectDisplayValue(
