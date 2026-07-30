@@ -431,4 +431,72 @@ export interface SaveMetadata {
   updatedAt: string;
 }
 
+// ==========================================
+// 成就系统
+// ==========================================
+
+export type AchievementCategory = 'combat' | 'life' | 'cultivation' | 'collection' | 'special';
+
+export type AchievementRarity = 'common' | 'rare' | 'epic' | 'legendary';
+
+export interface Achievement {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  category: AchievementCategory;
+  rarity: AchievementRarity;
+  condition: (state: AchievementCheckState) => boolean;
+  progress?: (state: AchievementCheckState) => number;
+  maxProgress?: number;
+  hidden?: boolean;
+}
+
+export interface AchievementCheckState {
+  totalGamesPlayed: number;
+  totalGamesWon: number;
+  totalDeaths: number;
+  totalCombatsWon: number;
+  totalEventsCompleted: number;
+  totalCardsCollected: number;
+  totalRelicsCollected: number;
+  totalGoldEarned: number;
+  totalBreakthroughs: number;
+  highestAge: number;
+  highestAttributes: PlayerAttributes;
+  cultivationRealmsReached: CultivationRealm[];
+  bossesDefeated: string[];
+  choicesMade: number;
+  tagsUnlocked: string[];
+  npcRelationships: number;
+  currentGameState: GameState | null;
+}
+
+export interface AchievementProgress {
+  achievementId: string;
+  unlockedAt: string;
+  progress: number;
+}
+
+export interface AchievementState {
+  achievements: Achievement[];
+  unlockedAchievements: AchievementProgress[];
+  totalGamesPlayed: number;
+  totalGamesWon: number;
+  totalDeaths: number;
+  totalCombatsWon: number;
+  totalEventsCompleted: number;
+  totalCardsCollected: number;
+  totalRelicsCollected: number;
+  totalGoldEarned: number;
+  totalBreakthroughs: number;
+  highestAge: number;
+  highestAttributes: PlayerAttributes;
+  cultivationRealmsReached: CultivationRealm[];
+  bossesDefeated: string[];
+  choicesMade: number;
+  tagsUnlocked: string[];
+  npcRelationships: number;
+}
+
 export {};

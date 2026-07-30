@@ -37,6 +37,7 @@ import type {
   PendingChoice, ShopItem,
 } from '../types/simulation';
 import useBondStore from './bondStore';
+import useAchievementStore from './achievementStore';
 
 const STORAGE_KEY = 'simulation_game_v3';
 const storageService = StorageService.getInstance();
@@ -322,16 +323,15 @@ function deepClone<T>(o: T): T {
 
 function getEnemyPool(type: OptionType, era: number, yearInEra: number, rand: () => number, age?: number, currentYear?: number): Enemy[] {
   const totalYears = era * 10 + yearInEra;
-  const multiplier = 1 + Math.floor(totalYears / 5) * 0.3;
-  const mechanics: EnemyMechanic[] = [];
-  if (totalYears >= 10) mechanics.push('double_attack');
-  if (totalYears >= 20) mechanics.push('shield');
-  if (totalYears >= 30) mechanics.push('regen');
-  if (totalYears >= 40) mechanics.push('rage');
-
-  // 获取年龄段信息用于怪物名称映射
+  const multiplier = 1 + Math.floor(totalYears / 5) * 0.12;
   const resolvedAge = age ?? totalYears;
   const resolvedYear = currentYear ?? (1950 + totalYears);
+  const mechanics: EnemyMechanic[] = [];
+  if (resolvedAge >= 20) mechanics.push('double_attack');
+  if (resolvedAge >= 40) mechanics.push('shield');
+  if (resolvedAge >= 60) mechanics.push('regen');
+  if (resolvedAge >= 80) mechanics.push('rage');
+
   const ageStage = getAgeStage(resolvedAge);
   void ageStage; // 保留供调试和日志使用
 
@@ -424,7 +424,7 @@ function getEnemyPool(type: OptionType, era: number, yearInEra: number, rand: ()
       };
     },
     academic: () => {
-      const ageMultiplier = 1 + (resolvedAge < 20 ? 0.8 : resolvedAge < 40 ? 1.0 : 1.2);
+      const ageMultiplier = resolvedAge < 20 ? 0.8 : resolvedAge < 40 ? 1.0 : 1.2;
       return {
         id: '',
         name: academicVariant.name,
@@ -434,9 +434,9 @@ function getEnemyPool(type: OptionType, era: number, yearInEra: number, rand: ()
         currentHealth: Math.floor(80 * multiplier * ageMultiplier),
         block: 0,
         intents: [
-          { type: 'attack', damage: Math.floor(15 * multiplier) },
+          { type: 'attack', damage: Math.floor(15 * multiplier * ageMultiplier) },
           { type: 'buff', effect: 'strength', value: 2 },
-          { type: 'attack', damage: Math.floor(10 * multiplier), hits: 2 },
+          { type: 'attack', damage: Math.floor(10 * multiplier * ageMultiplier), hits: 2 },
         ],
         currentIntentIndex: 0,
         statusEffects: [],
@@ -447,7 +447,7 @@ function getEnemyPool(type: OptionType, era: number, yearInEra: number, rand: ()
       };
     },
     burnout: () => {
-      const ageMultiplier = 1 + (resolvedAge < 20 ? 0.8 : resolvedAge < 40 ? 1.0 : 1.2);
+      const ageMultiplier = resolvedAge < 20 ? 0.8 : resolvedAge < 40 ? 1.0 : 1.2;
       return {
         id: '',
         name: burnoutVariant.name,
@@ -457,9 +457,9 @@ function getEnemyPool(type: OptionType, era: number, yearInEra: number, rand: ()
         currentHealth: Math.floor(65 * multiplier * ageMultiplier),
         block: 0,
         intents: [
-          { type: 'attack', damage: Math.floor(12 * multiplier) },
+          { type: 'attack', damage: Math.floor(12 * multiplier * ageMultiplier) },
           { type: 'debuff', effect: 'weak', value: 3 },
-          { type: 'attack', damage: Math.floor(8 * multiplier), hits: 2 },
+          { type: 'attack', damage: Math.floor(8 * multiplier * ageMultiplier), hits: 2 },
         ],
         currentIntentIndex: 0,
         statusEffects: [{ type: 'strength', value: 1, duration: Infinity }],
@@ -490,7 +490,7 @@ function getEnemyPool(type: OptionType, era: number, yearInEra: number, rand: ()
         isBoss: true,
         cardRewards: pickRandom(LEGENDARY_CARDS, 2, rand).concat(pickRandom(RARE_CARDS, 1, rand)),
         goldReward: [80, 150],
-        mechanics: [...(bossPartial.mechanics || mechanics), 'boss_aura'] as EnemyMechanic[],
+        mechanics: [...(bossPartial.mechanics || []), 'boss_aura'] as EnemyMechanic[],
       };
     },
   };
@@ -680,6 +680,8 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
     if (!era) return;
     const mode = get().mode;
     const rand = seededRandom(Date.now());
+
+    useAchievementStore.getState().recordGameStart();
 
     // 基础属性总值140点，随机分配给8项属性
     const TOTAL_BASE_POINTS = 140;
@@ -895,7 +897,12 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
     }
   },
 
-  endGame: () => { set({ phase: 'ended' }); },
+  endGame: () => {
+    const s = get();
+    const isVictory = s.age >= s.maxLifespan - 1;
+    useAchievementStore.getState().recordGameEnd(s, isVictory);
+    set({ phase: 'ended' });
+  },
   resetGame: () => { set({ ...initialState, phase: 'setup' }); storageService.removeData(STORAGE_KEY); useBondStore.getState().resetBondSystem(); },
 
   startCombat: (enemies) => {
@@ -1024,6 +1031,11 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
       const newRelics = relicReward ? [...s.relics, relicReward] : s.relics;
       set({ gold: s.gold + gold, relics: newRelics });
       set({ combat: { ...c, phase: 'victory', rewards: { mode: 'battle', cards: cardRewards, attribute: undefined, relic: relicReward, wonderOptions: [] } }, phase: 'reward', pendingChoice: null });
+
+      const enemyIds = c.enemies.map(e => e.name);
+      const isBoss = c.enemies.map(e => e.isBoss);
+      useAchievementStore.getState().recordCombatWin(enemyIds, isBoss);
+      useAchievementStore.getState().recordGoldEarned(gold);
       return;
     }
 
@@ -1147,6 +1159,11 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
       set({ gold: s.gold + gold, relics: newRelics });
       set({ combat: { ...c, phase: 'victory', rewards: { mode: 'battle', cards: cardRewards, attribute: undefined, relic: relicReward, wonderOptions: [] } }, phase: 'reward', pendingChoice: null });
       set({ damageEventCounter: get().damageEventCounter + 1 });
+
+      const enemyIds = c.enemies.map(e => e.name);
+      const isBoss = c.enemies.map(e => e.isBoss);
+      useAchievementStore.getState().recordCombatWin(enemyIds, isBoss);
+      useAchievementStore.getState().recordGoldEarned(gold);
       return;
     }
 
@@ -1268,15 +1285,16 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
     }
   },
 
-  selectCardReward: (cardId) => { const s = get(); const card = s.combat.rewards.cards.find((c) => c.id === cardId); if (card) set({ deck: [...s.deck, { ...deepClone(card), id: generateId() }] }); get().completeOption(); },
+  selectCardReward: (cardId) => { const s = get(); const card = s.combat.rewards.cards.find((c) => c.id === cardId); if (card) { set({ deck: [...s.deck, { ...deepClone(card), id: generateId() }] }); useAchievementStore.getState().recordCardsCollected(1); } get().completeOption(); },
   selectAttributeReward: () => { const s = get(); if (s.combat.rewards.attribute) { const newAttrs = { ...s.attributes }; for (const [k, v] of Object.entries(s.combat.rewards.attribute)) { newAttrs[k as keyof PlayerAttributes] = clamp(newAttrs[k as keyof PlayerAttributes] + (v || 0)); } set({ attributes: newAttrs }); } get().completeOption(); },
-  skipRewardWithGold: () => { const s = get(); set({ gold: s.gold + 10 }); get().completeOption(); },
+  skipRewardWithGold: () => { const s = get(); set({ gold: s.gold + 10 }); useAchievementStore.getState().recordGoldEarned(10); get().completeOption(); },
   selectWonderOption: (index) => {
     const s = get();
     const option = s.combat.rewards.wonderOptions[index];
     if (!option) { get().completeOption(); return; }
     if (option.type === 'card' && option.card) {
       set({ deck: [...s.deck, { ...deepClone(option.card), id: generateId() }] });
+      useAchievementStore.getState().recordCardsCollected(1);
     } else if (option.type === 'attribute' && option.attribute) {
       const newAttrs = { ...s.attributes };
       for (const [k, v] of Object.entries(option.attribute)) {
@@ -1285,8 +1303,10 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
       set({ attributes: newAttrs });
     } else if (option.type === 'gold' && option.gold) {
       set({ gold: s.gold + option.gold });
+      useAchievementStore.getState().recordGoldEarned(option.gold);
     } else if (option.type === 'relic' && option.relic) {
       set({ relics: [...s.relics, { ...deepClone(option.relic), id: generateId() }] });
+      useAchievementStore.getState().recordRelicsCollected(1);
     }
     get().completeOption();
   },
@@ -1295,6 +1315,9 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
     const s = get();
     const rate = get().getSuccessRate(option);
     const success = Math.random() <= rate;
+
+    useAchievementStore.getState().recordChoiceMade();
+    useAchievementStore.getState().recordEventCompleted();
     const outcome = success ? option.successOutcome : option.failureOutcome;
     const attrs = { ...s.attributes };
     const changes: AttributeChange[] = [];
@@ -1375,6 +1398,7 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
     if (!selectedRelic) return;
     const newRelics = [...s.relics, { ...deepClone(selectedRelic), id: generateId() }];
     set({ relics: newRelics, eventRelicSelection: null });
+    useAchievementStore.getState().recordRelicsCollected(1);
     if (triggerCombatAfter && sourceOutcome) {
       const enemies = getEnemyPoolFromData(s.currentEra, s.age).map((e) => ({ ...e, id: generateId(), currentHealth: e.maxHealth }));
       if (enemies.length > 0) get().startCombat(enemies);
@@ -1435,6 +1459,8 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
     const items = [...s.shop.items];
     items[idx] = { ...item, isPurchased: true };
     set({ gold: s.gold - item.price, deck, relics, shop: { ...s.shop, items } });
+    if (item.card) useAchievementStore.getState().recordCardsCollected(1);
+    if (item.relic) useAchievementStore.getState().recordRelicsCollected(1);
   },
 
   rest: () => {
@@ -1525,6 +1551,8 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
       combat: newCombat,
       lifeRecords: [...s.lifeRecords, breakthroughRecord],
     });
+
+    useAchievementStore.getState().recordBreakthrough(nextRealm);
 
     return {
       success: true,

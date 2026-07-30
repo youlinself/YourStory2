@@ -1,16 +1,19 @@
 import { useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { ToastProvider } from "./components";
-import { Home, DialogueAgent, Settings, Autobiography, Simulation, ThinkTank } from "./pages";
+import { Home, DialogueAgent, Settings, Autobiography, Simulation, ThinkTank, AchievementWall } from "./pages";
 import { useAIStore } from "./stores";
 import { AppLayout } from "./components/layout";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import AchievementNotification from "./components/achievement/AchievementNotification";
+import FileStorageService from "./services/storage/FileStorageService";
 import "./App.css";
 
 function App() {
   const { loadSettings } = useAIStore();
 
   useEffect(() => {
+    FileStorageService.getInstance().loadConfig();
     loadSettings();
   }, [loadSettings]);
 
@@ -18,6 +21,7 @@ function App() {
     <ThemeProvider>
       <Router>
         <ToastProvider>
+          <AchievementNotification />
           <Routes>
             <Route element={<AppLayout />}>
               <Route path="/" element={<Home />} />
@@ -25,6 +29,7 @@ function App() {
               <Route path="/dialogue/:chapterId" element={<DialogueAgent />} />
               <Route path="/autobiography" element={<Autobiography />} />
               <Route path="/simulation" element={<Simulation />} />
+              <Route path="/achievements" element={<AchievementWall />} />
               <Route path="/thinktank" element={<ThinkTank />} />
               <Route path="/thinktank/battle" element={<ThinkTank />} />
               <Route path="/settings" element={<Settings />} />

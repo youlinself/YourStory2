@@ -292,13 +292,22 @@ const ModeSelectPhase: React.FC = () => {
             ✨ AI将根据你的属性、年龄和经历动态生成专属事件
           </p>
         )}
-        <button
-          onClick={() => navigate('/thinktank')}
-          className="mt-4 px-6 py-2.5 bg-white border border-border-subtle rounded-xl text-ink-muted hover:border-brand hover:text-brand transition-all flex items-center gap-2 text-sm"
-        >
-          <span>🏛️</span>
-          <span>智库 - 查看所有卡牌</span>
-        </button>
+        <div className="mt-4 flex gap-3">
+          <button
+            onClick={() => navigate('/thinktank')}
+            className="px-6 py-2.5 bg-white border border-border-subtle rounded-xl text-ink-muted hover:border-brand hover:text-brand transition-all flex items-center gap-2 text-sm"
+          >
+            <span>🏛️</span>
+            <span>智库 - 查看所有卡牌</span>
+          </button>
+          <button
+            onClick={() => navigate('/achievements')}
+            className="px-6 py-2.5 bg-white border border-border-subtle rounded-xl text-ink-muted hover:border-gold hover:text-gold transition-all flex items-center gap-2 text-sm"
+          >
+            <span>🏆</span>
+            <span>成就墙</span>
+          </button>
+        </div>
       </div>
     );
   }

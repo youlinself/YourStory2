@@ -1,3 +1,5 @@
+import FileStorageService from './FileStorageService';
+
 class StorageService {
   private static instance: StorageService;
 
@@ -11,6 +13,11 @@ class StorageService {
   }
 
   async saveData(key: string, data: any): Promise<void> {
+    const fileStorage = FileStorageService.getInstance();
+    const config = fileStorage.getConfig();
+    if (config.type === 'file') {
+      return fileStorage.saveData(key, data);
+    }
     try {
       const serializedData = JSON.stringify(data);
       localStorage.setItem(key, serializedData);
@@ -21,6 +28,11 @@ class StorageService {
   }
 
   async loadData<T>(key: string): Promise<T | null> {
+    const fileStorage = FileStorageService.getInstance();
+    const config = fileStorage.getConfig();
+    if (config.type === 'file') {
+      return fileStorage.loadData<T>(key);
+    }
     try {
       const data = localStorage.getItem(key);
       return data ? JSON.parse(data) : null;
@@ -31,6 +43,11 @@ class StorageService {
   }
 
   async removeData(key: string): Promise<void> {
+    const fileStorage = FileStorageService.getInstance();
+    const config = fileStorage.getConfig();
+    if (config.type === 'file') {
+      return fileStorage.removeData(key);
+    }
     try {
       localStorage.removeItem(key);
     } catch (error) {
@@ -40,6 +57,11 @@ class StorageService {
   }
 
   async clearAll(): Promise<void> {
+    const fileStorage = FileStorageService.getInstance();
+    const config = fileStorage.getConfig();
+    if (config.type === 'file') {
+      return fileStorage.clearAll();
+    }
     try {
       localStorage.clear();
     } catch (error) {

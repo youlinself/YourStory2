@@ -7,6 +7,7 @@ import { useNotification } from '../../hooks/useNotification';
 import ExportService from '../../services/export/ExportService';
 import BackupService from '../../services/backup/BackupService';
 import { isTauriEnvironment, migrateToTauriStorage } from '../../services/storage/tauriStorage';
+import FileStorageService from '../../services/storage/FileStorageService';
 import { useToast } from '../../components';
 import { AI_VENDORS, getVendorById, getVendorModels } from '../../ai_config/vendors';
 import AIService from '../../services/ai/AIService';
@@ -34,8 +35,12 @@ const SettingsPage: React.FC = () => {
   const {
     autoSave,
     notifications,
+    storageType,
+    storageFilePath,
     setAutoSave,
     setNotifications,
+    setStorageType,
+    selectStorageDirectory,
     loadSettings: loadAppSettings,
     saveSettings: saveAppSettings,
   } = useSettingsStore();
@@ -117,6 +122,32 @@ const SettingsPage: React.FC = () => {
     }
     setNotifications(value);
     await saveAppSettings();
+  };
+
+  const handleStorageTypeChange = async (type: 'localStorage' | 'file') => {
+    setStorageType(type);
+    await saveAppSettings();
+  };
+
+  const handleSelectDirectory = async () => {
+    const path = await selectStorageDirectory();
+    if (path) {
+      await saveAppSettings();
+    }
+  };
+
+  const handleMigrateData = async () => {
+    const keys = ['achievement_system_v1', 'app-settings', 'simulation-save'];
+    try {
+      const fileStorage = FileStorageService.getInstance();
+      const result = await fileStorage.migrateFromLocalStorage(keys);
+      toast.addToast({
+        type: 'success',
+        message: `数据迁移完成：成功 ${result.success.length} 项`,
+      });
+    } catch (error) {
+      toast.addToast({ type: 'error', message: '数据迁移失败' });
+    }
   };
 
   const handleExportData = () => {
@@ -454,6 +485,78 @@ const SettingsPage: React.FC = () => {
                   <span className="toggle-slider" />
                 </label>
               </div>
+            </div>
+          </section>
+
+          <section>
+            <h2 className="section-title mb-4">数据存储</h2>
+            <div className="card p-5 space-y-4">
+              <div>
+                <label className="text-sm font-medium text-ink mb-2 block">存储方式</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <div
+                    className={`model-card ${storageType === 'localStorage' ? 'selected' : ''}`}
+                    onClick={() => handleStorageTypeChange('localStorage')}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm font-medium text-ink">浏览器存储</span>
+                      {storageType === 'localStorage' && (
+                        <svg className="model-check w-4 h-4 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                        </svg>
+                      )}
+                    </div>
+                    <p className="text-xs text-ink-faint">使用 localStorage（浏览器本地）</p>
+                  </div>
+                  <div
+                    className={`model-card ${storageType === 'file' ? 'selected' : ''}`}
+                    onClick={() => handleStorageTypeChange('file')}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm font-medium text-ink">文件系统</span>
+                      {storageType === 'file' && (
+                        <svg className="model-check w-4 h-4 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                        </svg>
+                      )}
+                    </div>
+                    <p className="text-xs text-ink-faint">保存到本地文件系统</p>
+                  </div>
+                </div>
+              </div>
+
+              {storageType === 'file' && (
+                <div>
+                  <label className="text-sm font-medium text-ink mb-2 block">存储路径</label>
+                  <div className="flex gap-2">
+                    <input
+                      className="input flex-1"
+                      placeholder="选择数据存储文件夹"
+                      value={storageFilePath}
+                      readOnly
+                    />
+                    <button
+                      className="btn btn-outline"
+                      onClick={handleSelectDirectory}
+                    >
+                      浏览...
+                    </button>
+                  </div>
+                  <p className="text-xs text-ink-faint mt-1">
+                    数据存储在该文件夹下的 JSON 文件中
+                  </p>
+                </div>
+              )}
+
+              {storageType === 'file' && (
+                <div className="flex items-center justify-between py-2">
+                  <div>
+                    <p className="text-sm font-medium text-ink">迁移现有数据</p>
+                    <p className="text-xs text-ink-faint mt-0.5">将浏览器存储的数据迁移到文件系统</p>
+                  </div>
+                  <button className="btn btn-outline text-xs" onClick={handleMigrateData}>迁移</button>
+                </div>
+              )}
             </div>
           </section>
 
