@@ -191,24 +191,42 @@ export function executeEnemyTurn(combat: CombatState): CombatState {
     if (intent.type === 'attack') {
       const hits = intent.hits || 1;
       let totalDmg = 0;
+      const shield = e.mechanics?.includes('shield') ? 0.75 : 1;
+      const hitDetails: string[] = [];
       for (let i = 0; i < hits; i++) {
-        const dmg = calculateDamage(intent.damage, e.statusEffects, c.player.statusEffects);
+        const dmg = calculateDamage(Math.floor(intent.damage * shield), e.statusEffects, c.player.statusEffects);
         let remainingDmg = dmg;
         const shields = c.player.statusEffects.find((x) => x.type === 'shields');
         if (shields && shields.value > 0) {
           const absorb = Math.min(shields.value, remainingDmg);
           shields.value -= absorb;
           remainingDmg -= absorb;
+          if (absorb > 0) {
+            hitDetails.push(`第${i + 1}击:${dmg}伤,护盾吸收${absorb}`);
+          }
         }
+        const blocked = Math.min(c.player.block, remainingDmg);
         const d = Math.max(0, remainingDmg - c.player.block);
         c.player.block = Math.max(0, c.player.block - remainingDmg);
         c.player.currentHealth -= d;
         totalDmg += d;
+        if (blocked > 0 && d > 0) {
+          hitDetails.push(`第${i + 1}击:格挡${blocked},受${d}伤`);
+        } else if (blocked > 0) {
+          hitDetails.push(`第${i + 1}击:格挡${blocked},无伤`);
+        } else if (d > 0) {
+          hitDetails.push(`第${i + 1}击:受${d}伤`);
+        }
         const th = c.player.statusEffects.find((x) => x.type === 'thorns');
         if (th && e.currentHealth > 0) e.currentHealth -= th.value;
       }
       if (totalDmg > 0) {
         c.log.push(createLogEntry(turn, e.name, `攻击造成 ${totalDmg} 点伤害${hits > 1 ? ` (${hits}连击)` : ''}`));
+        if (hits > 1 && hitDetails.length > 0) {
+          c.log.push(createLogEntry(turn, e.name, `  [${hitDetails.join(' | ')}]`));
+        }
+      } else if (hits > 1) {
+        c.log.push(createLogEntry(turn, e.name, `${hits}连击被完全格挡`));
       }
     } else if (intent.type === 'defend') {
       e.block += intent.block;
@@ -289,13 +307,16 @@ export function getIntentColor(intent: EnemyIntent): string {
 
 export function getIntentDescription(intent: EnemyIntent, enemy: EnemyState): string {
   const weakValue = enemy.statusEffects.find((x) => x.type === 'weak')?.value || 0;
-  const totalStrengthValue = enemy.statusEffects.filter((x) => x.type === 'strength').reduce((sum, x) => sum + x.value, 0);
   switch (intent.type) {
     case 'attack': {
-      let actualDmg = calculateDamage(intent.damage, enemy.statusEffects, []);
-      if (totalStrengthValue > 0) actualDmg += totalStrengthValue;
+      const shield = enemy.mechanics?.includes('shield') ? 0.75 : 1;
+      let actualDmg = calculateDamage(Math.floor(intent.damage * shield), enemy.statusEffects, []);
       if (weakValue > 0) actualDmg = Math.floor(actualDmg * 0.75);
-      return `攻击 ${actualDmg} 伤害${intent.hits ? ` ×${intent.hits}` : ''}`;
+      const hits = intent.hits || 1;
+      if (hits > 1) {
+        return `攻击 ${actualDmg}×${hits} 伤害 (共${actualDmg * hits})`;
+      }
+      return `攻击 ${actualDmg} 伤害`;
     }
     case 'defend': return `格挡 ${intent.block}`;
     case 'buff': return `强化 +${intent.value}力量`;
@@ -383,7 +404,8 @@ export function executeTribulationStage(combat: CombatState, tribulation: Tribul
 
     for (const intent of e.intents) {
       if (intent.type === 'attack') {
-        const baseDamage = Math.floor(intent.damage * damageMult);
+        const shield = e.mechanics?.includes('shield') ? 0.75 : 1;
+        const baseDamage = Math.floor(Math.floor(intent.damage * shield) * damageMult);
         const hits = intent.hits || 1;
         for (let i = 0; i < hits; i++) {
           const dmg = calculateDamage(baseDamage, e.statusEffects, c.player.statusEffects);

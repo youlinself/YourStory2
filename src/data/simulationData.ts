@@ -4080,7 +4080,8 @@ export function getBossByEra(era: number, age?: number): Enemy {
 export function calculateEnemyDamage(intent: { type: string; damage?: number; hits?: number }, enemy: Enemy): number {
   if (intent.type !== 'attack' || !intent.damage) return 0;
   const hits = intent.hits || 1;
-  let damage = intent.damage * hits;
+  const shield = enemy.mechanics?.includes('shield') ? 0.75 : 1;
+  let damage = Math.floor(intent.damage * shield) * hits;
   // 力量加成
   const strength = enemy.statusEffects.find((e) => e.type === 'strength');
   if (strength) damage += strength.value * hits;
