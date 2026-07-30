@@ -48,7 +48,7 @@ const NPCCard: React.FC<NPCCardProps> = ({ npc }) => {
         <div className="npc-info">
           <div className="npc-name-row">
             <span className="npc-name">{npc.name}</span>
-            <span className="npc-identity">{identity?.name || npc.identityId}</span>
+            <span className="npc-identity">{identity?.name || '未知身份'}</span>
           </div>
           <div className="npc-traits">
             {npc.traits.slice(0, 2).map((trait, i) => (
@@ -83,7 +83,7 @@ const NPCCard: React.FC<NPCCardProps> = ({ npc }) => {
               </div>
               <div className="detail-title">
                 <h3>{npc.name}</h3>
-                <span className="detail-identity">{identity?.name || npc.identityId}</span>
+                <span className="detail-identity">{identity?.name || '未知身份'}</span>
               </div>
             </div>
 

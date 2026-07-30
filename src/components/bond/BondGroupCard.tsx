@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import type { BondGroupDefinition } from '../../types/bond';
 import { IDENTITY_MAP } from '../../data/bondData';
+import { ATTRIBUTE_NAMES } from '../../data/simulationData';
 import useBondStore from '../../stores/bondStore';
 import './BondGroupCard.css';
 
@@ -66,7 +67,7 @@ const BondGroupCard: React.FC<BondGroupCardProps> = ({ group }) => {
     for (const r of rewards) {
       if (r.attributeBonus) {
         const attrs = Object.entries(r.attributeBonus)
-          .map(([k, v]) => `${k}+${v}`)
+          .map(([k, v]) => `${ATTRIBUTE_NAMES[k] || k}+${v}`)
           .join(', ');
         parts.push(`属性: ${attrs}`);
       }
@@ -107,7 +108,7 @@ const BondGroupCard: React.FC<BondGroupCardProps> = ({ group }) => {
                 key={i}
                 className={`requirement-tag ${req.isPresent ? 'present' : 'missing'}`}
               >
-                {req.identity?.icon} {req.identity?.name || req.id}
+                {req.identity?.icon} {req.identity?.name || '未知身份'}
                 {req.isPresent ? ' ✓' : ' ✗'}
               </span>
             ))}
@@ -118,7 +119,7 @@ const BondGroupCard: React.FC<BondGroupCardProps> = ({ group }) => {
           <div className="bond-group-tiers">
             <div className="tier-progress">
               <span className="current-tier">
-                当前等级: Tier {currentTier} / {maxTier}
+                当前等级: {currentTier} / {maxTier}
               </span>
               {nextTier && (
                 <span className="next-tier">
@@ -138,7 +139,7 @@ const BondGroupCard: React.FC<BondGroupCardProps> = ({ group }) => {
             )}
             {canUpgrade && (
               <button className="upgrade-btn" onClick={handleUpgrade}>
-                升级到 Tier {nextTier!.tier}
+                升级到等级 {nextTier!.tier}
               </button>
             )}
           </div>
@@ -168,7 +169,7 @@ const BondGroupCard: React.FC<BondGroupCardProps> = ({ group }) => {
                     <div key={i} className={`detail-requirement ${req.isPresent ? 'present' : 'missing'}`}>
                       <span className="req-icon">{req.identity?.icon || '❓'}</span>
                       <div className="req-info">
-                        <span className="req-name">{req.identity?.name || req.id}</span>
+                        <span className="req-name">{req.identity?.name || '未知身份'}</span>
                         <span className="req-desc">{req.identity?.description || ''}</span>
                       </div>
                       <span className="req-status">{req.isPresent ? '✓' : '✗'}</span>
@@ -187,7 +188,7 @@ const BondGroupCard: React.FC<BondGroupCardProps> = ({ group }) => {
                       return (
                         <div key={tier.tier} className={`tier-item ${isUnlocked ? 'unlocked' : 'locked'}`}>
                           <div className="tier-header">
-                            <span className="tier-level">Tier {tier.tier}</span>
+                            <span className="tier-level">等级 {tier.tier}</span>
                             <span className="tier-name">{tier.name}</span>
                             <span className="tier-requirement">
                               需要 {tier.totalRelationshipRequired} 关系值

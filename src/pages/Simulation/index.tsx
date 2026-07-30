@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useNavigate } from 'react-router-dom';
 import useSimulationStore, { getEffectDisplayValue, MAX_HAND_SIZE, BASE_DRAW_COUNT, getAttributeTierInfo } from '../../stores/simulationStore';
+import useBondStore from '../../stores/bondStore';
 
 import {
   ERAS,
@@ -16,12 +17,14 @@ import {
   RARITY_NAMES,
   ATTRIBUTE_TIER_CARDS,
 } from '../../data/simulationData';
+import { IDENTITY_MAP } from '../../data/bondData';
 import { calculateDamage } from '../../combat/combatEngine';
 import Tooltip from '../../components/common/Tooltip';
 import { useToast } from '../../components/common';
 import FloatingDamage from '../../components/ui/FloatingDamage';
 import BuffDebuffBadge from '../../components/ui/BuffDebuffBadge';
 import LifeSummary from './LifeSummary';
+import BondPanel from '../../components/bond/BondPanel';
 import type { BirthYear, PlayerAttributes, GameEvent, AttributeThresholdBonus, LifeCard, CardEffect, StatusEffect, WonderRewardOption } from '../../types/simulation';
 
 const EFFECT_LABELS: Record<string, string> = {
@@ -1260,6 +1263,7 @@ const CombatPhaseView: React.FC = () => {
                 </div>
               </div>
             )}
+
             {/* 属性加成 */}
             {activeBonuses.length > 0 && (
               <div>
@@ -1940,6 +1944,11 @@ const SimulationPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [gameLoaded, setGameLoaded] = useState(false);
   const [showDeckModal, setShowDeckModal] = useState(false);
+  const [showBondPanel, setShowBondPanel] = useState(false);
+
+  const bondNPCs = useBondStore((s) => s.npcs);
+  const bondActiveGroups = useBondStore((s) => s.activeBondGroups);
+  const bondActiveTiers = useBondStore((s) => s.activeBondTiers);
 
   useEffect(() => {
     const initGame = async () => {
@@ -2067,6 +2076,54 @@ const SimulationPage: React.FC = () => {
                 <div className="flex justify-between"><span className="text-ink-muted">金币</span><span className="font-medium">💰 {gold}</span></div>
                 {cultivation && <div className="flex justify-between"><span className="text-ink-muted">境界</span><span className="font-medium text-brand">{CULTIVATION_REALM_NAMES[cultivation.realm] || cultivation.realm}</span></div>}
               </div>
+            </div>
+
+            {/* 羁绊模块入口 */}
+            <div className="bg-white rounded-xl border border-border-subtle p-4 mb-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-semibold text-ink">🔗 羁绊</h3>
+                <button
+                  onClick={() => setShowBondPanel(true)}
+                  className="text-xs text-brand hover:text-brand-hover transition-colors"
+                >
+                  查看详情 →
+                </button>
+              </div>
+              <div className="grid grid-cols-3 gap-2 text-center">
+                <div>
+                  <div className="text-lg font-bold text-ink">{bondNPCs.length}</div>
+                  <div className="text-[10px] text-ink-faint">NPC</div>
+                </div>
+                <div>
+                  <div className="text-lg font-bold text-brand">{bondActiveGroups.length}</div>
+                  <div className="text-[10px] text-ink-faint">羁绊</div>
+                </div>
+                <div>
+                  <div className="text-lg font-bold text-gold">{Object.values(bondActiveTiers).reduce((a: number, b: number) => a + b, 0)}</div>
+                  <div className="text-[10px] text-ink-faint">等级</div>
+                </div>
+              </div>
+              {bondNPCs.filter(n => n.isActive).length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-1">
+                  {bondNPCs.filter(n => n.isActive).slice(0, 4).map((npc) => {
+                    const identity = IDENTITY_MAP[npc.identityId];
+                    return (
+                      <span
+                        key={npc.id}
+                        className="text-[10px] px-1.5 py-0.5 rounded bg-gold-light border border-gold/20 text-gold"
+                        title={`${npc.name} - ${identity?.name || '未知身份'}`}
+                      >
+                        {npc.avatar} {npc.name}
+                      </span>
+                    );
+                  })}
+                  {bondNPCs.filter(n => n.isActive).length > 4 && (
+                    <span className="text-[10px] text-ink-faint">
+                      +{bondNPCs.filter(n => n.isActive).length - 4}
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* 修仙突破面板 */}
@@ -2217,6 +2274,21 @@ const SimulationPage: React.FC = () => {
                 ))}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* 羁绊面板弹窗 */}
+      {showBondPanel && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowBondPanel(false)}>
+          <div className="bg-bg-elevated rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden shadow-2xl border border-border-subtle" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-4 border-b border-border-subtle">
+              <h3 className="text-lg font-bold text-ink">🔗 羁绊系统</h3>
+              <button onClick={() => setShowBondPanel(false)} className="text-ink-muted hover:text-ink text-xl">&times;</button>
+            </div>
+            <div className="h-[70vh] overflow-hidden">
+              <BondPanel />
+            </div>
           </div>
         </div>
       )}

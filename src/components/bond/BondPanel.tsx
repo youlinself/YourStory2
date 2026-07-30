@@ -184,7 +184,7 @@ const BondPanel: React.FC = () => {
                       <span className="reward-icon">{group.icon}</span>
                       <div className="reward-info">
                         <span className="reward-name">{rewardName}</span>
-                        <span className="reward-tier">Tier {tier}</span>
+                        <span className="reward-tier">等级 {tier}</span>
                       </div>
                     </div>
                   );
