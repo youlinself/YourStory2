@@ -36,6 +36,7 @@ import type {
   AttributeThresholdBonus, EnemyMechanic, CombatBonus, WonderRewardOption, WonderRewardType,
   PendingChoice, ShopItem,
 } from '../types/simulation';
+import useBondStore from './bondStore';
 
 const STORAGE_KEY = 'simulation_game_v3';
 const storageService = StorageService.getInstance();
@@ -660,6 +661,13 @@ interface SimulationState extends GameState {
   generateAIEvent: () => Promise<void>;
   selectEventRelic: (relicId: string) => void;
   skipEventRelic: () => void;
+  // 羁绊系统方法
+  getBondNPCs: () => import('../types/bond').NPCBond[],
+  getBondActiveGroups: () => string[],
+  getBondPassiveEffects: () => { id: string; description: string }[],
+  interactWithNPC: (npcId: string, delta: number) => void,
+  activateBondGroup: (groupId: string) => void,
+  claimBondReward: (groupId: string, tier: number) => { attributeBonus?: Partial<PlayerAttributes>; cardReward?: LifeCard; relicReward?: LifeRelic; passiveId?: string; passiveDescription?: string; } | null;
 }
 
 const useSimulationStore = create<SimulationState>((set, get) => ({
@@ -723,6 +731,11 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
     };
     if (mode === 'endless') state.cultivation = { ...initialCultivationState, maxLifespan: era.baseLifeExpectancy };
     set(state as GameState);
+
+    // 初始化羁绊系统
+    useBondStore.getState().resetBondSystem();
+    useBondStore.getState().initializeBondSystem(0);
+
     storageService.removeData(STORAGE_KEY);
   },
 
@@ -873,10 +886,17 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
     const newPhase: GamePhase = (newLife <= 0 || s.attributes.health <= 0) ? 'ended' : 'year_view';
     set({ currentEra: nextEra, currentYear: nextYear, age: newAge, remainingLife: newLife, hiddenTags: newTags, phase: newPhase, currentMap: null, combat: { ...initialCombatState }, shop: null });
     if (newPhase === 'year_view') get().generateMap();
+
+    // 触发羁绊系统年龄增长事件
+    const newNPCs = useBondStore.getState().onAgeUp(newAge);
+    if (newNPCs.length > 0) {
+      // 可以在这里添加通知逻辑
+      console.log(`新遇到了 ${newNPCs.length} 位NPC:`, newNPCs.map(n => n.name));
+    }
   },
 
   endGame: () => { set({ phase: 'ended' }); },
-  resetGame: () => { set({ ...initialState, phase: 'setup' }); storageService.removeData(STORAGE_KEY); },
+  resetGame: () => { set({ ...initialState, phase: 'setup' }); storageService.removeData(STORAGE_KEY); useBondStore.getState().resetBondSystem(); },
 
   startCombat: (enemies) => {
     const s = get();
@@ -1738,6 +1758,12 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
       const value = bonus[key];
       if (value) base[key] += value;
     });
+    // 添加羁绊系统属性加成
+    const bondBonus = useBondStore.getState().getTotalAttributeBonus();
+    (Object.keys(bondBonus) as Array<keyof PlayerAttributes>).forEach((key) => {
+      const value = bondBonus[key];
+      if (value) base[key] += value;
+    });
     return base;
   },
 
@@ -1798,6 +1824,14 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
 
   getActiveAttributeBonuses: () => getActiveBonuses(get().attributes),
   getAttributeTierInfo: (attr, value) => getAttributeTierInfo(attr, value),
+
+  // 羁绊系统相关方法
+  getBondNPCs: () => useBondStore.getState().npcs,
+  getBondActiveGroups: () => useBondStore.getState().activeBondGroups,
+  getBondPassiveEffects: () => useBondStore.getState().getTotalPassiveEffects(),
+  interactWithNPC: (npcId: string, delta: number) => useBondStore.getState().updateRelationship(npcId, delta),
+  activateBondGroup: (groupId: string) => useBondStore.getState().activateBondGroup(groupId),
+  claimBondReward: (groupId: string, tier: number) => useBondStore.getState().claimReward(groupId, tier),
 
   toggleAI: () => {
     const s = get();

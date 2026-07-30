@@ -987,6 +987,9 @@ const CombatPhaseView: React.FC = () => {
                                  {intent.type === 'attack' && (
                                    <>
                                      攻击 {actualDamage} 伤害
+                                     {intent.hits && intent.hits > 1 && (
+                                       <span className="text-[9px] text-ink-faint ml-1">×{intent.hits}</span>
+                                     )}
                                      {baseDamage !== actualDamage && (
                                        <span className="text-[9px] text-ink-faint ml-1">({baseDamage}
                                          {enemy.statusEffects.find((x) => x.type === 'strength') && `+${enemy.statusEffects.find((x) => x.type === 'strength')!.value}`}

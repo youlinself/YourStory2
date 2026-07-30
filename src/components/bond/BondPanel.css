@@ -1,0 +1,215 @@
+.bond-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  border-radius: 12px;
+  overflow: hidden;
+  color: #e0e0e0;
+}
+
+.bond-header {
+  padding: 16px 20px;
+  background: rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.bond-header h2 {
+  margin: 0 0 8px 0;
+  font-size: 1.4rem;
+  color: #fff;
+}
+
+.bond-stats {
+  display: flex;
+  gap: 16px;
+}
+
+.stat {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.85rem;
+  color: #a0a0a0;
+}
+
+.stat-icon {
+  font-size: 1rem;
+}
+
+.bond-tabs {
+  display: flex;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.tab {
+  flex: 1;
+  padding: 12px 8px;
+  background: transparent;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+
+.tab:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #ccc;
+}
+
+.tab.active {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+  border-bottom: 2px solid #60a5fa;
+}
+
+.tab-icon {
+  font-size: 1.1rem;
+}
+
+.npc-tab,
+.bonds-tab,
+.rewards-tab {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.category-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.category-btn {
+  padding: 6px 12px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.05);
+  color: #aaa;
+  cursor: pointer;
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s;
+}
+
+.category-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.category-btn.active {
+  background: rgba(96, 165, 250, 0.2);
+  border-color: #60a5fa;
+  color: #60a5fa;
+}
+
+.npc-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.npc-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.section-title {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #ccc;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.section-icon {
+  font-size: 1rem;
+}
+
+.npc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  text-align: center;
+}
+
+.empty-icon {
+  font-size: 3rem;
+  margin-bottom: 12px;
+}
+
+.empty-state p {
+  margin: 4px 0;
+  color: #888;
+}
+
+.empty-hint {
+  font-size: 0.8rem;
+  color: #666;
+}
+
+.bond-group-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.claimed-rewards-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.claimed-reward-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.reward-icon {
+  font-size: 1.5rem;
+}
+
+.reward-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.reward-name {
+  font-weight: 500;
+  color: #fff;
+}
+
+.reward-tier {
+  font-size: 0.8rem;
+  color: #888;
+}
+
+.rewards-summary h3 {
+  margin: 0 0 12px 0;
+  font-size: 1rem;
+  color: #ccc;
+}

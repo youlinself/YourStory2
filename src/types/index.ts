@@ -85,3 +85,17 @@ export interface ChapterContext {
   existingContent: string;
   timeRange?: string;
 }
+
+// 羁绊系统类型导出
+export type {
+  IdentityCategory,
+  IdentityDefinition,
+  NPCBond,
+  BondRewardType,
+  BondReward,
+  BondGroupDefinition,
+  BondGroupTier,
+  BondSystemState,
+  BondEvent,
+  BondEventOption,
+} from './bond';
