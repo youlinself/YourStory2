@@ -4,6 +4,7 @@ import type {
   NPCBond,
   BondSystemState,
   BondGroupDefinition,
+  IdentityDefinition,
 } from '../types/bond';
 import type { PlayerAttributes, LifeCard, LifeRelic } from '../types/simulation';
 import {
@@ -402,24 +403,36 @@ const useBondStore = create<BondStoreState>((set, get) => ({
     const availableIdentities = getAvailableIdentities(age);
     const newNPCs: NPCBond[] = [];
 
-    for (const identity of availableIdentities) {
-      if (identity.category === 'family' && age <= 1) {
-        const existing = newNPCs.filter((n) => n.identityId === identity.id).length;
-        if (existing < (identity.maxCount || 1)) {
-          newNPCs.push({
-            id: generateId(),
-            name: getRandomName(identity.id),
-            identityId: identity.id,
-            relationship: 20,
-            isActive: false,
-            activationThreshold: 30,
-            metAge: 0,
-            isGone: false,
-            traits: getRandomTraits(identity.id),
-            avatar: identity.icon,
-          });
-        }
+    const initialPool = availableIdentities.filter((i) => i.minAge === 0);
+
+    const targetCount = 4 + Math.floor(Math.random() * 3);
+
+    const shuffled = [...initialPool].sort(() => Math.random() - 0.5);
+    const selectedTypes: IdentityDefinition[] = [];
+    let totalSlots = 0;
+
+    for (const identity of shuffled) {
+      if (totalSlots >= targetCount) break;
+      const slots = Math.min(identity.maxCount || 1, targetCount - totalSlots);
+      for (let i = 0; i < slots; i++) {
+        selectedTypes.push(identity);
       }
+      totalSlots += slots;
+    }
+
+    for (const identity of selectedTypes) {
+      newNPCs.push({
+        id: generateId(),
+        name: getRandomName(identity.id),
+        identityId: identity.id,
+        relationship: Math.floor(Math.random() * 31),
+        isActive: false,
+        activationThreshold: 30,
+        metAge: 0,
+        isGone: false,
+        traits: getRandomTraits(identity.id),
+        avatar: identity.icon,
+      });
     }
 
     set({

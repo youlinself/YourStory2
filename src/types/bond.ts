@@ -28,6 +28,8 @@ export interface IdentityDefinition {
   isRare?: boolean;
   /** 该身份可拥有的最大数量（默认1） */
   maxCount?: number;
+  /** 初始出现概率（0-1，默认0.7） */
+  appearChance?: number;
 }
 
 /** NPC实例 */
