@@ -9,6 +9,7 @@ import {
   SCRIPT_2060_EVENTS,
   SCRIPT_2070_EVENTS,
 } from './futureEraEvents';
+import { SCRIPT_SUPPLEMENTARY_EVENTS } from './supplementaryEvents';
 
 // ==========================================
 // 1960年代事件（出生年份1960，0-9岁对应1960-1969年）
@@ -2831,25 +2832,422 @@ export const SCRIPT_CONDITIONAL_EVENTS: GameEvent[] = [
 ];
 
 // ==========================================
+// 通用事件池（10岁以上后备事件）
+// 当年代特定事件不可用时，作为后备使用
+// ==========================================
+export const SCRIPT_GENERIC_EVENTS: GameEvent[] = [
+  // ---- 10-12岁：少年时期 ----
+  {
+    id: 'generic_teen_school',
+    type: 'fixed',
+    era: 1,
+    ageRange: [10, 12],
+    title: '求学之路',
+    baseText: '你开始了新的学习阶段，{school_context}。',
+    skinRule: (attrs) => {
+      if (attrs.iq >= 50) return '你对学习充满热情，成绩优异。';
+      if (attrs.eq >= 50) return '你很快融入了新环境，交到了新朋友。';
+      return '你正在努力适应新的学习节奏。';
+    },
+    options: [
+      {
+        id: 'focus_study',
+        text: '专心学习',
+        successRate: { iq: 0.5, energy: 0.3 },
+        successOutcome: {
+          description: '你的成绩突飞猛进，老师对你赞赏有加。',
+          attributeChanges: { iq: 4, energy: -1 },
+        },
+        failureOutcome: {
+          description: '你虽然努力，但进步并不明显。',
+          attributeChanges: { energy: -2 },
+        },
+      },
+      {
+        id: 'make_friends',
+        text: '广交朋友',
+        successRate: { eq: 0.5, network: 0.3 },
+        successOutcome: {
+          description: '你交到了很多好朋友，校园生活变得丰富多彩。',
+          attributeChanges: { network: 4, eq: 2 },
+        },
+        failureOutcome: {
+          description: '你有些害羞，但慢慢也适应了。',
+          attributeChanges: { eq: 1 },
+        },
+      },
+    ],
+  },
+
+  // ---- 13-15岁：青春期 ----
+  {
+    id: 'generic_teen_growth',
+    type: 'fixed',
+    era: 1,
+    ageRange: [13, 15],
+    title: '青春成长',
+    baseText: '青春期带来了许多变化，{growth_context}。',
+    skinRule: (attrs) => {
+      if (attrs.physique >= 50) return '你身体发育良好，比同龄人高出不少。';
+      if (attrs.eq >= 50) return '你开始思考人生的意义，对未来充满憧憬。';
+      return '你正在经历身心的变化，有些困惑但充满好奇。';
+    },
+    options: [
+      {
+        id: 'sports_training',
+        text: '参加体育锻炼',
+        successRate: { physique: 0.5, energy: 0.3 },
+        successOutcome: {
+          description: '你通过锻炼变得更强壮，也更加自信了。',
+          attributeChanges: { physique: 4, health: 2 },
+        },
+        failureOutcome: {
+          description: '你运动过度，需要休息一段时间。',
+          attributeChanges: { energy: -2 },
+        },
+      },
+      {
+        id: 'self_reflection',
+        text: '阅读与思考',
+        successRate: { iq: 0.4, eq: 0.4 },
+        successOutcome: {
+          description: '通过阅读，你对世界有了更深的理解。',
+          attributeChanges: { iq: 3, eq: 3 },
+        },
+        failureOutcome: {
+          description: '你读了很多书，但有些内容还不太理解。',
+          attributeChanges: { iq: 1 },
+        },
+      },
+    ],
+  },
+
+  // ---- 16-19岁：青年时期 ----
+  {
+    id: 'generic_youth_choice',
+    type: 'world_event',
+    era: 1,
+    ageRange: [16, 19],
+    title: '人生抉择',
+    baseText: '站在人生的十字路口，{choice_context}。',
+    skinRule: (attrs) => {
+      if (attrs.iq >= 60) return '你成绩优异，有多种选择。';
+      if (attrs.wealth >= 50) return '家庭条件不错，你可以追求自己的兴趣。';
+      return '你需要认真思考未来的方向。';
+    },
+    options: [
+      {
+        id: 'academic_path',
+        text: '走学术道路',
+        successRate: { iq: 0.6, energy: 0.2 },
+        successOutcome: {
+          description: '你决定继续深造，为未来打下坚实基础。',
+          attributeChanges: { iq: 5, energy: -2 },
+        },
+        failureOutcome: {
+          description: '学术道路并不轻松，但你没有放弃。',
+          attributeChanges: { iq: 2 },
+        },
+      },
+      {
+        id: 'enter_society',
+        text: '踏入社会',
+        successRate: { eq: 0.4, network: 0.4 },
+        successOutcome: {
+          description: '你提前进入社会，积累了宝贵的经验。',
+          attributeChanges: { network: 5, wealth: 3 },
+        },
+        failureOutcome: {
+          description: '社会比你想象的复杂，但你学到了很多。',
+          attributeChanges: { eq: 2 },
+        },
+      },
+    ],
+    isMilestone: true,
+  },
+
+  // ---- 20-29岁：初入社会 ----
+  {
+    id: 'generic_young_career',
+    type: 'fixed',
+    era: 2,
+    ageRange: [20, 29],
+    title: '事业起步',
+    baseText: '你开始了自己的职业生涯，{career_context}。',
+    skinRule: (attrs) => {
+      if (attrs.network >= 50) return '凭借良好的人脉，你很快找到了不错的工作。';
+      if (attrs.iq >= 50) return '你的专业能力得到了认可。';
+      return '你正在努力寻找适合自己的职业方向。';
+    },
+    options: [
+      {
+        id: 'work_hard',
+        text: '努力工作',
+        successRate: { energy: 0.4, physique: 0.3 },
+        successOutcome: {
+          description: '你的努力得到了回报，事业稳步上升。',
+          attributeChanges: { wealth: 4, energy: -2 },
+        },
+        failureOutcome: {
+          description: '工作并不顺利，但你积累了经验。',
+          attributeChanges: { energy: -3 },
+        },
+      },
+      {
+        id: 'build_network',
+        text: '拓展人脉',
+        successRate: { eq: 0.5, network: 0.3 },
+        successOutcome: {
+          description: '你认识了很多业内人士，为未来发展铺平了道路。',
+          attributeChanges: { network: 5, eq: 2 },
+        },
+        failureOutcome: {
+          description: '社交活动让你有些疲惫，但认识了一些新朋友。',
+          attributeChanges: { network: 2 },
+        },
+      },
+    ],
+  },
+
+  // ---- 30-39岁：而立之年 ----
+  {
+    id: 'generic_adult_establishment',
+    type: 'fixed',
+    era: 3,
+    ageRange: [30, 39],
+    title: '立业成家',
+    baseText: '三十而立，{establishment_context}。',
+    skinRule: (attrs) => {
+      if (attrs.wealth >= 60) return '事业有成，家庭美满。';
+      if (attrs.network >= 60) return '你的人脉资源越来越丰富。';
+      return '你正在努力平衡事业和家庭。';
+    },
+    options: [
+      {
+        id: 'career_focus',
+        text: '专注事业发展',
+        successRate: { iq: 0.4, energy: 0.4 },
+        successOutcome: {
+          description: '你的事业更上一层楼，收入大幅增加。',
+          attributeChanges: { wealth: 6, fame: 2 },
+        },
+        failureOutcome: {
+          description: '事业遇到了一些瓶颈，但你有信心克服。',
+          attributeChanges: { wealth: 2 },
+        },
+      },
+      {
+        id: 'family_focus',
+        text: '回归家庭',
+        successRate: { eq: 0.5, health: 0.3 },
+        successOutcome: {
+          description: '你享受到了家庭的温暖，身心都得到了放松。',
+          attributeChanges: { eq: 4, health: 3 },
+        },
+        failureOutcome: {
+          description: '家庭生活有甜蜜也有挑战，但你乐在其中。',
+          attributeChanges: { eq: 2 },
+        },
+      },
+    ],
+    isMilestone: true,
+  },
+
+  // ---- 40-49岁：不惑之年 ----
+  {
+    id: 'generic_middle_age',
+    type: 'fixed',
+    era: 4,
+    ageRange: [40, 49],
+    title: '不惑之年',
+    baseText: '四十不惑，{maturity_context}。',
+    skinRule: (attrs) => {
+      if (attrs.fame >= 50) return '你在行业内已经小有名气。';
+      if (attrs.iq >= 50) return '岁月赋予了你智慧和从容。';
+      return '你对人生有了更深的理解。';
+    },
+    options: [
+      {
+        id: 'mentor_others',
+        text: '提携后辈',
+        successRate: { network: 0.4, eq: 0.4 },
+        successOutcome: {
+          description: '你帮助了很多年轻人，赢得了尊重和认可。',
+          attributeChanges: { network: 4, fame: 3 },
+        },
+        failureOutcome: {
+          description: '你尽力帮助他人，虽然效果一般，但问心无愧。',
+          attributeChanges: { network: 2 },
+        },
+      },
+      {
+        id: 'personal_growth',
+        text: '自我提升',
+        successRate: { iq: 0.5, energy: 0.3 },
+        successOutcome: {
+          description: '你坚持学习新知识，保持了良好的状态。',
+          attributeChanges: { iq: 4, health: 2 },
+        },
+        failureOutcome: {
+          description: '学习新知识有些吃力，但你没有放弃。',
+          attributeChanges: { iq: 2 },
+        },
+      },
+    ],
+  },
+
+  // ---- 50-59岁：知天命 ----
+  {
+    id: 'generic_mature_life',
+    type: 'fixed',
+    era: 5,
+    ageRange: [50, 59],
+    title: '知天命',
+    baseText: '五十而知天命，{wisdom_context}。',
+    skinRule: (attrs) => {
+      if (attrs.wealth >= 60) return '生活富足，可以安享晚年。';
+      if (attrs.health >= 60) return '身体健康，精神矍铄。';
+      return '你开始思考人生的意义和价值。';
+    },
+    options: [
+      {
+        id: 'enjoy_life',
+        text: '享受生活',
+        successRate: { health: 0.4, eq: 0.4 },
+        successOutcome: {
+          description: '你学会了享受生活，每天都过得很充实。',
+          attributeChanges: { health: 4, eq: 3 },
+        },
+        failureOutcome: {
+          description: '生活有起有落，但你保持乐观。',
+          attributeChanges: { health: 2 },
+        },
+      },
+      {
+        id: 'give_back',
+        text: '回馈社会',
+        successRate: { network: 0.4, wealth: 0.3 },
+        successOutcome: {
+          description: '你热心公益，帮助了许多需要帮助的人。',
+          attributeChanges: { fame: 5, network: 3 },
+        },
+        failureOutcome: {
+          description: '你的善举得到了社会的认可。',
+          attributeChanges: { fame: 2 },
+        },
+      },
+    ],
+    isMilestone: true,
+  },
+
+  // ---- 60-69岁：花甲之年 ----
+  {
+    id: 'senior_life',
+    type: 'fixed',
+    era: 6,
+    ageRange: [60, 69],
+    title: '花甲之年',
+    baseText: '六十花甲，{retirement_context}。',
+    skinRule: (attrs) => {
+      if (attrs.health >= 50) return '你身体硬朗，每天坚持锻炼。';
+      if (attrs.wealth >= 50) return '退休生活无忧，可以追求自己的爱好。';
+      return '你开始享受悠闲的退休生活。';
+    },
+    options: [
+      {
+        id: 'hobby_pursuit',
+        text: '培养爱好',
+        successRate: { energy: 0.4, iq: 0.3 },
+        successOutcome: {
+          description: '你培养了许多爱好，生活变得丰富多彩。',
+          attributeChanges: { iq: 3, health: 3 },
+        },
+        failureOutcome: {
+          description: '你在寻找适合自己的爱好。',
+          attributeChanges: { health: 1 },
+        },
+      },
+      {
+        id: 'share_wisdom',
+        text: '传承经验',
+        successRate: { eq: 0.5, network: 0.3 },
+        successOutcome: {
+          description: '你把自己的经验传授给年轻人，备受尊敬。',
+          attributeChanges: { fame: 4, eq: 3 },
+        },
+        failureOutcome: {
+          description: '你乐于分享，从年轻人身上也学到了新东西。',
+          attributeChanges: { eq: 2 },
+        },
+      },
+    ],
+  },
+
+  // ---- 70岁以上：古稀之年 ----
+  {
+    id: 'elderly_life',
+    type: 'fixed',
+    era: 7,
+    ageRange: [70, 100],
+    title: '古稀之年',
+    baseText: '七十古稀，{elderly_context}。',
+    skinRule: (attrs) => {
+      if (attrs.health >= 60) return '你精神矍铄，身体康健。';
+      if (attrs.fame >= 50) return '你的事迹被人们传颂，德高望重。';
+      return '你安享晚年，看着儿孙满堂，心中满是欣慰。';
+    },
+    options: [
+      {
+        id: 'family_time',
+        text: '含饴弄孙',
+        successRate: { eq: 0.5, health: 0.3 },
+        successOutcome: {
+          description: '天伦之乐让你感到无比幸福。',
+          attributeChanges: { eq: 4, health: 3 },
+        },
+        failureOutcome: {
+          description: '看着孩子们成长，你心中满是欣慰。',
+          attributeChanges: { eq: 2 },
+        },
+      },
+      {
+        id: 'reflect_life',
+        text: '回顾人生',
+        successRate: { iq: 0.4, eq: 0.4 },
+        successOutcome: {
+          description: '回顾一生，你无憾无悔，心境平和。',
+          attributeChanges: { iq: 3, eq: 4 },
+        },
+        failureOutcome: {
+          description: '人生有起有落，但你已经看淡了得失。',
+          attributeChanges: { eq: 2 },
+        },
+      },
+    ],
+    isMilestone: true,
+  },
+];
+
+// ==========================================
 // 年代事件路由表
 // ==========================================
 export const ERA_EVENTS_MAP: Record<BirthYear, GameEvent[]> = {
-  1950: [...SCRIPT_1950_EVENTS, ...SCRIPT_CONDITIONAL_EVENTS],
-  1960: [...SCRIPT_1960_EVENTS, ...SCRIPT_CONDITIONAL_EVENTS],
-  1970: [...SCRIPT_1970_EVENTS, ...SCRIPT_CONDITIONAL_EVENTS],
-  1980: [...SCRIPT_1980_EVENTS, ...SCRIPT_CONDITIONAL_EVENTS],
-  1990: [...SCRIPT_1990_EVENTS, ...SCRIPT_CONDITIONAL_EVENTS],
-  2000: [...SCRIPT_2000_EVENTS, ...SCRIPT_CONDITIONAL_EVENTS],
-  2010: [...SCRIPT_2010_EVENTS, ...SCRIPT_CONDITIONAL_EVENTS],
-  2020: [...SCRIPT_2020_EVENTS, ...SCRIPT_CONDITIONAL_EVENTS],
-  2030: [...SCRIPT_2030_EVENTS, ...SCRIPT_CONDITIONAL_EVENTS],
-  2040: [...SCRIPT_2040_EVENTS, ...SCRIPT_CONDITIONAL_EVENTS],
-  2050: [...SCRIPT_2050_EVENTS, ...SCRIPT_CONDITIONAL_EVENTS],
-  2060: [...SCRIPT_2060_EVENTS, ...SCRIPT_CONDITIONAL_EVENTS],
-  2070: [...SCRIPT_2070_EVENTS, ...SCRIPT_CONDITIONAL_EVENTS],
+  1950: [...SCRIPT_1950_EVENTS, ...SCRIPT_CONDITIONAL_EVENTS, ...SCRIPT_GENERIC_EVENTS, ...SCRIPT_SUPPLEMENTARY_EVENTS],
+  1960: [...SCRIPT_1960_EVENTS, ...SCRIPT_CONDITIONAL_EVENTS, ...SCRIPT_GENERIC_EVENTS, ...SCRIPT_SUPPLEMENTARY_EVENTS],
+  1970: [...SCRIPT_1970_EVENTS, ...SCRIPT_CONDITIONAL_EVENTS, ...SCRIPT_GENERIC_EVENTS, ...SCRIPT_SUPPLEMENTARY_EVENTS],
+  1980: [...SCRIPT_1980_EVENTS, ...SCRIPT_CONDITIONAL_EVENTS, ...SCRIPT_GENERIC_EVENTS, ...SCRIPT_SUPPLEMENTARY_EVENTS],
+  1990: [...SCRIPT_1990_EVENTS, ...SCRIPT_CONDITIONAL_EVENTS, ...SCRIPT_GENERIC_EVENTS, ...SCRIPT_SUPPLEMENTARY_EVENTS],
+  2000: [...SCRIPT_2000_EVENTS, ...SCRIPT_CONDITIONAL_EVENTS, ...SCRIPT_GENERIC_EVENTS, ...SCRIPT_SUPPLEMENTARY_EVENTS],
+  2010: [...SCRIPT_2010_EVENTS, ...SCRIPT_CONDITIONAL_EVENTS, ...SCRIPT_GENERIC_EVENTS, ...SCRIPT_SUPPLEMENTARY_EVENTS],
+  2020: [...SCRIPT_2020_EVENTS, ...SCRIPT_CONDITIONAL_EVENTS, ...SCRIPT_GENERIC_EVENTS, ...SCRIPT_SUPPLEMENTARY_EVENTS],
+  2030: [...SCRIPT_2030_EVENTS, ...SCRIPT_CONDITIONAL_EVENTS, ...SCRIPT_GENERIC_EVENTS, ...SCRIPT_SUPPLEMENTARY_EVENTS],
+  2040: [...SCRIPT_2040_EVENTS, ...SCRIPT_CONDITIONAL_EVENTS, ...SCRIPT_GENERIC_EVENTS, ...SCRIPT_SUPPLEMENTARY_EVENTS],
+  2050: [...SCRIPT_2050_EVENTS, ...SCRIPT_CONDITIONAL_EVENTS, ...SCRIPT_GENERIC_EVENTS, ...SCRIPT_SUPPLEMENTARY_EVENTS],
+  2060: [...SCRIPT_2060_EVENTS, ...SCRIPT_CONDITIONAL_EVENTS, ...SCRIPT_GENERIC_EVENTS, ...SCRIPT_SUPPLEMENTARY_EVENTS],
+  2070: [...SCRIPT_2070_EVENTS, ...SCRIPT_CONDITIONAL_EVENTS, ...SCRIPT_GENERIC_EVENTS, ...SCRIPT_SUPPLEMENTARY_EVENTS],
 };
 
 // 根据出生年份获取对应年代事件
 export function getEventsByBirthYear(birthYear: BirthYear): GameEvent[] {
-  return ERA_EVENTS_MAP[birthYear] || SCRIPT_1950_EVENTS;
+  return ERA_EVENTS_MAP[birthYear] || [...SCRIPT_1950_EVENTS, ...SCRIPT_GENERIC_EVENTS, ...SCRIPT_SUPPLEMENTARY_EVENTS];
 }
