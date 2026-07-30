@@ -261,6 +261,8 @@ export interface EventOutcome {
   cardRewards?: LifeCard[];
   relicRewards?: LifeRelic[];
   goldReward?: number;
+  triggerCombat?: boolean;
+  relicRewardPool?: LifeRelic[];
 }
 
 export interface GameEvent {
@@ -305,7 +307,8 @@ export interface ShopState {
 
 export type GamePhase =
   | 'setup' | 'allocating' | 'year_view' | 'event' | 'combat'
-  | 'shop' | 'rest' | 'reward' | 'era_transition' | 'ended' | 'loading';
+  | 'shop' | 'rest' | 'reward' | 'era_transition' | 'ended' | 'loading'
+  | 'event_relic_selection';
 
 export type GameMode = 'normal' | 'endless';
 
@@ -398,6 +401,13 @@ export interface GameState {
   aiEnabled: boolean;
   aiGeneratedEvent: GameEvent | null;
   aiLoading: boolean;
+  eventRelicSelection: {
+    relics: LifeRelic[];
+    sourceEvent: GameEvent | null;
+    sourceOption: EventOption | null;
+    sourceOutcome: EventOutcome | null;
+    triggerCombatAfter: boolean;
+  } | null;
 }
 
 export interface WorldState {

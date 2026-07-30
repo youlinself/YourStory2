@@ -735,6 +735,93 @@ const EventPhase: React.FC<{ event: GameEvent }> = ({ event }) => {
 };
 
 // ==========================================
+// 事件遗物选择界面
+// ==========================================
+const EventRelicSelectionPhase: React.FC = () => {
+  const eventRelicSelection = useSimulationStore((s) => s.eventRelicSelection);
+  const selectEventRelic = useSimulationStore((s) => s.selectEventRelic);
+  const skipEventRelic = useSimulationStore((s) => s.skipEventRelic);
+
+  if (!eventRelicSelection) return null;
+
+  const { relics, triggerCombatAfter } = eventRelicSelection;
+
+  const getRarityColor = (rarity: string) => {
+    switch (rarity) {
+      case 'common': return 'border-gray-300 bg-gray-50';
+      case 'uncommon': return 'border-green-400 bg-green-50';
+      case 'rare': return 'border-blue-400 bg-blue-50';
+      case 'boss': return 'border-purple-400 bg-purple-50';
+      case 'legendary': return 'border-yellow-400 bg-yellow-50';
+      default: return 'border-gray-300 bg-gray-50';
+    }
+  };
+
+  const getRarityName = (rarity: string) => {
+    switch (rarity) {
+      case 'common': return '普通';
+      case 'uncommon': return '优秀';
+      case 'rare': return '稀有';
+      case 'boss': return 'Boss';
+      case 'legendary': return '传说';
+      default: return '普通';
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-xl border border-border-subtle p-6 shadow-sm max-w-2xl mx-auto">
+      <div className="text-center mb-6">
+        <h3 className="text-lg font-semibold text-ink mb-2">🎁 选择一件遗物</h3>
+        <p className="text-ink-muted text-sm">
+          {triggerCombatAfter ? '选择后即将进入战斗...' : '从以下遗物中挑选一件作为奖励'}
+        </p>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        {relics.map((relic) => (
+          <button
+            key={relic.id}
+            onClick={() => selectEventRelic(relic.id)}
+            className={`text-left p-4 rounded-lg border-2 transition-all hover:shadow-md hover:scale-[1.02] ${getRarityColor(relic.rarity)}`}
+          >
+            <div className="flex items-center gap-3 mb-2">
+              <span className="text-3xl">{relic.icon}</span>
+              <div>
+                <h4 className="font-medium text-ink text-sm">{relic.name}</h4>
+                <span className="text-xs text-ink-muted">{getRarityName(relic.rarity)}</span>
+              </div>
+            </div>
+            <p className="text-xs text-ink-muted leading-relaxed">{relic.description}</p>
+            <div className="mt-2 space-y-1">
+              {relic.effects.map((effect, idx) => (
+                <div key={idx} className="text-xs text-brand">
+                  • {effect.type === 'max_health_bonus' && `生命上限+${effect.value}`}
+                  {effect.type === 'energy_bonus' && `精力+${effect.value}`}
+                  {effect.type === 'card_draw_bonus' && `抽牌+${effect.value}`}
+                  {effect.type === 'discount' && `折扣${Math.round(effect.value * 100)}%`}
+                  {effect.type === 'double_damage' && `伤害加成${Math.round(effect.value * 100)}%`}
+                  {effect.type === 'heal_on_rest' && `休息恢复+${effect.value}`}
+                  {effect.type === 'extra_card_reward' && `额外抽牌奖励+${effect.value}`}
+                  {effect.type === 'card_type_bonus' && `${effect.cardType}卡加成${Math.round(effect.value * 100)}%`}
+                  {effect.type === 'attribute_scaling' && `${effect.attribute}成长+${Math.round(effect.value * 100)}%`}
+                  {effect.type === 'lifespan_extend' && `寿命+${effect.value}`}
+                  {effect.type === 'retention_bonus' && `保留加成+${effect.value}`}
+                </div>
+              ))}
+            </div>
+          </button>
+        ))}
+      </div>
+      <button
+        onClick={skipEventRelic}
+        className="w-full px-4 py-2.5 border border-border-subtle text-ink-muted rounded-lg hover:border-brand hover:text-brand transition-all text-sm"
+      >
+        跳过（不选遗物）
+      </button>
+    </div>
+  );
+};
+
+// ==========================================
 // 战斗界面（浅色主题）
 // ==========================================
 const CombatPhaseView: React.FC = () => {
@@ -1939,6 +2026,7 @@ const SimulationPage: React.FC = () => {
         {phase === 'allocating' && <AllocatingPhase />}
         {phase === 'year_view' && <YearViewPhase />}
         {phase === 'event' && currentEvent && <EventPhase event={currentEvent} />}
+        {phase === 'event_relic_selection' && <EventRelicSelectionPhase />}
         {phase === 'combat' && <CombatPhaseView />}
         {phase === 'reward' && <RewardPhase />}
         {phase === 'shop' && <ShopPhase />}

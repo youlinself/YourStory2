@@ -7,6 +7,7 @@ import {
   WONDER_REWARD_POOL, ATTRIBUTE_TIER_CARDS, CULTIVATION_REALM_NAMES,
   SCRIPT_CULTIVATION_EVENTS,
   COMMON_RELICS, RARE_RELICS, EPIC_RELICS, BOSS_RELICS,
+  getEnemyPool as getEnemyPoolFromData,
 } from '../data/simulationData';
 import {
   getEventsByBirthYear,
@@ -600,6 +601,7 @@ const initialState: GameState = {
   aiEnabled: false,
   aiGeneratedEvent: null,
   aiLoading: false,
+  eventRelicSelection: null,
 };
 
 interface SimulationState extends GameState {
@@ -656,6 +658,8 @@ interface SimulationState extends GameState {
   resolveChoice: (choiceId: string) => void;
   toggleAI: () => void;
   generateAIEvent: () => Promise<void>;
+  selectEventRelic: (relicId: string) => void;
+  skipEventRelic: () => void;
 }
 
 const useSimulationStore = create<SimulationState>((set, get) => ({
@@ -1311,10 +1315,65 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
     ws.lockedEvents = Array.from(newLocked);
     let ph = s.phase;
     if (life <= 0 || attrs.health <= 0) ph = 'ended';
-    set({ attributes: attrs, remainingLife: life, gold, deck, relics, choiceHistory: [...s.choiceHistory, rec], lifeRecords: [...s.lifeRecords, lr], worldState: ws, phase: ph });
+    const hasRelicPool = !!(outcome.relicRewardPool && outcome.relicRewardPool.length > 0);
+    const shouldTriggerCombat = !!outcome.triggerCombat;
+    set({
+      attributes: attrs,
+      remainingLife: life,
+      gold,
+      deck,
+      relics,
+      choiceHistory: [...s.choiceHistory, rec],
+      lifeRecords: [...s.lifeRecords, lr],
+      worldState: ws,
+      phase: hasRelicPool ? 'event_relic_selection' : ph,
+      eventRelicSelection: hasRelicPool ? {
+        relics: outcome.relicRewardPool!.map(r => ({ ...r, id: generateId() })),
+        sourceEvent: event,
+        sourceOption: option,
+        sourceOutcome: outcome,
+        triggerCombatAfter: shouldTriggerCombat,
+      } : null,
+    });
     const tags = get().checkHiddenTags();
     if (tags.length > s.hiddenTags.length) set({ hiddenTags: tags });
-    if (ph !== 'ended') get().completeOption();
+    if (!hasRelicPool && ph !== 'ended') {
+      if (shouldTriggerCombat) {
+        const enemies = getEnemyPoolFromData(s.currentEra, s.age).map((e) => ({ ...e, id: generateId(), currentHealth: e.maxHealth }));
+        if (enemies.length > 0) get().startCombat(enemies);
+      } else {
+        get().completeOption();
+      }
+    }
+  },
+
+  selectEventRelic: (relicId) => {
+    const s = get();
+    if (!s.eventRelicSelection) return;
+    const { relics, sourceOutcome, triggerCombatAfter } = s.eventRelicSelection;
+    const selectedRelic = relics.find(r => r.id === relicId);
+    if (!selectedRelic) return;
+    const newRelics = [...s.relics, { ...deepClone(selectedRelic), id: generateId() }];
+    set({ relics: newRelics, eventRelicSelection: null });
+    if (triggerCombatAfter && sourceOutcome) {
+      const enemies = getEnemyPoolFromData(s.currentEra, s.age).map((e) => ({ ...e, id: generateId(), currentHealth: e.maxHealth }));
+      if (enemies.length > 0) get().startCombat(enemies);
+    } else {
+      get().completeOption();
+    }
+  },
+
+  skipEventRelic: () => {
+    const s = get();
+    if (!s.eventRelicSelection) return;
+    const { triggerCombatAfter, sourceOutcome } = s.eventRelicSelection;
+    set({ eventRelicSelection: null });
+    if (triggerCombatAfter && sourceOutcome) {
+      const enemies = getEnemyPoolFromData(s.currentEra, s.age).map((e) => ({ ...e, id: generateId(), currentHealth: e.maxHealth }));
+      if (enemies.length > 0) get().startCombat(enemies);
+    } else {
+      get().completeOption();
+    }
   },
 
   generateShop: () => {

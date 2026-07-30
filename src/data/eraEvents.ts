@@ -2431,8 +2431,13 @@ export const SCRIPT_CONDITIONAL_EVENTS: GameEvent[] = [
         text: '专注科研',
         successRate: { iq: 0.6, energy: 0.2 },
         successOutcome: {
-          description: '你加入了教授的实验室，开始了前沿研究。',
+          description: '你加入了教授的实验室，开始了前沿研究。教授送你一件实验纪念品。',
           attributeChanges: { iq: 10, fame: 3 },
+          relicRewardPool: [
+            { id: 'relic_academic_1', name: '学术期刊', rarity: 'rare', description: '你发表论文的期刊', effects: [{ type: 'card_draw_bonus', value: 1 }, { type: 'extra_card_reward', value: 1 }], icon: '📚', stackable: false },
+            { id: 'relic_academic_2', name: '实验笔记', rarity: 'uncommon', description: '记录实验过程的笔记', effects: [{ type: 'card_type_bonus', value: 0.15, cardType: 'skill' }], icon: '📓', stackable: false },
+            { id: 'relic_academic_3', name: '校友徽章', rarity: 'common', description: '名校校友的象征', effects: [{ type: 'max_health_bonus', value: 8 }], icon: '🎓', stackable: true, maxStacks: 3 },
+          ],
         },
         failureOutcome: {
           description: '科研并不像想象中那么有趣，你有些迷茫。',
@@ -2494,8 +2499,13 @@ export const SCRIPT_CONDITIONAL_EVENTS: GameEvent[] = [
         text: '走职业道路',
         successRate: { physique: 0.5, energy: 0.4 },
         successOutcome: {
-          description: '你成为职业运动员，为国争光。',
+          description: '你成为职业运动员，为国争光。赞助商送你一件纪念品。',
           attributeChanges: { physique: 8, fame: 10, wealth: 5 },
+          relicRewardPool: [
+            { id: 'relic_sports_1', name: '冠军奖牌', rarity: 'rare', description: '省级冠军的证明，激励你不断前进', effects: [{ type: 'max_health_bonus', value: 15 }], icon: '🏅', stackable: false },
+            { id: 'relic_sports_2', name: '专业运动装备', rarity: 'uncommon', description: '提升训练效果的装备', effects: [{ type: 'energy_bonus', value: 1 }], icon: '👟', stackable: false },
+            { id: 'relic_sports_3', name: '运动水壶', rarity: 'common', description: '保持水分的水壶', effects: [{ type: 'heal_on_rest', value: 3 }], icon: '🥤', stackable: true, maxStacks: 3 },
+          ],
         },
         failureOutcome: {
           description: '职业道路充满挑战，你遇到了强劲的对手。',
@@ -2588,6 +2598,232 @@ export const SCRIPT_CONDITIONAL_EVENTS: GameEvent[] = [
         failureOutcome: {
           description: '虽然留在国内，但你时常想象留学的生活。',
           attributeChanges: { iq: 2 },
+        },
+      },
+    ],
+  },
+
+  // ==========================================
+  // 新增：遗物奖励 + 战斗触发事件
+  // ==========================================
+
+  // 探险事件：触发战斗
+  {
+    id: 'mysterious_ruins',
+    type: 'random',
+    era: 2,
+    ageRange: [18, 25],
+    title: '神秘遗迹',
+    baseText: '你听说附近有一处古老的遗迹，里面可能藏着珍贵的宝物，但也充满了危险。',
+    triggerCondition: (state) => state.attributes.physique >= 40 && state.attributes.iq >= 40,
+    options: [
+      {
+        id: 'enter_ruins',
+        text: '深入探索',
+        successRate: { physique: 0.4, energy: 0.3, iq: 0.3 },
+        successOutcome: {
+          description: '你成功突破了遗迹中的陷阱，发现了一些珍贵的遗物！',
+          attributeChanges: { physique: 3, energy: -2 },
+          relicRewardPool: [
+            { id: 'relic_ruins_1', name: '古代护符', rarity: 'rare', description: '古老的护符，据说能保护持有者', effects: [{ type: 'max_health_bonus', value: 15 }], icon: '🛡️', stackable: false },
+            { id: 'relic_ruins_2', name: '探险家指南针', rarity: 'uncommon', description: '永不迷失方向的指南针', effects: [{ type: 'card_draw_bonus', value: 1 }], icon: '🧭', stackable: false },
+            { id: 'relic_ruins_3', name: '遗迹宝石', rarity: 'rare', description: '闪耀着神秘光芒的宝石', effects: [{ type: 'discount', value: 0.15 }], icon: '💎', stackable: false },
+          ],
+        },
+        failureOutcome: {
+          description: '遗迹中的陷阱让你措手不及，你只能狼狈地逃了出来。',
+          attributeChanges: { health: -5, energy: -3 },
+        },
+      },
+      {
+        id: 'observe_carefully',
+        text: '谨慎观察',
+        successRate: { iq: 0.6 },
+        successOutcome: {
+          description: '你仔细观察了遗迹的结构，虽然没敢进去，但学到了一些古代知识。',
+          attributeChanges: { iq: 4 },
+        },
+        failureOutcome: {
+          description: '你看了半天也没看出什么名堂，只好离开。',
+          attributeChanges: { energy: -1 },
+        },
+      },
+    ],
+  },
+
+  // 传承事件：遗物奖励
+  {
+    id: 'family_inheritance',
+    type: 'random',
+    era: 4,
+    ageRange: [35, 50],
+    title: '家族传承',
+    baseText: '年迈的父母决定把家族中传承多年的宝物交给你，让你选择一件作为家族的继承者。',
+    triggerCondition: (state) => state.attributes.eq >= 50 && state.age >= 35,
+    options: [
+      {
+        id: 'accept_inheritance',
+        text: '接受传承',
+        successRate: { eq: 0.5, network: 0.3 },
+        successOutcome: {
+          description: '你郑重地接受了家族的传承，感受到了沉甸甸的责任。',
+          attributeChanges: { eq: 3, network: 2 },
+          relicRewardPool: [
+            { id: 'relic_family_1', name: '传家玉佩', rarity: 'rare', description: '家族世代相传的玉佩，蕴含着先人的祝福', effects: [{ type: 'max_health_bonus', value: 20 }, { type: 'heal_on_rest', value: 5 }], icon: '🟢', stackable: false },
+            { id: 'relic_family_2', name: '先祖手札', rarity: 'rare', description: '先祖记录的处世智慧', effects: [{ type: 'card_draw_bonus', value: 1 }, { type: 'extra_card_reward', value: 1 }], icon: '📜', stackable: false },
+            { id: 'relic_family_3', name: '家族徽章', rarity: 'uncommon', description: '象征着家族荣誉的徽章', effects: [{ type: 'max_health_bonus', value: 10 }], icon: '🏅', stackable: true, maxStacks: 3 },
+          ],
+        },
+        failureOutcome: {
+          description: '你在选择时犹豫不决，父母有些失望，但还是鼓励你下次再做决定。',
+          attributeChanges: { eq: -1 },
+        },
+      },
+      {
+        id: 'defer_to_sibling',
+        text: '让给兄弟姐妹',
+        successRate: { eq: 0.6 },
+        successOutcome: {
+          description: '你谦让的美德让家人更加团结，虽然没拿到宝物，但收获了亲情。',
+          attributeChanges: { eq: 5, network: 4 },
+        },
+        failureOutcome: {
+          description: '你的谦让被误解为不感兴趣，有些尴尬。',
+          attributeChanges: { eq: 1 },
+        },
+      },
+    ],
+  },
+
+  // 挑战事件：遗物 + 战斗
+  {
+    id: 'martial_challenge',
+    type: 'random',
+    era: 2,
+    ageRange: [20, 30],
+    title: '武林挑战',
+    baseText: '一位高手向你发起挑战，说如果你能接他三招，就把家传宝物相赠。',
+    triggerCondition: (state) => state.attributes.physique >= 50 && state.attributes.energy >= 50,
+    options: [
+      {
+        id: 'accept_challenge',
+        text: '接受挑战',
+        successRate: { physique: 0.5, energy: 0.3, health: 0.2 },
+        successOutcome: {
+          description: '你咬牙接下了三招，高手兑现承诺，让你在他的宝物中挑选一件！',
+          attributeChanges: { physique: 5, energy: -5 },
+          relicRewardPool: [
+            { id: 'relic_martial_1', name: '武者护腕', rarity: 'rare', description: '增强攻击力的护腕', effects: [{ type: 'double_damage', value: 0.15 }], icon: '🥊', stackable: false },
+            { id: 'relic_martial_2', name: '疗伤秘药', rarity: 'uncommon', description: '珍贵的疗伤圣药', effects: [{ type: 'heal_on_rest', value: 10 }], icon: '💊', stackable: false },
+            { id: 'relic_martial_3', name: '轻功秘籍', rarity: 'rare', description: '提升身法的秘籍', effects: [{ type: 'card_draw_bonus', value: 1 }, { type: 'energy_bonus', value: 1 }], icon: '📖', stackable: false },
+          ],
+          triggerCombat: true,
+        },
+        failureOutcome: {
+          description: '你虽然输了，但高手的实力让你心服口服，决定以后再来挑战。',
+          attributeChanges: { physique: 2, energy: -3 },
+        },
+      },
+      {
+        id: 'decline_challenge',
+        text: '婉拒挑战',
+        successRate: { eq: 0.5 },
+        successOutcome: {
+          description: '你礼貌地拒绝了，表示还需要更多修炼。高手点头赞许你的自知之明。',
+          attributeChanges: { eq: 3, iq: 2 },
+        },
+        failureOutcome: {
+          description: '你拒绝得有些生硬，高手有些不悦。',
+          attributeChanges: { eq: -1 },
+        },
+      },
+    ],
+  },
+
+  // 秘境探索：战斗触发
+  {
+    id: 'secret_realm',
+    type: 'random',
+    era: 3,
+    ageRange: [25, 40],
+    title: '秘境开启',
+    baseText: '传说中每百年开启一次的秘境出现在你面前，里面有机遇也有危险。',
+    triggerCondition: (state) => state.attributes.iq >= 55 && state.attributes.physique >= 45,
+    options: [
+      {
+        id: 'enter_secret_realm',
+        text: '进入秘境',
+        successRate: { iq: 0.4, physique: 0.4, energy: 0.2 },
+        successOutcome: {
+          description: '你成功闯过秘境中的考验，获得了珍贵的奖励！但秘境守护者出现了...',
+          attributeChanges: { iq: 5, physique: 3, energy: -5 },
+          relicRewardPool: [
+            { id: 'relic_secret_1', name: '秘境灵珠', rarity: 'rare', description: '蕴含秘境灵气的宝珠', effects: [{ type: 'energy_bonus', value: 2 }], icon: '🔮', stackable: false },
+            { id: 'relic_secret_2', name: '百年灵芝', rarity: 'rare', description: '稀有的延年益寿灵芝', effects: [{ type: 'lifespan_extend', value: 10 }], icon: '🍄', stackable: false },
+            { id: 'relic_secret_3', name: '秘境地图', rarity: 'uncommon', description: '记录秘境位置的古图', effects: [{ type: 'card_draw_bonus', value: 1 }], icon: '🗺️', stackable: false },
+          ],
+          triggerCombat: true,
+        },
+        failureOutcome: {
+          description: '秘境中的考验太过艰难，你不得不中途退出。',
+          attributeChanges: { energy: -5, health: -3 },
+        },
+      },
+      {
+        id: 'wait_and_see',
+        text: '静观其变',
+        successRate: { iq: 0.5 },
+        successOutcome: {
+          description: '你选择观察其他探险者的行动，从中学习经验。',
+          attributeChanges: { iq: 3 },
+        },
+        failureOutcome: {
+          description: '你等了很久，秘境关闭了，错失了机会。',
+          attributeChanges: { eq: -2 },
+        },
+      },
+    ],
+  },
+
+  // 古寺祈福：遗物奖励
+  {
+    id: 'temple_blessing',
+    type: 'random',
+    era: 1,
+    ageRange: [12, 18],
+    title: '古寺祈福',
+    baseText: '你和家人来到一座古老的寺庙祈福，住持说你可以选择一件开光的护身符。',
+    triggerCondition: (state) => state.attributes.eq >= 45,
+    options: [
+      {
+        id: 'choose_amulet',
+        text: '选择护身符',
+        successRate: { eq: 0.4, network: 0.3 },
+        successOutcome: {
+          description: '你虔诚地选取了一件护身符，感受到了内心的平静。',
+          attributeChanges: { eq: 3, health: 2 },
+          relicRewardPool: [
+            { id: 'relic_temple_1', name: '平安符', rarity: 'common', description: '保佑平安的护身符', effects: [{ type: 'max_health_bonus', value: 8 }], icon: '🧧', stackable: true, maxStacks: 5 },
+            { id: 'relic_temple_2', name: '智慧珠', rarity: 'uncommon', description: '提升智慧的佛珠', effects: [{ type: 'card_draw_bonus', value: 1 }], icon: '📿', stackable: false },
+            { id: 'relic_temple_3', name: '慈悲铃', rarity: 'uncommon', description: '净化心灵的铃铛', effects: [{ type: 'heal_on_rest', value: 5 }], icon: '🔔', stackable: false },
+          ],
+        },
+        failureOutcome: {
+          description: '你在选择时犹豫不决，住持微笑着说下次再来。',
+          attributeChanges: { eq: 1 },
+        },
+      },
+      {
+        id: 'donate_only',
+        text: '只祈福不取物',
+        successRate: { eq: 0.5 },
+        successOutcome: {
+          description: '你虔诚地祈福，不取一物，住持赞叹你的清净之心。',
+          attributeChanges: { eq: 5, health: 3 },
+        },
+        failureOutcome: {
+          description: '你祈福完毕，心中感到一丝安宁。',
+          attributeChanges: { eq: 2 },
         },
       },
     ],
