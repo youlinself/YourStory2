@@ -6,3 +6,5 @@ export { default as Autobiography } from './Autobiography';
 export { default as Simulation } from './Simulation';
 export { default as ThinkTank } from './ThinkTank';
 export { default as AchievementWall } from './AchievementWall';
+export { default as GameRecords } from './GameRecords';
+export { default as RecordDetail } from './GameRecords/RecordDetail';

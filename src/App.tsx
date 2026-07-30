@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { ToastProvider } from "./components";
-import { Home, DialogueAgent, Settings, Autobiography, Simulation, ThinkTank, AchievementWall } from "./pages";
+import { Home, DialogueAgent, Settings, Autobiography, Simulation, ThinkTank, AchievementWall, GameRecords, RecordDetail } from "./pages";
 import { useAIStore } from "./stores";
 import { AppLayout } from "./components/layout";
 import { ThemeProvider } from "./contexts/ThemeContext";
@@ -32,6 +32,8 @@ function App() {
               <Route path="/achievements" element={<AchievementWall />} />
               <Route path="/thinktank" element={<ThinkTank />} />
               <Route path="/thinktank/battle" element={<ThinkTank />} />
+              <Route path="/records" element={<GameRecords />} />
+              <Route path="/records/:recordId" element={<RecordDetail />} />
               <Route path="/settings" element={<Settings />} />
             </Route>
           </Routes>

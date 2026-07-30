@@ -431,6 +431,34 @@ export interface SaveMetadata {
   updatedAt: string;
 }
 
+export interface GameRecord {
+  id: string;
+  birthYear: number;
+  deathYear: number;
+  age: number;
+  maxLifespan: number;
+  mode: GameMode;
+  cultivationRealm?: CultivationRealm;
+  finalAttributes: PlayerAttributes;
+  baseAttributes: PlayerAttributes;
+  totalAttributeGain: number;
+  deckSize: number;
+  relicsCount: number;
+  gold: number;
+  totalChoices: number;
+  successChoices: number;
+  successRate: number;
+  title: string;
+  titleIcon: string;
+  score: number;
+  evaluations: string[];
+  bondNpcCount: number;
+  bondGroupCount: number;
+  bondTotalTier: number;
+  createdAt: string;
+  gameState: GameState;
+}
+
 // ==========================================
 // 成就系统
 // ==========================================

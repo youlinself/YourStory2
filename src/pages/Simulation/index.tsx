@@ -307,6 +307,13 @@ const ModeSelectPhase: React.FC = () => {
             <span>🏆</span>
             <span>成就墙</span>
           </button>
+          <button
+            onClick={() => navigate('/records')}
+            className="px-6 py-2.5 bg-white border border-border-subtle rounded-xl text-ink-muted hover:border-brand hover:text-brand transition-all flex items-center gap-2 text-sm"
+          >
+            <span>📜</span>
+            <span>游戏记录</span>
+          </button>
         </div>
       </div>
     );

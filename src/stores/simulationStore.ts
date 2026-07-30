@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { StorageService } from '../services';
 import { generateId } from '../utils';
+import useGameRecordStore from './gameRecordStore';
 import {
   ERAS, STARTER_DECK, HIDDEN_TAGS,
   COMMON_ATTACK_CARDS, COMMON_SKILL_CARDS, RARE_CARDS, LEGENDARY_CARDS,
@@ -902,6 +903,7 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
     const isVictory = s.age >= s.maxLifespan - 1;
     useAchievementStore.getState().recordGameEnd(s, isVictory);
     set({ phase: 'ended' });
+    useGameRecordStore.getState().saveRecord({ ...s, phase: 'ended' });
   },
   resetGame: () => { set({ ...initialState, phase: 'setup' }); storageService.removeData(STORAGE_KEY); useBondStore.getState().resetBondSystem(); },
 
@@ -1145,6 +1147,7 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
     if (c.player.currentHealth <= 0) {
       set({ combat: { ...c, phase: 'defeat' }, phase: 'ended', pendingChoice: null });
       set({ damageEventCounter: get().damageEventCounter + 1 });
+      useGameRecordStore.getState().saveRecord({ ...get(), phase: 'ended' });
       return;
     }
     if (c.enemies.every((e) => e.currentHealth <= 0)) {
@@ -1612,6 +1615,7 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
         tribulation: { ...s.tribulation, isActive: false },
         phase: 'ended',
       });
+      useGameRecordStore.getState().saveRecord({ ...get(), phase: 'ended' });
       return { success: false, message: '渡劫失败，身死道消' };
     }
 
