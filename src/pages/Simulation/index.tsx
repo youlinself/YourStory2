@@ -1579,13 +1579,13 @@ const ShopPhase: React.FC = () => {
             disabled={!canRefresh}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5 ${
               canRefresh
-                ? 'bg-secondary text-white hover:bg-secondary/90'
+                ? 'bg-brand text-white hover:bg-brand/90 shadow-sm'
                 : 'bg-gray-200 text-gray-400 cursor-not-allowed'
             }`}
           >
             <span>🔄</span>
             <span>刷新</span>
-            <span className="text-xs opacity-80">💰{refreshCost}</span>
+            <span className="text-xs opacity-90">💰{refreshCost}</span>
           </button>
         </div>
       </div>
