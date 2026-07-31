@@ -585,21 +585,31 @@ export function getDefaultEraContent(era: number, ctx: GenerationContext): EraPr
           type: option.type,
         };
 
+        const currentAgeAtYear = baseAge + yearIndex;
+
         switch (option.type) {
           case 'event': {
-            const events = getDefaultEventsForEra(era, baseAge, ctx.birthYear);
+            const events = getDefaultEventsForEra(era, baseAge, ctx.birthYear, currentAgeAtYear);
             if (events.length > 0) {
-              optionContent.event = events[yearIndex % events.length];
+              const ageAppropriateEvents = events.filter(e => {
+                if (e.ageRange) {
+                  const [minAge, maxAge] = e.ageRange;
+                  return currentAgeAtYear >= minAge && currentAgeAtYear <= maxAge;
+                }
+                return true;
+              });
+              const eventPool = ageAppropriateEvents.length > 0 ? ageAppropriateEvents : events;
+              optionContent.event = eventPool[yearIndex % eventPool.length];
             }
             break;
           }
           case 'combat': {
             optionContent.enemies = [];
-            const monsterTypes = ['slime', 'ghost', 'golem', 'wraith'];
+            const monsterTypes = ['slime', 'ghost', 'golem', 'wraith', 'beast', 'insect', 'undead', 'elemental'];
             for (let i = 0; i < 3; i++) {
               const monsterType = monsterTypes[Math.floor(Math.random() * monsterTypes.length)];
-              const variant = getNormalMonsterVariant(monsterType, baseAge + yearIndex);
-              const partial = createMonsterFromVariant(variant, monsterType, baseAge + yearIndex, multiplier);
+              const variant = getNormalMonsterVariant(monsterType, currentAgeAtYear);
+              const partial = createMonsterFromVariant(variant, monsterType, currentAgeAtYear, multiplier);
               optionContent.enemies.push({
                 id: generateId(),
                 name: variant.name,
@@ -615,18 +625,18 @@ export function getDefaultEraContent(era: number, ctx: GenerationContext): EraPr
                 cardRewards: COMMON_ATTACK_CARDS.slice(0, 1).map(c => ({ ...c, id: generateId() })),
                 goldReward: [5, 15],
                 mechanics: [],
-                ageRange: [baseAge, baseAge + 9],
+                ageRange: [currentAgeAtYear, currentAgeAtYear],
               });
             }
             break;
           }
           case 'elite': {
             optionContent.enemies = [];
-            const eliteTypes = ['academic', 'burnout'];
+            const eliteTypes = ['academic', 'burnout', 'authority', 'temptation', 'crisis', 'inner_demon'];
             for (let i = 0; i < 2; i++) {
               const eliteType = eliteTypes[Math.floor(Math.random() * eliteTypes.length)];
-              const variant = getEliteMonsterVariant(eliteType, baseAge + yearIndex);
-              const partial = createMonsterFromVariant(variant, 'slime', baseAge + yearIndex, multiplier * 1.5);
+              const variant = getEliteMonsterVariant(eliteType, currentAgeAtYear);
+              const partial = createMonsterFromVariant(variant, 'slime', currentAgeAtYear, multiplier * 1.5);
               optionContent.enemies.push({
                 id: generateId(),
                 name: variant.name,
@@ -642,7 +652,7 @@ export function getDefaultEraContent(era: number, ctx: GenerationContext): EraPr
                 cardRewards: RARE_CARDS.slice(0, 1).map(c => ({ ...c, id: generateId() })),
                 goldReward: [15, 30],
                 mechanics: [],
-                ageRange: [baseAge, baseAge + 9],
+                ageRange: [currentAgeAtYear, currentAgeAtYear],
               });
             }
             break;
@@ -652,7 +662,8 @@ export function getDefaultEraContent(era: number, ctx: GenerationContext): EraPr
             break;
           }
           case 'boss': {
-            const bossPartial = createAnnualBoss(baseAge + 9, ctx.currentYear, multiplier);
+            const bossAge = baseAge + yearIndex;
+            const bossPartial = createAnnualBoss(bossAge, ctx.currentYear, multiplier);
             optionContent.enemies = [{
               id: generateId(),
               name: bossPartial.name || '时代终结者',
@@ -668,7 +679,7 @@ export function getDefaultEraContent(era: number, ctx: GenerationContext): EraPr
               cardRewards: LEGENDARY_CARDS.slice(0, 2).map(c => ({ ...c, id: generateId() })),
               goldReward: [80, 150],
               mechanics: ['boss_aura'],
-              ageRange: [baseAge, baseAge + 9],
+              ageRange: [bossAge, bossAge],
             }];
             break;
           }
@@ -681,7 +692,8 @@ export function getDefaultEraContent(era: number, ctx: GenerationContext): EraPr
     });
   }
 
-  const bossPartial = createAnnualBoss(baseAge + 9, ctx.currentYear, multiplier);
+  const finalBossAge = baseAge + 9;
+  const bossPartial = createAnnualBoss(finalBossAge, ctx.currentYear, multiplier);
   const boss: Enemy = {
     id: generateId(),
     name: bossPartial.name || '时代终结者',
@@ -697,7 +709,7 @@ export function getDefaultEraContent(era: number, ctx: GenerationContext): EraPr
     cardRewards: LEGENDARY_CARDS.slice(0, 2).map(c => ({ ...c, id: generateId() })),
     goldReward: [80, 150],
     mechanics: ['boss_aura'],
-    ageRange: [baseAge, baseAge + 9],
+    ageRange: [finalBossAge, finalBossAge],
   };
 
   return {
@@ -710,14 +722,15 @@ export function getDefaultEraContent(era: number, ctx: GenerationContext): EraPr
   };
 }
 
-export function getDefaultEventsForEra(_era: number, baseAge: number, birthYear: number): GameEvent[] {
+export function getDefaultEventsForEra(_era: number, baseAge: number, birthYear: number, targetAge?: number): GameEvent[] {
   const events = getEventsByBirthYear(birthYear as 1950 | 1960 | 1970 | 1980 | 1990 | 2000 | 2010 | 2020 | 2030 | 2040 | 2050 | 2060 | 2070);
 
   return events
     .filter(event => {
       if (event.ageRange) {
         const [minAge, maxAge] = event.ageRange;
-        return baseAge >= minAge && baseAge <= maxAge + 9;
+        const checkAge = targetAge !== undefined ? targetAge : baseAge;
+        return checkAge >= minAge && checkAge <= maxAge;
       }
       return true;
     })

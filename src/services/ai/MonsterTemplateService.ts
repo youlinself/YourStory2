@@ -5,7 +5,7 @@ export interface MonsterTemplate {
   intentTypes: { type: EnemyIntent['type']; description: string; params: string[] }[];
   statusEffects: { type: StatusEffect['type']; description: string }[];
   mechanics: { type: EnemyMechanic; description: string; unlockAge: number }[];
-  monsterTypes: { type: string; description: string; baseHealth: number; baseBlock: number }[];
+  monsterTypes: { type: string; description: string; baseHealth: number; baseBlock: number; group: 'regular' | 'elite' | 'boss' }[];
   ageStages: { name: string; minAge: number; maxAge: number; description: string }[];
 }
 
@@ -42,10 +42,23 @@ export function getMonsterTemplate(): MonsterTemplate {
       { type: 'boss_aura', description: 'Boss光环效果', unlockAge: 0 },
     ],
     monsterTypes: [
-      { type: 'slime', description: '史莱姆类：基础怪物，生命值低，无特殊能力', baseHealth: 20, baseBlock: 0 },
-      { type: 'ghost', description: '幽灵类：多段攻击，可增益自身', baseHealth: 25, baseBlock: 0 },
-      { type: 'golem', description: '傀儡类：高生命高格挡，防御型', baseHealth: 35, baseBlock: 5 },
-      { type: 'wraith', description: '暗影类：减益型，削弱敌人', baseHealth: 18, baseBlock: 0 },
+      { type: 'slime', description: '史莱姆类：基础怪物，生命值低，无特殊能力', baseHealth: 20, baseBlock: 0, group: 'regular' },
+      { type: 'ghost', description: '幽灵类：多段攻击，可增益自身', baseHealth: 25, baseBlock: 0, group: 'regular' },
+      { type: 'golem', description: '傀儡类：高生命高格挡，防御型', baseHealth: 35, baseBlock: 5, group: 'regular' },
+      { type: 'wraith', description: '暗影类：减益型，削弱敌人', baseHealth: 18, baseBlock: 0, group: 'regular' },
+      { type: 'beast', description: '野兽类：高攻击高连击，狂暴型', baseHealth: 28, baseBlock: 0, group: 'regular' },
+      { type: 'insect', description: '虫类：召唤同类，数量压制', baseHealth: 15, baseBlock: 0, group: 'regular' },
+      { type: 'undead', description: '不死类：恢复生命，难以击杀', baseHealth: 30, baseBlock: 3, group: 'regular' },
+      { type: 'elemental', description: '元素类：元素伤害，属性克制', baseHealth: 22, baseBlock: 0, group: 'regular' },
+      { type: 'academic', description: '学术类：知识压制，机制复杂', baseHealth: 80, baseBlock: 0, group: 'elite' },
+      { type: 'burnout', description: '过劳类：持续施压，削弱敌人', baseHealth: 65, baseBlock: 0, group: 'elite' },
+      { type: 'authority', description: '权威类：控制型，压制玩家行动', baseHealth: 90, baseBlock: 5, group: 'elite' },
+      { type: 'temptation', description: '诱惑类：迷惑敌人，增益自身', baseHealth: 70, baseBlock: 0, group: 'elite' },
+      { type: 'crisis', description: '危机类：高爆发，同归于尽', baseHealth: 100, baseBlock: 0, group: 'elite' },
+      { type: 'inner_demon', description: '心魔类：复制玩家技能，镜像战斗', baseHealth: 85, baseBlock: 0, group: 'elite' },
+      { type: 'life_boss', description: '人生Boss：综合考验，多阶段战斗', baseHealth: 150, baseBlock: 10, group: 'boss' },
+      { type: 'fate_boss', description: '命运Boss：随机机制，不可预测', baseHealth: 180, baseBlock: 5, group: 'boss' },
+      { type: 'time_boss', description: '时间Boss：限时压力，加速衰老', baseHealth: 200, baseBlock: 8, group: 'boss' },
     ],
     ageStages: AGE_STAGES.map(s => ({ name: s.name, minAge: s.minAge, maxAge: s.maxAge, description: s.description })),
   };
@@ -54,6 +67,10 @@ export function getMonsterTemplate(): MonsterTemplate {
 export function buildMonsterTemplatePrompt(template: MonsterTemplate, age: number): string {
   const stage = getAgeStage(age);
   const availableMechanics = template.mechanics.filter(m => age >= m.unlockAge);
+
+  const regularTypes = template.monsterTypes.filter(t => t.group === 'regular');
+  const eliteTypes = template.monsterTypes.filter(t => t.group === 'elite');
+  const bossTypes = template.monsterTypes.filter(t => t.group === 'boss');
 
   return `怪物生成模板（年龄段：${stage.name}，${age}岁）：
 
@@ -66,8 +83,14 @@ ${template.statusEffects.map(t => `- ${t.type}: ${t.description}`).join('\n')}
 【特殊机制】（根据年龄解锁）
 ${availableMechanics.map(t => `- ${t.type}: ${t.description}(${t.unlockAge}岁解锁)`).join('\n')}
 
-【怪物类型参考】（可自由组合创新）
-${template.monsterTypes.map(t => `- ${t.type}: ${t.description} (基础生命${t.baseHealth}, 基础格挡${t.baseBlock})`).join('\n')}
+【常规怪物组】（普通战斗遭遇）
+${regularTypes.map(t => `- ${t.type}: ${t.description} (基础生命${t.baseHealth}, 基础格挡${t.baseBlock})`).join('\n')}
+
+【精英怪物组】（高难度战斗遭遇）
+${eliteTypes.map(t => `- ${t.type}: ${t.description} (基础生命${t.baseHealth}, 基础格挡${t.baseBlock})`).join('\n')}
+
+【Boss怪物组】（关卡Boss战）
+${bossTypes.map(t => `- ${t.type}: ${t.description} (基础生命${t.baseHealth}, 基础格挡${t.baseBlock})`).join('\n')}
 
 【年龄段特征】
 ${stage.name}(${stage.minAge}-${stage.maxAge}岁)：${stage.description}
@@ -78,7 +101,12 @@ ${stage.name}(${stage.minAge}-${stage.maxAge}岁)：${stage.description}
 3. 根据年龄段选择合适的怪物强度和机制
 4. 可以创造新的怪物类型，不必局限于现有类型
 5. 怪物名称和描述应该体现年龄段特征
-6. 强度计算公式：基础值 × (1 + 年龄/10 × 0.12) × 难度系数`;
+6. 强度计算公式：基础值 × (1 + 年龄/10 × 0.12) × 难度系数
+7. 战斗时从常规组/精英组/Boss组中随机抽取，避免同一组重复出现`;
+}
+
+export function getMonstersByGroup(template: MonsterTemplate, group: 'regular' | 'elite' | 'boss'): { type: string; description: string; baseHealth: number; baseBlock: number }[] {
+  return template.monsterTypes.filter(t => t.group === group);
 }
 
 export function buildMonsterExample(age: number): string {

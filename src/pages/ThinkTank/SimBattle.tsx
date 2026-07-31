@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   COMMON_ATTACK_CARDS,
@@ -40,6 +40,7 @@ import {
   getIntentColor,
   getIntentDescription,
 } from '../../combat/combatEngine';
+import { createCombatRandomState, generateCombatEnemies } from '../../utils';
 
 // 待处理抉择状态
 interface PendingChoice {
@@ -115,6 +116,8 @@ const SimBattle: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
   const [combat, setCombat] = useState<CombatState | null>(null);
   const [selectedTarget, setSelectedTarget] = useState<number>(0);
   const [pendingChoice, setPendingChoice] = useState<PendingChoice | null>(null);
+  const combatRandomState = useRef(createCombatRandomState(3));
+  const [playerAge] = useState<number>(25);
 
   // 返回智库
   const handleBack = useCallback(() => {
@@ -170,26 +173,28 @@ const SimBattle: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
     setDifficulty(diff);
     const config = DIFFICULTY_CONFIG[diff];
 
-    const numEnemies = config.enemyCount[0] + Math.floor(Math.random() * (config.enemyCount[1] - config.enemyCount[0] + 1));
-    const enemies: CombatState['enemies'] = [];
-    for (let i = 0; i < numEnemies; i++) {
-      const template = config.enemyPool[Math.floor(Math.random() * config.enemyPool.length)];
-      const health = Math.floor(template.maxHealth * config.multiplier);
-      enemies.push({
-        ...template,
-        id: generateId(),
-        maxHealth: health,
-        currentHealth: health,
-        block: 0,
-        statusEffects: [],
-        currentIntentIndex: 0,
-        intents: template.intents.map((intent) => ({
-          ...intent,
-          damage: intent.type === 'attack' ? Math.floor((intent.damage || 0) * config.multiplier) : (intent as any).damage,
-          block: intent.type === 'defend' ? Math.floor((intent.block || 0) * config.multiplier) : (intent as any).block,
-        })),
-      });
-    }
+    const baseMultiplier = config.multiplier;
+    const enemies = generateCombatEnemies(
+      combatRandomState.current,
+      playerAge,
+      baseMultiplier,
+      Math.random
+    );
+
+    const adjustedEnemies: CombatState['enemies'] = enemies.map((e) => ({
+      ...e,
+      id: generateId(),
+      maxHealth: Math.floor(e.maxHealth * baseMultiplier),
+      currentHealth: Math.floor(e.maxHealth * baseMultiplier),
+      block: 0,
+      statusEffects: [],
+      currentIntentIndex: 0,
+      intents: e.intents.map((intent) => ({
+        ...intent,
+        damage: intent.type === 'attack' ? Math.floor((intent.damage || 0) * baseMultiplier) : (intent as any).damage,
+        block: intent.type === 'defend' ? Math.floor((intent.block || 0) * baseMultiplier) : (intent as any).block,
+      })),
+    }));
 
     const drawPile = shuffle(selectedCards.map((c) => ({ ...c, id: generateId() })));
     const hand = drawPile.splice(0, Math.min(4, drawPile.length));
@@ -210,7 +215,7 @@ const SimBattle: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
         exhaustPile: [],
         statusEffects: [],
       },
-      enemies: enemies as any,
+      enemies: adjustedEnemies as any,
       currentEnemyIndex: 0,
       rewards: { mode: 'battle', cards: [], wonderOptions: [] },
       availableBonuses: [],
@@ -222,7 +227,7 @@ const SimBattle: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
 
     setCombat(newCombat);
     setStep('combat');
-  }, [selectedCards, difficulty, randomDifficulty]);
+  }, [selectedCards, difficulty, randomDifficulty, playerAge]);
 
   const playCard = useCallback((cardId: string) => {
     if (!combat || combat.phase !== 'player_turn') return;
@@ -322,6 +327,7 @@ const SimBattle: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
     setSelectedCards([]);
     setDifficulty(null);
     setCombat(null);
+    combatRandomState.current = createCombatRandomState(3);
   }, []);
 
   // 渲染：选牌界面
