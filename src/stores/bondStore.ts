@@ -22,9 +22,11 @@ import {
 
 export interface BondStoreState extends BondSystemState {
   // 抽卡操作
-  performYearDraw: (year: number) => void;
+  performYearDraw: (year: number) => boolean;
   selectCard: (cardDefId: string) => void;
   cancelDraw: () => void;
+  addDrawChance: () => void;
+  getDrawChances: () => number;
 
   // 查询
   getCollectionCard: (cardDefId: string) => BondCardInstance | undefined;
@@ -78,6 +80,7 @@ const initialBondState: BondSystemState = {
   activeBondGroups: [],
   activeBondTiers: {},
   claimedRewards: [],
+  drawChances: 0,
 };
 
 const useBondStore = create<BondStoreState>((set, get) => ({
@@ -88,6 +91,10 @@ const useBondStore = create<BondStoreState>((set, get) => ({
   // ==========================================
 
   performYearDraw: (year) => {
+    const state = get();
+    if (state.drawChances <= 0) return false;
+    if (state.currentDraw?.isSelecting) return false;
+
     const availableCards = getAvailableCards(year);
     const drawnCards = weightedRandomSelect(availableCards, 5);
 
@@ -97,7 +104,18 @@ const useBondStore = create<BondStoreState>((set, get) => ({
         cards: drawnCards,
         isSelecting: true,
       },
+      drawChances: state.drawChances - 1,
     });
+
+    return true;
+  },
+
+  addDrawChance: () => {
+    set((s) => ({ drawChances: s.drawChances + 1 }));
+  },
+
+  getDrawChances: () => {
+    return get().drawChances;
   },
 
   selectCard: (cardDefId) => {

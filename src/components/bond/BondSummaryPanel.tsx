@@ -12,6 +12,7 @@ const BondSummaryPanel: React.FC<BondSummaryPanelProps> = ({ onOpenDetail }) => 
   const collection = useBondStore((s) => s.collection);
   const activeBondGroups = useBondStore((s) => s.activeBondGroups);
   const activeBondTiers = useBondStore((s) => s.activeBondTiers);
+  const drawChances = useBondStore((s) => s.drawChances);
   const getCollectionStats = useBondStore((s) => s.getCollectionStats);
 
   const stats = getCollectionStats();
@@ -49,6 +50,15 @@ const BondSummaryPanel: React.FC<BondSummaryPanelProps> = ({ onOpenDetail }) => 
           <span className="bond-stat-value bond-stat-gold">{totalBondLevel}</span>
           <span className="bond-stat-label">等级</span>
         </div>
+        {drawChances > 0 && (
+          <>
+            <div className="bond-stat-divider" />
+            <div className="bond-stat-item">
+              <span className="bond-stat-value bond-stat-draw">{drawChances}</span>
+              <span className="bond-stat-label">抽卡</span>
+            </div>
+          </>
+        )}
       </div>
 
       {collectedCards.length > 0 && (

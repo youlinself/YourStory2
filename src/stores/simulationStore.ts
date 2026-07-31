@@ -707,7 +707,7 @@ interface SimulationState extends GameState {
   getBondCollection: () => import('../types/bond').BondCardInstance[],
   getBondActiveGroups: () => string[],
   getBondPassiveEffects: () => { id: string; description: string }[],
-  performYearDraw: (year: number) => void,
+  performYearDraw: (year: number) => boolean,
   activateBondGroup: (groupId: string) => void,
   claimBondReward: (groupId: string, tier: number) => { attributeBonus?: Partial<PlayerAttributes>; cardReward?: LifeCard; relicReward?: LifeRelic; passiveId?: string; passiveDescription?: string; } | null;
   // 寿命延长系统方法
@@ -1007,6 +1007,7 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
     const newCurrentYear = (s.birthYear || 1950) + s.currentEra * 10 + nextYearIndex;
     const newAge = newCurrentYear - (s.birthYear || 1950);
     set({ currentMap: { ...s.currentMap, years: newYears, currentYearIndex: nextYearIndex, completed }, currentYear: newCurrentYear, age: newAge, phase: completed ? 'era_transition' : 'year_view', loadingType: undefined });
+    useBondStore.getState().addDrawChance();
     if (completed) get().advanceEra();
   },
 
@@ -1050,9 +1051,6 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
         get().startBackgroundGeneration(nextEra + 1);
       }, 200);
     }
-
-    // 触发年度抽卡
-    useBondStore.getState().performYearDraw(newAge);
   },
 
   endGame: () => {

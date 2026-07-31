@@ -102,6 +102,7 @@ export interface BondSystemState {
   activeBondGroups: string[];
   activeBondTiers: Record<string, number>;
   claimedRewards: string[];
+  drawChances: number;
 }
 
 /** 收集统计 */

@@ -65,6 +65,10 @@
   color: var(--color-gold, #d97706);
 }
 
+.bond-stat-draw {
+  color: #a855f7;
+}
+
 .bond-stat-label {
   font-size: 0.625rem;
   color: var(--color-ink-faint);

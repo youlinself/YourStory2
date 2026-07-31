@@ -17,6 +17,7 @@ const BondPanel: React.FC = () => {
   const activeBondGroups = useBondStore((s) => s.activeBondGroups);
   const drawHistory = useBondStore((s) => s.drawHistory);
   const currentDraw = useBondStore((s) => s.currentDraw);
+  const drawChances = useBondStore((s) => s.drawChances);
   const getCollectionStats = useBondStore((s) => s.getCollectionStats);
   const performYearDraw = useBondStore((s) => s.performYearDraw);
   const getCardStarCounts = useBondStore((s) => s.getCardStarCounts);
@@ -51,11 +52,14 @@ const BondPanel: React.FC = () => {
   };
 
   const handleStartDraw = () => {
+    if (drawChances <= 0) return;
     const currentYear = drawHistory.length > 0
       ? drawHistory[drawHistory.length - 1].year + 1
       : 1;
-    performYearDraw(currentYear);
-    setShowDrawModal(true);
+    const success = performYearDraw(currentYear);
+    if (success) {
+      setShowDrawModal(true);
+    }
   };
 
   return (
@@ -104,8 +108,12 @@ const BondPanel: React.FC = () => {
           <span className="bond-progress-text">收集完成度 {(stats.completionRate * 100).toFixed(1)}%</span>
         </div>
 
-        <button className="bond-draw-btn" onClick={handleStartDraw} disabled={!!currentDraw}>
-          <span>🎲</span> 年度抽卡
+        <button
+          className="bond-draw-btn"
+          onClick={handleStartDraw}
+          disabled={!!currentDraw || drawChances <= 0}
+        >
+          <span>🎲</span> 年度抽卡 {drawChances > 0 && `(${drawChances})`}
         </button>
       </div>
 
