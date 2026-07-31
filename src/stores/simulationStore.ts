@@ -41,6 +41,21 @@ import type {
   AttributeThresholdBonus, EnemyMechanic, CombatBonus, WonderRewardOption, WonderRewardType,
   PendingChoice, ShopItem, AIGenerationState, EraPreGeneratedContent, EraEventPool,
 } from '../types/simulation';
+import type { LifespanExtensionState, BloodlineType } from '../types/lifespan';
+import {
+  createInitialLifespanState,
+  craftPill,
+  cultivateTechnique,
+  performKarmaAction,
+  awakenBloodline,
+  purifyBloodline,
+  establishSanctuary,
+  purchaseSanctuaryUpgrade,
+  activateTreasure,
+  calculateTotalLifespanBonus,
+  generateLifespanEvents,
+  updateKarmaCooldowns,
+} from '../services/LifespanExtensionService';
 import useBondStore from './bondStore';
 import useAchievementStore from './achievementStore';
 
@@ -546,6 +561,8 @@ const initialAIGenerationState: AIGenerationState = {
 
 const initialCultivationState: CultivationState = { realm: 'mortal', maxLifespan: 70, tribulationThreshold: 0, realmBonus: {} };
 
+const initialLifespanExtensionState: LifespanExtensionState | null = null;
+
 export interface DamageEvent {
   id: string;
   value: number;
@@ -586,6 +603,7 @@ const initialState: GameState = {
   age: 0,
   maxLifespan: 70,
   remainingLife: 70,
+  lifespanExtension: initialLifespanExtensionState,
   attributes: { ...initialAttributes },
   baseAttributes: { ...initialAttributes },
   remainingAttributePoints: 35,
@@ -693,6 +711,18 @@ interface SimulationState extends GameState {
   interactWithNPC: (npcId: string, delta: number) => void,
   activateBondGroup: (groupId: string) => void,
   claimBondReward: (groupId: string, tier: number) => { attributeBonus?: Partial<PlayerAttributes>; cardReward?: LifeCard; relicReward?: LifeRelic; passiveId?: string; passiveDescription?: string; } | null;
+  // 寿命延长系统方法
+  craftLifespanPill: (formulaId: string, herbInventory: Record<string, number>) => { success: boolean; message: string; lifespanGain: number };
+  cultivateLongevityTechnique: (techniqueId: string, gold: number) => { success: boolean; message: string; lifespanGain: number };
+  performKarmaDeed: (actionId: string) => { success: boolean; message: string; attributeChanges: Record<string, number> };
+  awakenCharacterBloodline: (bloodlineType: BloodlineType) => { success: boolean; message: string };
+  purifyCharacterBloodline: (purityPoints: number) => { success: boolean; message: string; lifespanGain: number };
+  establishCharacterSanctuary: (gold: number) => { success: boolean; message: string };
+  purchaseSanctuaryUpgradeAction: (upgradeId: string, gold: number) => { success: boolean; message: string; lifespanGain: number };
+  activateLifespanTreasure: (treasureId: string) => { success: boolean; message: string; lifespanGain: number };
+  getLifespanEvents: () => import('../services/LifespanExtensionService').LifespanEventData[];
+  updateLifespanCooldowns: () => void;
+  getTotalLifespanBonus: () => number;
 }
 
 const useSimulationStore = create<SimulationState>((set, get) => ({
@@ -756,7 +786,10 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
       deck, relics: [], gold: 30, worldState: { ...initialWorldState }, seed: Date.now(),
       attributeCardsGranted: false,
     };
-    if (mode === 'endless') state.cultivation = { ...initialCultivationState, maxLifespan: era.baseLifeExpectancy };
+    if (mode === 'endless') {
+      state.cultivation = { ...initialCultivationState, maxLifespan: era.baseLifeExpectancy };
+      state.lifespanExtension = createInitialLifespanState(era.baseLifeExpectancy);
+    }
     set(state as GameState);
 
     useBondStore.getState().resetBondSystem();
@@ -2036,6 +2069,125 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
   interactWithNPC: (npcId: string, delta: number) => useBondStore.getState().updateRelationship(npcId, delta),
   activateBondGroup: (groupId: string) => useBondStore.getState().activateBondGroup(groupId),
   claimBondReward: (groupId: string, tier: number) => useBondStore.getState().claimReward(groupId, tier),
+
+  // ==================== 寿命延长系统 ====================
+
+  craftLifespanPill: (formulaId, herbInventory) => {
+    const s = get();
+    if (!s.lifespanExtension) return { success: false, message: '寿命延长系统未激活', lifespanGain: 0 };
+    const result = craftPill(s.lifespanExtension, formulaId, herbInventory);
+    if (result.success) {
+      set({ lifespanExtension: result.newState });
+    }
+    return result;
+  },
+
+  cultivateLongevityTechnique: (techniqueId, gold) => {
+    const s = get();
+    if (!s.lifespanExtension) return { success: false, message: '寿命延长系统未激活', lifespanGain: 0 };
+    const result = cultivateTechnique(s.lifespanExtension, techniqueId, gold);
+    if (result.success) {
+      set({ lifespanExtension: result.newState, gold: s.gold - gold });
+    }
+    return result;
+  },
+
+  performKarmaDeed: (actionId) => {
+    const s = get();
+    if (!s.lifespanExtension) return { success: false, message: '寿命延长系统未激活', attributeChanges: {} };
+    const result = performKarmaAction(s.lifespanExtension, actionId, s.age);
+    if (result.success) {
+      const newAttrs = { ...s.attributes };
+      for (const [k, v] of Object.entries(result.attributeChanges)) {
+        const attr = k as keyof PlayerAttributes;
+        newAttrs[attr] = Math.max(0, Math.min(100, newAttrs[attr] + (v || 0)));
+      }
+      set({ lifespanExtension: result.newState, attributes: newAttrs });
+    }
+    return result;
+  },
+
+  awakenCharacterBloodline: (bloodlineType) => {
+    const s = get();
+    if (!s.lifespanExtension) return { success: false, message: '寿命延长系统未激活' };
+    const result = awakenBloodline(s.lifespanExtension, bloodlineType);
+    if (result.success) {
+      set({ lifespanExtension: result.newState });
+    }
+    return result;
+  },
+
+  purifyCharacterBloodline: (purityPoints) => {
+    const s = get();
+    if (!s.lifespanExtension) return { success: false, message: '寿命延长系统未激活', lifespanGain: 0 };
+    const result = purifyBloodline(s.lifespanExtension, purityPoints);
+    if (result.success) {
+      set({ lifespanExtension: result.newState });
+    }
+    return result;
+  },
+
+  establishCharacterSanctuary: (gold) => {
+    const s = get();
+    if (!s.lifespanExtension) return { success: false, message: '寿命延长系统未激活' };
+    const result = establishSanctuary(s.lifespanExtension, gold);
+    if (result.success) {
+      set({ lifespanExtension: result.newState, gold: s.gold - gold });
+    }
+    return result;
+  },
+
+  purchaseSanctuaryUpgradeAction: (upgradeId, gold) => {
+    const s = get();
+    if (!s.lifespanExtension) return { success: false, message: '寿命延长系统未激活', lifespanGain: 0 };
+    const result = purchaseSanctuaryUpgrade(s.lifespanExtension, upgradeId, gold);
+    if (result.success) {
+      set({ lifespanExtension: result.newState, gold: s.gold - gold });
+    }
+    return result;
+  },
+
+  activateLifespanTreasure: (treasureId) => {
+    const s = get();
+    if (!s.lifespanExtension) return { success: false, message: '寿命延长系统未激活', lifespanGain: 0 };
+    const result = activateTreasure(
+      s.lifespanExtension,
+      treasureId,
+      s.age,
+      s.cultivation?.realm || 'mortal',
+      s.lifespanExtension.karma.totalKarma,
+      s.gold,
+      {}
+    );
+    if (result.success) {
+      set({ lifespanExtension: result.newState });
+    }
+    return result;
+  },
+
+  getLifespanEvents: () => {
+    const s = get();
+    if (!s.lifespanExtension) return [];
+    return generateLifespanEvents(
+      s.lifespanExtension,
+      s.age,
+      s.cultivation?.realm || 'mortal',
+      s.lifespanExtension.karma.totalKarma
+    );
+  },
+
+  updateLifespanCooldowns: () => {
+    const s = get();
+    if (!s.lifespanExtension) return;
+    const newState = updateKarmaCooldowns(s.lifespanExtension);
+    set({ lifespanExtension: newState });
+  },
+
+  getTotalLifespanBonus: () => {
+    const s = get();
+    if (!s.lifespanExtension) return 0;
+    return calculateTotalLifespanBonus(s.lifespanExtension);
+  },
 
   toggleAI: () => {
     const s = get();

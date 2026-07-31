@@ -2,6 +2,8 @@
 // 模拟人生 - 核心类型定义（年度决策版）
 // ==========================================
 
+import type { LifespanExtensionState } from './lifespan';
+
 export type BirthYear = 1950 | 1960 | 1970 | 1980 | 1990 | 2000 | 2010 | 2020 | 2030 | 2040 | 2050 | 2060 | 2070;
 
 export interface EraDefinition {
@@ -426,6 +428,7 @@ export interface GameState {
   age: number;
   maxLifespan: number;
   remainingLife: number;
+  lifespanExtension: LifespanExtensionState | null;
   attributes: PlayerAttributes;
   baseAttributes: PlayerAttributes;
   remainingAttributePoints: number;
