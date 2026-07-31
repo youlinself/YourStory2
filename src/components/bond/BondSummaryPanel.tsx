@@ -1,6 +1,6 @@
 import React from 'react';
 import useBondStore from '../../stores/bondStore';
-import { IDENTITY_MAP, BOND_GROUPS } from '../../data/bondData';
+import { BOND_CARDS, BOND_GROUPS } from '../../data/bondCards';
 import type { BondGroupDefinition } from '../../types/bond';
 import './BondSummaryPanel.css';
 
@@ -9,12 +9,17 @@ interface BondSummaryPanelProps {
 }
 
 const BondSummaryPanel: React.FC<BondSummaryPanelProps> = ({ onOpenDetail }) => {
-  const npcs = useBondStore((s) => s.npcs);
+  const collection = useBondStore((s) => s.collection);
   const activeBondGroups = useBondStore((s) => s.activeBondGroups);
   const activeBondTiers = useBondStore((s) => s.activeBondTiers);
+  const getCollectionStats = useBondStore((s) => s.getCollectionStats);
 
-  const activeNPCs = npcs.filter((n) => n.isActive && !n.isGone);
+  const stats = getCollectionStats();
   const totalBondLevel = Object.values(activeBondTiers).reduce((a: number, b: number) => a + b, 0);
+
+  const collectedCards = BOND_CARDS.filter((card) =>
+    collection.some((c) => c.cardDefId === card.id)
+  );
 
   const getBondGroupDef = (groupId: string): BondGroupDefinition | undefined => {
     return BOND_GROUPS.find((g) => g.id === groupId);
@@ -23,7 +28,7 @@ const BondSummaryPanel: React.FC<BondSummaryPanelProps> = ({ onOpenDetail }) => 
   return (
     <div className="bond-summary-panel">
       <div className="bond-summary-header">
-        <span className="bond-summary-title">🔗 羁绊</span>
+        <span className="bond-summary-title">🎴 羁绊</span>
         <button className="bond-summary-detail-btn" onClick={onOpenDetail}>
           详情
         </button>
@@ -31,8 +36,8 @@ const BondSummaryPanel: React.FC<BondSummaryPanelProps> = ({ onOpenDetail }) => 
 
       <div className="bond-summary-stats">
         <div className="bond-stat-item">
-          <span className="bond-stat-value">{npcs.length}</span>
-          <span className="bond-stat-label">NPC</span>
+          <span className="bond-stat-value">{stats.unique}</span>
+          <span className="bond-stat-label">收集</span>
         </div>
         <div className="bond-stat-divider" />
         <div className="bond-stat-item">
@@ -46,33 +51,22 @@ const BondSummaryPanel: React.FC<BondSummaryPanelProps> = ({ onOpenDetail }) => 
         </div>
       </div>
 
-      {activeNPCs.length > 0 && (
+      {collectedCards.length > 0 && (
         <div className="bond-summary-npcs">
-          <div className="bond-summary-npcs-title">已激活NPC</div>
+          <div className="bond-summary-npcs-title">已收集卡牌</div>
           <div className="bond-summary-npc-list">
-            {activeNPCs.slice(0, 5).map((npc) => {
-              const identity = IDENTITY_MAP[npc.identityId];
-              return (
-                <div key={npc.id} className="bond-summary-npc-item" title={`${npc.name} · ${identity?.name || '未知身份'} (${npc.relationship})`}>
-                  <span className="bond-summary-npc-avatar">{npc.avatar}</span>
-                  <div className="bond-summary-npc-info">
-                    <span className="bond-summary-npc-name">{npc.name}</span>
-                    <div className="bond-summary-npc-rel">
-                      <div className="bond-summary-npc-rel-bar">
-                        <div
-                          className="bond-summary-npc-rel-fill"
-                          style={{ width: `${npc.relationship}%` }}
-                        />
-                      </div>
-                      <span className="bond-summary-npc-rel-value">{npc.relationship}</span>
-                    </div>
-                  </div>
+            {collectedCards.slice(0, 5).map((card) => (
+              <div key={card.id} className="bond-summary-npc-item" title={`${card.name} · ${card.description}`}>
+                <span className="bond-summary-npc-avatar">{card.icon}</span>
+                <div className="bond-summary-npc-info">
+                  <span className="bond-summary-npc-name">{card.name}</span>
+                  <span className="bond-summary-npc-desc">{card.category}</span>
                 </div>
-              );
-            })}
-            {activeNPCs.length > 5 && (
+              </div>
+            ))}
+            {collectedCards.length > 5 && (
               <div className="bond-summary-more">
-                +{activeNPCs.length - 5} 更多
+                +{collectedCards.length - 5} 更多
               </div>
             )}
           </div>

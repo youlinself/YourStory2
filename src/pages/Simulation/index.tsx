@@ -18,7 +18,7 @@ import {
   RARITY_NAMES,
   ATTRIBUTE_TIER_CARDS,
 } from '../../data/simulationData';
-import { IDENTITY_MAP } from '../../data/bondData';
+import { BOND_CARD_MAP } from '../../data/bondCards';
 import { calculateDamage } from '../../combat/combatEngine';
 import Tooltip from '../../components/common/Tooltip';
 import { useToast } from '../../components/common';
@@ -2023,9 +2023,12 @@ const SimulationPage: React.FC = () => {
   const [showDeckModal, setShowDeckModal] = useState(false);
   const [showBondPanel, setShowBondPanel] = useState(false);
 
-  const bondNPCs = useBondStore((s) => s.npcs);
+  const bondCollection = useBondStore((s) => s.collection);
   const bondActiveGroups = useBondStore((s) => s.activeBondGroups);
   const bondActiveTiers = useBondStore((s) => s.activeBondTiers);
+  const getBondStats = useBondStore((s) => s.getCollectionStats);
+
+  const bondStats = getBondStats();
 
   const aiGenerationState = useSimulationStore((s) => s.aiGenerationState);
   const loadingType = useSimulationStore((s) => s.loadingType);
@@ -2171,8 +2174,8 @@ const SimulationPage: React.FC = () => {
               </div>
               <div className="grid grid-cols-3 gap-2 text-center">
                 <div>
-                  <div className="text-lg font-bold text-ink">{bondNPCs.length}</div>
-                  <div className="text-[10px] text-ink-faint">NPC</div>
+                  <div className="text-lg font-bold text-ink">{bondStats.unique}</div>
+                  <div className="text-[10px] text-ink-faint">卡牌</div>
                 </div>
                 <div>
                   <div className="text-lg font-bold text-brand">{bondActiveGroups.length}</div>
@@ -2183,23 +2186,24 @@ const SimulationPage: React.FC = () => {
                   <div className="text-[10px] text-ink-faint">等级</div>
                 </div>
               </div>
-              {bondNPCs.filter(n => n.isActive).length > 0 && (
+              {bondCollection.length > 0 && (
                 <div className="mt-3 flex flex-wrap gap-1">
-                  {bondNPCs.filter(n => n.isActive).slice(0, 4).map((npc) => {
-                    const identity = IDENTITY_MAP[npc.identityId];
+                  {bondCollection.slice(0, 4).map((cardInstance) => {
+                    const card = BOND_CARD_MAP[cardInstance.cardDefId];
+                    if (!card) return null;
                     return (
                       <span
-                        key={npc.id}
+                        key={cardInstance.instanceId}
                         className="text-[10px] px-1.5 py-0.5 rounded bg-gold-light border border-gold/20 text-gold"
-                        title={`${npc.name} - ${identity?.name || '未知身份'}`}
+                        title={`${card.name} - ${card.description}`}
                       >
-                        {npc.avatar} {npc.name}
+                        {card.icon} {card.name}
                       </span>
                     );
                   })}
-                  {bondNPCs.filter(n => n.isActive).length > 4 && (
+                  {bondCollection.length > 4 && (
                     <span className="text-[10px] text-ink-faint">
-                      +{bondNPCs.filter(n => n.isActive).length - 4}
+                      +{bondCollection.length - 4}
                     </span>
                   )}
                 </div>

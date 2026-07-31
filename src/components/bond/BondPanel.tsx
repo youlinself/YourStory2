@@ -1,20 +1,28 @@
 import React, { useState } from 'react';
 import useBondStore from '../../stores/bondStore';
-import { BOND_GROUPS, IDENTITY_MAP } from '../../data/bondData';
-import NPCCard from './NPCCard';
+import { BOND_CARDS, BOND_GROUPS } from '../../data/bondCards';
+import BondCard from './BondCard';
 import BondGroupCard from './BondGroupCard';
+import YearDrawModal from './YearDrawModal';
 import './BondPanel.css';
 
-type TabType = 'npcs' | 'bonds' | 'rewards';
+type TabType = 'collection' | 'bonds' | 'history';
 
 const BondPanel: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<TabType>('npcs');
+  const [activeTab, setActiveTab] = useState<TabType>('collection');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [showDrawModal, setShowDrawModal] = useState(false);
 
-  const npcs = useBondStore((s) => s.npcs);
+  const collection = useBondStore((s) => s.collection);
   const activeBondGroups = useBondStore((s) => s.activeBondGroups);
-  const claimedRewards = useBondStore((s) => s.claimedRewards);
-  const activeBondTiers = useBondStore((s) => s.activeBondTiers);
+  const drawHistory = useBondStore((s) => s.drawHistory);
+  const currentDraw = useBondStore((s) => s.currentDraw);
+  const getCollectionStats = useBondStore((s) => s.getCollectionStats);
+  const performYearDraw = useBondStore((s) => s.performYearDraw);
+  const getCardStarCounts = useBondStore((s) => s.getCardStarCounts);
+  const getBestStarLevel = useBondStore((s) => s.getBestStarLevel);
+  const canUpgradeCardStar = useBondStore((s) => s.canUpgradeCardStar);
+  const upgradeCardStar = useBondStore((s) => s.upgradeCardStar);
 
   const categories = [
     { id: 'all', name: '全部', icon: '📋' },
@@ -26,34 +34,48 @@ const BondPanel: React.FC = () => {
     { id: 'rival', name: '对手', icon: '⚔️' },
   ];
 
-  const filteredNPCs = selectedCategory === 'all'
-    ? npcs
-    : npcs.filter((n) => IDENTITY_MAP[n.identityId]?.category === selectedCategory);
+  const activeBondTiers = useBondStore((s) => s.activeBondTiers);
+  const stats = getCollectionStats();
+  const totalLevels = Object.values(activeBondTiers as Record<string, number>).reduce((a: number, b: number) => a + b, 0);
 
-  const filteredActiveNPCs = filteredNPCs.filter((n) => n.isActive && !n.isGone);
-  const filteredInactiveNPCs = filteredNPCs.filter((n) => !n.isActive && !n.isGone);
-  const filteredGoneNPCs = filteredNPCs.filter((n) => n.isGone);
+  const filteredCards = selectedCategory === 'all'
+    ? BOND_CARDS
+    : BOND_CARDS.filter((c) => c.category === selectedCategory);
 
-  const totalBondLevels = Object.values(activeBondTiers).reduce((a: number, b: number) => a + b, 0);
+  const isCardCollected = (cardId: string) => {
+    return collection.some((c) => c.cardDefId === cardId);
+  };
+
+  const getDuplicateCount = (cardId: string) => {
+    return collection.filter((c) => c.cardDefId === cardId).length;
+  };
+
+  const handleStartDraw = () => {
+    const currentYear = drawHistory.length > 0
+      ? drawHistory[drawHistory.length - 1].year + 1
+      : 1;
+    performYearDraw(currentYear);
+    setShowDrawModal(true);
+  };
 
   return (
     <div className="bond-panel">
       <div className="bond-panel-header">
         <div className="bond-panel-title-row">
           <div className="bond-panel-icon">
-            <span>🔗</span>
+            <span>🎴</span>
           </div>
           <div className="bond-panel-title-text">
-            <h2>羁绊系统</h2>
-            <p className="bond-panel-subtitle">珍惜每一段缘分</p>
+            <h2>羁绊卡牌</h2>
+            <p className="bond-panel-subtitle">收集人生中的每一段缘分</p>
           </div>
         </div>
         <div className="bond-panel-stats">
           <div className="bond-stat-card">
-            <div className="bond-stat-icon">👥</div>
+            <div className="bond-stat-icon">🎴</div>
             <div className="bond-stat-content">
-              <span className="bond-stat-number">{npcs.length}</span>
-              <span className="bond-stat-label">位NPC</span>
+              <span className="bond-stat-number">{stats.unique}</span>
+              <span className="bond-stat-label">/{BOND_CARDS.length} 收集</span>
             </div>
           </div>
           <div className="bond-stat-card">
@@ -66,39 +88,53 @@ const BondPanel: React.FC = () => {
           <div className="bond-stat-card">
             <div className="bond-stat-icon">⭐</div>
             <div className="bond-stat-content">
-              <span className="bond-stat-number bond-stat-gold">{totalBondLevels}</span>
+              <span className="bond-stat-number bond-stat-gold">{totalLevels}</span>
               <span className="bond-stat-label">总等级</span>
             </div>
           </div>
         </div>
+
+        <div className="bond-panel-progress">
+          <div className="bond-progress-bar">
+            <div
+              className="bond-progress-fill"
+              style={{ width: `${stats.completionRate * 100}%` }}
+            />
+          </div>
+          <span className="bond-progress-text">收集完成度 {(stats.completionRate * 100).toFixed(1)}%</span>
+        </div>
+
+        <button className="bond-draw-btn" onClick={handleStartDraw} disabled={!!currentDraw}>
+          <span>🎲</span> 年度抽卡
+        </button>
       </div>
 
       <div className="bond-panel-tabs">
         <button
-          className={`bond-tab ${activeTab === 'npcs' ? 'active' : ''}`}
-          onClick={() => setActiveTab('npcs')}
+          className={`bond-tab ${activeTab === 'collection' ? 'active' : ''}`}
+          onClick={() => setActiveTab('collection')}
         >
-          <span className="bond-tab-icon">👥</span>
-          <span>NPC</span>
+          <span className="bond-tab-icon">🎴</span>
+          <span>收集图鉴</span>
         </button>
         <button
           className={`bond-tab ${activeTab === 'bonds' ? 'active' : ''}`}
           onClick={() => setActiveTab('bonds')}
         >
           <span className="bond-tab-icon">🔗</span>
-          <span>羁绊</span>
+          <span>羁绊组合</span>
         </button>
         <button
-          className={`bond-tab ${activeTab === 'rewards' ? 'active' : ''}`}
-          onClick={() => setActiveTab('rewards')}
+          className={`bond-tab ${activeTab === 'history' ? 'active' : ''}`}
+          onClick={() => setActiveTab('history')}
         >
-          <span className="bond-tab-icon">🎁</span>
-          <span>奖励</span>
+          <span className="bond-tab-icon">📜</span>
+          <span>抽卡记录</span>
         </button>
       </div>
 
       <div className="bond-panel-body">
-        {activeTab === 'npcs' && (
+        {activeTab === 'collection' && (
           <div className="bond-tab-content">
             <div className="bond-category-filter">
               {categories.map((cat) => (
@@ -113,55 +149,70 @@ const BondPanel: React.FC = () => {
               ))}
             </div>
 
-            {filteredNPCs.length === 0 ? (
+            {filteredCards.length === 0 ? (
               <div className="bond-empty-state">
-                <div className="bond-empty-icon">🌱</div>
-                <h3>还没有遇到任何NPC</h3>
-                <p>随着游戏进行，你会遇到各种各样的人</p>
+                <div className="bond-empty-icon">🎴</div>
+                <h3>该分类暂无卡牌</h3>
               </div>
             ) : (
-              <div className="bond-npc-sections">
-                {filteredActiveNPCs.length > 0 && (
-                  <div className="bond-section">
-                    <div className="bond-section-header">
-                      <span className="bond-section-dot bond-section-dot-active" />
-                      <h3 className="bond-section-title">已激活 ({filteredActiveNPCs.length})</h3>
-                    </div>
-                    <div className="bond-npc-grid">
-                      {filteredActiveNPCs.map((npc) => (
-                        <NPCCard key={npc.id} npc={npc} />
-                      ))}
-                    </div>
-                  </div>
-                )}
+              <div className="bond-collection-grid">
+                {filteredCards.map((card) => {
+                  const collected = isCardCollected(card.id);
+                  const duplicateCount = getDuplicateCount(card.id);
+                  const starCounts = getCardStarCounts(card.id);
+                  const bestStar = getBestStarLevel(card.id);
+                  const canUpgrade1 = canUpgradeCardStar(card.id, 1);
+                  const canUpgrade2 = canUpgradeCardStar(card.id, 2);
 
-                {filteredInactiveNPCs.length > 0 && (
-                  <div className="bond-section">
-                    <div className="bond-section-header">
-                      <span className="bond-section-dot bond-section-dot-inactive" />
-                      <h3 className="bond-section-title">未激活 ({filteredInactiveNPCs.length})</h3>
-                    </div>
-                    <div className="bond-npc-grid">
-                      {filteredInactiveNPCs.map((npc) => (
-                        <NPCCard key={npc.id} npc={npc} />
-                      ))}
-                    </div>
-                  </div>
-                )}
+                  const handleUpgrade = (e: React.MouseEvent, fromStar: 1 | 2) => {
+                    e.stopPropagation();
+                    upgradeCardStar(card.id, fromStar);
+                  };
 
-                {filteredGoneNPCs.length > 0 && (
-                  <div className="bond-section">
-                    <div className="bond-section-header">
-                      <span className="bond-section-dot bond-section-dot-gone" />
-                      <h3 className="bond-section-title">已离开 ({filteredGoneNPCs.length})</h3>
+                  return (
+                    <div key={card.id} className="bond-collection-item">
+                      <BondCard
+                        card={card}
+                        isCollected={collected}
+                        starLevel={bestStar}
+                      />
+                      {duplicateCount > 1 && (
+                        <div className="bond-duplicate-indicator">
+                          ×{duplicateCount}
+                        </div>
+                      )}
+                      {collected && (
+                        <div className="bond-star-upgrade">
+                          <div className="star-counts">
+                            <span className="star-count">{starCounts[1]}★</span>
+                            {starCounts[2] > 0 && <span className="star-count">{starCounts[2]}★★</span>}
+                            {starCounts[3] > 0 && <span className="star-count gold">{starCounts[3]}★★★</span>}
+                          </div>
+                          <div className="upgrade-buttons">
+                            {canUpgrade1 && (
+                              <button
+                                className="upgrade-btn from-1"
+                                onClick={(e) => handleUpgrade(e, 1)}
+                                title="3张1星合成1张2星"
+                              >
+                                3★→★★
+                              </button>
+                            )}
+                            {canUpgrade2 && (
+                              <button
+                                className="upgrade-btn from-2"
+                                onClick={(e) => handleUpgrade(e, 2)}
+                                title="3张2星合成1张3星"
+                              >
+                                3★★→★★★
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
-                    <div className="bond-npc-grid">
-                      {filteredGoneNPCs.map((npc) => (
-                        <NPCCard key={npc.id} npc={npc} />
-                      ))}
-                    </div>
-                  </div>
-                )}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -172,8 +223,8 @@ const BondPanel: React.FC = () => {
             {BOND_GROUPS.length === 0 ? (
               <div className="bond-empty-state">
                 <div className="bond-empty-icon">🔗</div>
-                <h3>暂无可激活的羁绊</h3>
-                <p>结交更多朋友，解锁羁绊组合</p>
+                <h3>暂无羁绊组合</h3>
+                <p>收集更多卡牌来解锁羁绊</p>
               </div>
             ) : (
               <div className="bond-group-list">
@@ -185,39 +236,34 @@ const BondPanel: React.FC = () => {
           </div>
         )}
 
-        {activeTab === 'rewards' && (
+        {activeTab === 'history' && (
           <div className="bond-tab-content">
             <div className="bond-rewards-header">
-              <h3>已获得的奖励</h3>
-              <span className="bond-rewards-count">{claimedRewards.length} 项</span>
+              <h3>抽卡历史</h3>
+              <span className="bond-rewards-count">{drawHistory.length} 次</span>
             </div>
-            {claimedRewards.length === 0 ? (
+            {drawHistory.length === 0 ? (
               <div className="bond-empty-state">
-                <div className="bond-empty-icon">🎁</div>
-                <h3>还没有获得任何羁绊奖励</h3>
-                <p>激活羁绊组合后可以获得奖励</p>
+                <div className="bond-empty-icon">📜</div>
+                <h3>还没有抽卡记录</h3>
+                <p>完成每年操作后可以抽取羁绊卡牌</p>
               </div>
             ) : (
-              <div className="bond-rewards-list">
-                {claimedRewards.map((key) => {
-                  const [groupId, tierStr] = key.split('_tier');
-                  const tier = parseInt(tierStr);
-                  const group = BOND_GROUPS.find((g) => g.id === groupId);
-                  if (!group) return null;
-
-                  const tierData = group.tiers?.find((t) => t.tier === tier);
-                  const rewardName = tierData?.name || group.name;
-
+              <div className="bond-history-list">
+                {[...drawHistory].reverse().map((record) => {
+                  const selectedCard = BOND_CARDS.find((c) => c.id === record.selectedCardId);
                   return (
-                    <div key={key} className="bond-reward-item">
-                      <div className="bond-reward-icon-wrap">
-                        <span className="bond-reward-icon">{group.icon}</span>
+                    <div key={`${record.year}-${record.selectedCardId}`} className="bond-history-item">
+                      <div className="bond-history-year">
+                        <span>{record.year}岁</span>
                       </div>
-                      <div className="bond-reward-info">
-                        <span className="bond-reward-name">{rewardName}</span>
-                        <span className="bond-reward-tier">等级 {tier}</span>
+                      <div className="bond-history-card">
+                        <span className="bond-history-icon">{selectedCard?.icon || '❓'}</span>
+                        <span className="bond-history-name">{selectedCard?.name || '未知'}</span>
                       </div>
-                      <div className="bond-reward-check">✓</div>
+                      <div className="bond-history-discarded">
+                        丢弃 {record.discardedCards.length} 张
+                      </div>
                     </div>
                   );
                 })}
@@ -226,6 +272,8 @@ const BondPanel: React.FC = () => {
           </div>
         )}
       </div>
+
+      {showDrawModal && currentDraw && <YearDrawModal />}
     </div>
   );
 };

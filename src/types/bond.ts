@@ -1,7 +1,7 @@
 import type { PlayerAttributes, LifeCard, LifeRelic } from './simulation';
 
 // ==========================================
-// NPC身份与羁绊系统 - 核心类型定义
+// 羁绊卡牌系统 - 核心类型定义
 // ==========================================
 
 /** 身份分类 */
@@ -13,66 +13,72 @@ export type IdentityCategory =
   | 'romance'     // 爱情
   | 'rival';      // 对手
 
-/** 身份定义 */
-export interface IdentityDefinition {
+/** 卡牌稀有度 */
+export type BondRarity = 'common' | 'uncommon' | 'rare' | 'legendary';
+
+/** 羁绊卡牌定义 */
+export interface BondCardDefinition {
   id: string;
   name: string;
   category: IdentityCategory;
   icon: string;
+  rarity: BondRarity;
   description: string;
-  /** 该身份最早出现的年龄 */
+  flavorText: string;
   minAge: number;
-  /** 该身份最晚消失的年龄（可选） */
   maxAge?: number;
-  /** 是否为稀有身份 */
+  appearWeight: number;
   isRare?: boolean;
-  /** 该身份可拥有的最大数量（默认1） */
-  maxCount?: number;
-  /** 初始出现概率（0-1，默认0.7） */
-  appearChance?: number;
 }
 
-/** NPC实例 */
-export interface NPCBond {
-  id: string;
-  name: string;
-  identityId: string;
-  /** 关系值 0-100 */
-  relationship: number;
-  /** 是否已激活（关系值达到阈值） */
-  isActive: boolean;
-  /** 激活阈值 */
-  activationThreshold: number;
-  /** 相遇年龄 */
-  metAge: number;
-  /** 是否已死亡/离开 */
-  isGone: boolean;
-  /** 个人特质标签 */
-  traits: string[];
-  /** 头像图标 */
-  avatar: string;
+/** 玩家拥有的卡牌实例 */
+export interface BondCardInstance {
+  instanceId: string;
+  cardDefId: string;
+  obtainedYear: number;
+  isDuplicate: boolean;
+  starLevel: 1 | 2 | 3;
+}
+
+/** 抽卡记录 */
+export interface DrawRecord {
+  year: number;
+  drawnCards: string[];
+  selectedCardId: string;
+  discardedCards: string[];
+}
+
+/** 当前抽卡状态 */
+export interface CurrentDrawState {
+  year: number;
+  cards: BondCardDefinition[];
+  isSelecting: boolean;
 }
 
 /** 羁绊奖励类型 */
 export type BondRewardType =
-  | 'attribute'    // 属性加成
-  | 'card'         // 特殊卡牌
-  | 'relic'        // 遗物
-  | 'passive';     // 被动效果
+  | 'attribute'
+  | 'card'
+  | 'relic'
+  | 'passive';
 
 /** 羁绊奖励定义 */
 export interface BondReward {
   type: BondRewardType;
-  /** 属性加成 */
   attributeBonus?: Partial<PlayerAttributes>;
-  /** 卡牌奖励 */
   cardReward?: LifeCard;
-  /** 遗物奖励 */
   relicReward?: LifeRelic;
-  /** 被动效果描述 */
   passiveDescription?: string;
-  /** 被动效果ID */
   passiveId?: string;
+}
+
+/** 羁绊等级 */
+export interface BondGroupTier {
+  tier: number;
+  name: string;
+  description: string;
+  duplicateCardsRequired: number;
+  rewards: BondReward[];
 }
 
 /** 羁绊组合定义 */
@@ -81,63 +87,27 @@ export interface BondGroupDefinition {
   name: string;
   description: string;
   icon: string;
-  /** 需要的身份ID列表 */
-  requiredIdentities: string[];
-  /** 是否需要所有身份都激活 */
-  requireAllActive: boolean;
-  /** 奖励列表 */
+  requiredCards: string[];
+  requireAll: boolean;
   rewards: BondReward[];
-  /** 羁绊等级（可升级） */
   tiers?: BondGroupTier[];
-  /** 是否为隐藏羁绊 */
   isHidden?: boolean;
-}
-
-/** 羁绊等级 */
-export interface BondGroupTier {
-  tier: number;
-  name: string;
-  description: string;
-  /** 需要的最低总关系值 */
-  totalRelationshipRequired: number;
-  rewards: BondReward[];
 }
 
 /** 羁绊系统状态 */
 export interface BondSystemState {
-  /** 所有NPC */
-  npcs: NPCBond[];
-  /** 已激活的羁绊组合ID */
+  collection: BondCardInstance[];
+  drawHistory: DrawRecord[];
+  currentDraw: CurrentDrawState | null;
   activeBondGroups: string[];
-  /** 已激活的羁绊等级 {groupId: tier} */
   activeBondTiers: Record<string, number>;
-  /** 已领取的奖励记录 */
   claimedRewards: string[];
-  /** 身份解锁进度 */
-  unlockedIdentities: string[];
 }
 
-/** 羁绊事件 */
-export interface BondEvent {
-  id: string;
-  npcId: string;
-  title: string;
-  description: string;
-  options: BondEventOption[];
-  /** 触发年龄范围 */
-  ageRange?: [number, number];
-  /** 触发条件 */
-  triggerCondition?: (state: BondSystemState) => boolean;
-}
-
-/** 羁绊事件选项 */
-export interface BondEventOption {
-  id: string;
-  text: string;
-  /** 关系值变化 */
-  relationshipChange: number;
-  /** 属性变化 */
-  attributeChanges?: Partial<PlayerAttributes>;
-  /** 特殊效果 */
-  specialEffect?: string;
+/** 收集统计 */
+export interface CollectionStats {
+  total: number;
+  unique: number;
+  byRarity: Record<BondRarity, number>;
+  completionRate: number;
 }

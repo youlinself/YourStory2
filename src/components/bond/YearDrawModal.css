@@ -1,0 +1,235 @@
+/* ==========================================
+   年度抽卡弹窗样式
+   ========================================== */
+
+.year-draw-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(8px);
+  animation: overlayFadeIn 0.3s ease;
+}
+
+@keyframes overlayFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.year-draw-modal {
+  background: linear-gradient(145deg, #1a1a2e, #16213e);
+  border-radius: 20px;
+  padding: 32px;
+  max-width: 900px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+  animation: modalSlideIn 0.4s ease;
+}
+
+.year-draw-modal.animating {
+  animation: modalPulse 0.5s ease;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes modalPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+}
+
+.year-draw-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  font-size: 24px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.year-draw-close:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.2);
+  transform: rotate(90deg);
+}
+
+.year-draw-close:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.year-draw-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.year-draw-icon {
+  font-size: 56px;
+  margin-bottom: 12px;
+  animation: iconBounce 1s ease-in-out infinite;
+}
+
+@keyframes iconBounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+.year-draw-header h2 {
+  font-size: 28px;
+  font-weight: 700;
+  color: #f0f0f0;
+  margin: 0 0 8px;
+}
+
+.year-draw-subtitle {
+  font-size: 14px;
+  color: #a0a0a0;
+  margin: 0;
+}
+
+.year-draw-cards {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 32px;
+  padding: 20px 0;
+}
+
+.year-draw-card-wrapper {
+  position: relative;
+  animation: cardAppear 0.5s ease forwards;
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+@keyframes cardAppear {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.year-draw-card-wrapper.selected .bond-card {
+  border-color: #fbbf24;
+  box-shadow: 0 0 30px rgba(251, 191, 36, 0.5);
+  transform: translateY(-12px) scale(1.05);
+}
+
+.year-draw-selected-badge {
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  color: #000;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  z-index: 10;
+  box-shadow: 0 4px 12px rgba(251, 191, 36, 0.4);
+}
+
+.year-draw-actions {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.year-draw-btn {
+  padding: 12px 32px;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.year-draw-btn.secondary {
+  background: rgba(255, 255, 255, 0.1);
+  color: #a0a0a0;
+}
+
+.year-draw-btn.secondary:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+}
+
+.year-draw-btn.primary {
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  color: #000;
+}
+
+.year-draw-btn.primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(251, 191, 36, 0.4);
+}
+
+.year-draw-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.year-draw-hint {
+  text-align: center;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+}
+
+.year-draw-hint p {
+  margin: 0;
+  font-size: 13px;
+  color: #808080;
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+  .year-draw-modal {
+    padding: 20px;
+    width: 95%;
+  }
+
+  .year-draw-cards {
+    gap: 12px;
+  }
+
+  .year-draw-header h2 {
+    font-size: 22px;
+  }
+
+  .year-draw-icon {
+    font-size: 40px;
+  }
+}

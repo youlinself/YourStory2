@@ -608,7 +608,6 @@ const initialState: GameState = {
   baseAttributes: { ...initialAttributes },
   remainingAttributePoints: 35,
   hiddenTags: [],
-  npcs: [],
   choiceHistory: [],
   lifeRecords: [],
   deck: [],
@@ -705,10 +704,10 @@ interface SimulationState extends GameState {
   generateShopWithCards: (cards: LifeCard[]) => void;
   getCardPrice: (card: LifeCard, discount: number) => number;
   // 羁绊系统方法
-  getBondNPCs: () => import('../types/bond').NPCBond[],
+  getBondCollection: () => import('../types/bond').BondCardInstance[],
   getBondActiveGroups: () => string[],
   getBondPassiveEffects: () => { id: string; description: string }[],
-  interactWithNPC: (npcId: string, delta: number) => void,
+  performYearDraw: (year: number) => void,
   activateBondGroup: (groupId: string) => void,
   claimBondReward: (groupId: string, tier: number) => { attributeBonus?: Partial<PlayerAttributes>; cardReward?: LifeCard; relicReward?: LifeRelic; passiveId?: string; passiveDescription?: string; } | null;
   // 寿命延长系统方法
@@ -782,7 +781,7 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
       phase: 'allocating', birthYear, currentYear: birthYear, currentEra: 0, age: 0,
       maxLifespan: era.baseLifeExpectancy, remainingLife: era.baseLifeExpectancy,
       attributes: attrs, baseAttributes: { ...attrs }, remainingAttributePoints: era.attributePoints,
-      hiddenTags: [], npcs: [], choiceHistory: [], lifeRecords: [],
+      hiddenTags: [], choiceHistory: [], lifeRecords: [],
       deck, relics: [], gold: 30, worldState: { ...initialWorldState }, seed: Date.now(),
       attributeCardsGranted: false,
     };
@@ -793,7 +792,6 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
     set(state as GameState);
 
     useBondStore.getState().resetBondSystem();
-    useBondStore.getState().initializeBondSystem(0);
 
     set({
       aiGenerationState: { ...initialAIGenerationState },
@@ -1053,10 +1051,8 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
       }, 200);
     }
 
-    const newNPCs = useBondStore.getState().onAgeUp(newAge);
-    if (newNPCs.length > 0) {
-      console.log(`新遇到了 ${newNPCs.length} 位NPC:`, newNPCs.map(n => n.name));
-    }
+    // 触发年度抽卡
+    useBondStore.getState().performYearDraw(newAge);
   },
 
   endGame: () => {
@@ -1876,7 +1872,7 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
           phase: s.phase, mode: s.mode, birthYear: s.birthYear, currentYear: s.currentYear,
           currentEra: s.currentEra, age: s.age, maxLifespan: s.maxLifespan, remainingLife: s.remainingLife,
           attributes: s.attributes, baseAttributes: s.baseAttributes, remainingAttributePoints: s.remainingAttributePoints,
-          hiddenTags: s.hiddenTags, npcs: s.npcs, choiceHistory: s.choiceHistory, lifeRecords: s.lifeRecords,
+          hiddenTags: s.hiddenTags, choiceHistory: s.choiceHistory, lifeRecords: s.lifeRecords,
           deck: s.deck, relics: s.relics, gold: s.gold, combat: s.combat, currentMap: s.currentMap,
           shop: s.shop, cultivation: s.cultivation, worldState: s.worldState, seed: s.seed,
           damageEventCounter: s.damageEventCounter, lastCombatEnemies: s.lastCombatEnemies,
@@ -2063,10 +2059,10 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
   getAttributeTierInfo: (attr, value) => getAttributeTierInfo(attr, value),
 
   // 羁绊系统相关方法
-  getBondNPCs: () => useBondStore.getState().npcs,
+  getBondCollection: () => useBondStore.getState().collection,
   getBondActiveGroups: () => useBondStore.getState().activeBondGroups,
   getBondPassiveEffects: () => useBondStore.getState().getTotalPassiveEffects(),
-  interactWithNPC: (npcId: string, delta: number) => useBondStore.getState().updateRelationship(npcId, delta),
+  performYearDraw: (year: number) => useBondStore.getState().performYearDraw(year),
   activateBondGroup: (groupId: string) => useBondStore.getState().activateBondGroup(groupId),
   claimBondReward: (groupId: string, tier: number) => useBondStore.getState().claimReward(groupId, tier),
 

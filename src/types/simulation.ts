@@ -433,7 +433,6 @@ export interface GameState {
   baseAttributes: PlayerAttributes;
   remainingAttributePoints: number;
   hiddenTags: string[];
-  npcs: NPC[];
   choiceHistory: ChoiceRecord[];
   lifeRecords: LifeRecord[];
   deck: LifeCard[];
@@ -514,7 +513,7 @@ export interface GameRecord {
   titleIcon: string;
   score: number;
   evaluations: string[];
-  bondNpcCount: number;
+  bondCardCount: number;
   bondGroupCount: number;
   bondTotalTier: number;
   createdAt: string;

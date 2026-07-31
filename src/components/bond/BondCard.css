@@ -1,0 +1,231 @@
+/* ==========================================
+   羁绊卡牌样式
+   ========================================== */
+
+.bond-card {
+  width: 160px;
+  min-height: 220px;
+  border-radius: 12px;
+  background: linear-gradient(145deg, #1a1a2e, #16213e);
+  border: 2px solid var(--rarity-color, #9ca3af);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.bond-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(circle at 50% 0%, var(--rarity-glow, transparent), transparent 70%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.bond-card:hover::before {
+  opacity: 1;
+}
+
+.bond-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 25px var(--rarity-glow, rgba(0, 0, 0, 0.3));
+}
+
+.bond-card.selecting {
+  animation: cardFloat 2s ease-in-out infinite;
+}
+
+@keyframes cardFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+.bond-card.selecting:hover {
+  transform: translateY(-12px) scale(1.05);
+  box-shadow: 0 12px 35px var(--rarity-glow, rgba(0, 0, 0, 0.4));
+}
+
+.bond-card-inner {
+  padding: 12px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.bond-card-rarity-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 600;
+  z-index: 2;
+}
+
+.bond-card-star-badge {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  z-index: 2;
+  text-shadow: 0 0 8px currentColor;
+  animation: starGlow 2s ease-in-out infinite alternate;
+}
+
+@keyframes starGlow {
+  from { opacity: 0.8; }
+  to { opacity: 1; }
+}
+
+.bond-card.star-2 {
+  border-width: 3px;
+}
+
+.bond-card.star-3 {
+  border-width: 3px;
+  box-shadow: 0 0 25px var(--rarity-glow);
+  animation: star3Glow 2s ease-in-out infinite alternate;
+}
+
+@keyframes star3Glow {
+  from { box-shadow: 0 0 15px var(--rarity-glow); }
+  to { box-shadow: 0 0 35px var(--rarity-glow); }
+}
+
+.bond-card-duplicate-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+  font-size: 10px;
+  font-weight: 600;
+  z-index: 2;
+}
+
+.bond-card-new-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(34, 197, 94, 0.2);
+  color: #4ade80;
+  font-size: 10px;
+  font-weight: 600;
+  z-index: 2;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.bond-card-icon {
+  font-size: 48px;
+  text-align: center;
+  margin: 20px 0 12px;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+}
+
+.bond-card-info {
+  text-align: center;
+  flex: 1;
+}
+
+.bond-card-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: #f0f0f0;
+  margin: 0 0 4px;
+}
+
+.bond-card-desc {
+  font-size: 11px;
+  color: #a0a0a0;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.bond-card-flavor {
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.bond-card-flavor p {
+  font-size: 10px;
+  color: #808080;
+  margin: 0;
+  font-style: italic;
+  text-align: center;
+  line-height: 1.4;
+}
+
+.bond-card-locked {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+}
+
+.bond-card-locked span {
+  font-size: 32px;
+  opacity: 0.6;
+}
+
+/* 稀有度边框发光效果 */
+.bond-card.rarity-rare {
+  box-shadow: 0 0 15px var(--rarity-glow);
+}
+
+.bond-card.rarity-legendary {
+  box-shadow: 0 0 20px var(--rarity-glow);
+  animation: legendaryGlow 2s ease-in-out infinite alternate;
+}
+
+@keyframes legendaryGlow {
+  from { box-shadow: 0 0 15px var(--rarity-glow); }
+  to { box-shadow: 0 0 30px var(--rarity-glow); }
+}
+
+/* 已收集状态 */
+.bond-card.collected {
+  border-color: #4ade80;
+}
+
+.bond-card.collected::after {
+  content: '✓';
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  background: #22c55e;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: white;
+  font-weight: bold;
+}

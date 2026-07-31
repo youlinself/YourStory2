@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import useSimulationStore from '../../stores/simulationStore';
 import useBondStore from '../../stores/bondStore';
-import { IDENTITY_MAP, BOND_GROUPS } from '../../data/bondData';
+import { BOND_CARD_MAP, BOND_GROUPS } from '../../data/bondCards';
 import {
   ERAS,
   ATTRIBUTE_NAMES,
@@ -38,10 +38,13 @@ const LifeSummary: React.FC<LifeSummaryProps> = ({ onRestart }) => {
   const lifeRecords = useSimulationStore((s: any) => s.lifeRecords);
   const mode = useSimulationStore((s: any) => s.mode);
 
-  const bondNPCs = useBondStore((s) => s.npcs);
+  const bondCollection = useBondStore((s) => s.collection);
   const bondActiveGroups = useBondStore((s) => s.activeBondGroups);
   const bondActiveTiers = useBondStore((s) => s.activeBondTiers);
   const claimedRewards = useBondStore((s) => s.claimedRewards);
+  const getCollectionStats = useBondStore((s) => s.getCollectionStats);
+
+  const bondStats = getCollectionStats();
 
   const deathYear = birthYear ? birthYear + age : 0;
   const era = ERAS.find((e) => e.year === birthYear);
@@ -210,7 +213,7 @@ const LifeSummary: React.FC<LifeSummaryProps> = ({ onRestart }) => {
                 <StatCard label="收集卡牌" value={String(deck.length)} icon="🃏" />
                 <StatCard label="收集遗物" value={String(relics.length)} icon="🏺" />
                 <StatCard label="人生选择" value={String(stats.totalChoices)} icon="🔀" />
-                <StatCard label="遇到NPC" value={String(bondNPCs.length)} icon="👥" />
+                <StatCard label="收集卡牌" value={String(bondStats.unique)} icon="🎴" />
                 <StatCard label="激活羁绊" value={String(bondActiveGroups.length)} icon="🔗" />
                 <StatCard label="羁绊等级" value={String(Object.values(bondActiveTiers).reduce((a: number, b: number) => a + b, 0))} icon="⭐" />
                 <StatCard label="领取奖励" value={String(claimedRewards.length)} icon="🎁" />
@@ -311,14 +314,14 @@ const LifeSummary: React.FC<LifeSummaryProps> = ({ onRestart }) => {
               </Section>
             )}
 
-            {bondNPCs.length > 0 && (
+            {bondCollection.length > 0 && (
               <Section title="🔗 羁绊回顾" icon="🔗">
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     <div className="text-center p-3 bg-bg-elevated rounded-lg">
-                      <div className="text-2xl mb-1">👥</div>
-                      <div className="text-lg font-bold text-ink">{bondNPCs.length}</div>
-                      <div className="text-xs text-ink-muted">遇到NPC</div>
+                      <div className="text-2xl mb-1">🎴</div>
+                      <div className="text-lg font-bold text-ink">{bondStats.unique}</div>
+                      <div className="text-xs text-ink-muted">收集卡牌</div>
                     </div>
                     <div className="text-center p-3 bg-bg-elevated rounded-lg">
                       <div className="text-2xl mb-1">🔗</div>
@@ -361,27 +364,28 @@ const LifeSummary: React.FC<LifeSummaryProps> = ({ onRestart }) => {
                   </div>
 
                   <div>
-                    <h4 className="text-sm font-medium text-ink mb-2">重要NPC</h4>
+                    <h4 className="text-sm font-medium text-ink mb-2">已收集卡牌</h4>
                     <div className="flex flex-wrap gap-2">
-                      {bondNPCs.filter((npc) => npc.isActive).length > 0 ? (
-                        bondNPCs.filter((npc) => npc.isActive).slice(0, 8).map((npc) => {
-                          const identity = IDENTITY_MAP[npc.identityId];
+                      {bondCollection.length > 0 ? (
+                        bondCollection.slice(0, 8).map((cardInstance) => {
+                          const card = BOND_CARD_MAP[cardInstance.cardDefId];
+                          if (!card) return null;
                           return (
                             <span
-                              key={npc.id}
+                              key={cardInstance.instanceId}
                               className="px-2 py-1 bg-bg-elevated text-ink text-xs rounded-full border border-border-subtle"
-                              title={`${npc.name} - ${identity?.name || npc.identityId} (${npc.relationship})`}
+                              title={`${card.name} - ${card.description}`}
                             >
-                              {npc.avatar} {npc.name} ({npc.relationship})
+                              {card.icon} {card.name}
                             </span>
                           );
                         })
                       ) : (
-                        <span className="text-sm text-ink-muted">没有激活的NPC</span>
+                        <span className="text-sm text-ink-muted">未收集任何卡牌</span>
                       )}
-                      {bondNPCs.filter((npc) => npc.isActive).length > 8 && (
+                      {bondCollection.length > 8 && (
                         <span className="text-xs text-ink-muted">
-                          +{bondNPCs.filter((npc) => npc.isActive).length - 8} 更多...
+                          +{bondCollection.length - 8} 更多...
                         </span>
                       )}
                     </div>

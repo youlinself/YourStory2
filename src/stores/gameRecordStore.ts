@@ -134,9 +134,9 @@ const useGameRecordStore = create<GameRecordState>((set, get) => ({
 
   saveRecord: async (gameState: GameState) => {
     const bondStore = useBondStore.getState();
-    const bondNPCs = bondStore.npcs;
     const bondActiveGroups = bondStore.activeBondGroups;
     const bondActiveTiers = bondStore.activeBondTiers;
+    const bondStats = bondStore.getCollectionStats();
 
     const successChoices = gameState.choiceHistory.filter((c) => c.success).length;
     const totalChoices = gameState.choiceHistory.length;
@@ -178,7 +178,7 @@ const useGameRecordStore = create<GameRecordState>((set, get) => ({
       titleIcon: evaluation.titleIcon,
       score: evaluation.score,
       evaluations: evaluation.evaluations,
-      bondNpcCount: bondNPCs.length,
+      bondCardCount: bondStats.unique,
       bondGroupCount: bondActiveGroups.length,
       bondTotalTier: Object.values(bondActiveTiers).reduce((a: number, b: number) => a + b, 0),
       createdAt: new Date().toISOString(),

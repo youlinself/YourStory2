@@ -89,13 +89,15 @@ export interface ChapterContext {
 // 羁绊系统类型导出
 export type {
   IdentityCategory,
-  IdentityDefinition,
-  NPCBond,
+  BondRarity,
+  BondCardDefinition,
+  BondCardInstance,
+  DrawRecord,
+  CurrentDrawState,
   BondRewardType,
   BondReward,
   BondGroupDefinition,
   BondGroupTier,
   BondSystemState,
-  BondEvent,
-  BondEventOption,
+  CollectionStats,
 } from './bond';

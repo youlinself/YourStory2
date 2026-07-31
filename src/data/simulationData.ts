@@ -159,7 +159,7 @@ export const HIDDEN_TAGS: HiddenTag[] = [
     id: 'social_master',
     name: '人脉之王',
     description: '你的关系网遍布各个领域',
-    condition: (state) => state.attributes.network >= 85 && state.npcs.filter((n) => n.relationship > 60).length >= 3,
+    condition: (state) => state.attributes.network >= 85,
   },
   {
     id: 'hidden_dragon',

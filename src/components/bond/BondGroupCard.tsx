@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import type { BondGroupDefinition } from '../../types/bond';
-import { IDENTITY_MAP } from '../../data/bondData';
-import { ATTRIBUTE_NAMES } from '../../data/simulationData';
+import { BOND_CARD_MAP, ATTRIBUTE_NAMES } from '../../data/bondCards';
 import useBondStore from '../../stores/bondStore';
 import './BondGroupCard.css';
 
@@ -15,31 +14,34 @@ const BondGroupCard: React.FC<BondGroupCardProps> = ({ group }) => {
   const activeBondGroups = useBondStore((s) => s.activeBondGroups);
   const activeBondTiers = useBondStore((s) => s.activeBondTiers);
   const claimedRewards = useBondStore((s) => s.claimedRewards);
-  const npcs = useBondStore((s) => s.npcs);
+  const collection = useBondStore((s) => s.collection);
   const activateBondGroup = useBondStore((s) => s.activateBondGroup);
   const claimReward = useBondStore((s) => s.claimReward);
+  const canUpgradeTier = useBondStore((s) => s.canUpgradeTier);
+  const upgradeTier = useBondStore((s) => s.upgradeTier);
+  const getBondGroupStatus = useBondStore((s) => s.getBondGroupStatus);
 
   const isActive = activeBondGroups.includes(group.id);
   const currentTier = activeBondTiers[group.id] || 0;
   const maxTier = group.tiers?.length || 1;
 
-  const activeNPCs = npcs.filter((n) => n.isActive && !n.isGone);
-  const activeIdentityIds = activeNPCs.map((n) => n.identityId);
+  const collectedCardIds = [...new Set(collection.map((c) => c.cardDefId))];
 
-  const requiredIdentitiesStatus = group.requiredIdentities.map((id) => ({
+  const requiredCardsStatus = group.requiredCards.map((id) => ({
     id,
-    identity: IDENTITY_MAP[id],
-    isPresent: activeIdentityIds.includes(id),
+    card: BOND_CARD_MAP[id],
+    isCollected: collectedCardIds.includes(id),
   }));
 
-  const allRequiredPresent = group.requireAllActive
-    ? requiredIdentitiesStatus.every((r) => r.isPresent)
-    : requiredIdentitiesStatus.some((r) => r.isPresent);
+  const allRequiredCollected = group.requireAll
+    ? requiredCardsStatus.every((r) => r.isCollected)
+    : requiredCardsStatus.some((r) => r.isCollected);
 
-  const relevantNPCs = npcs.filter((n) =>
-    group.requiredIdentities.includes(n.identityId) && !n.isGone
-  );
-  const totalRelationship = relevantNPCs.reduce((sum, n) => sum + n.relationship, 0);
+  const collectedCount = requiredCardsStatus.filter((r) => r.isCollected).length;
+  const requiredCount = group.requiredCards.length;
+
+  const status = getBondGroupStatus(group.id);
+  const canUpgrade = canUpgradeTier(group.id);
 
   const getNextTier = () => {
     if (!group.tiers) return null;
@@ -47,10 +49,9 @@ const BondGroupCard: React.FC<BondGroupCardProps> = ({ group }) => {
   };
 
   const nextTier = getNextTier();
-  const canUpgrade = nextTier && totalRelationship >= nextTier.totalRelationshipRequired;
 
   const handleActivate = () => {
-    if (!isActive && allRequiredPresent) {
+    if (!isActive && allRequiredCollected) {
       activateBondGroup(group.id);
       claimReward(group.id, 0);
     }
@@ -58,6 +59,7 @@ const BondGroupCard: React.FC<BondGroupCardProps> = ({ group }) => {
 
   const handleUpgrade = () => {
     if (canUpgrade && nextTier) {
+      upgradeTier(group.id);
       claimReward(group.id, nextTier.tier);
     }
   };
@@ -90,7 +92,7 @@ const BondGroupCard: React.FC<BondGroupCardProps> = ({ group }) => {
           <div className="bond-group-status">
             {isActive ? (
               <span className="status-badge active">已激活</span>
-            ) : allRequiredPresent ? (
+            ) : allRequiredCollected ? (
               <button className="activate-btn" onClick={handleActivate}>
                 激活
               </button>
@@ -101,17 +103,29 @@ const BondGroupCard: React.FC<BondGroupCardProps> = ({ group }) => {
         </div>
 
         <div className="bond-group-requirements">
-          <span className="requirements-label">需要身份:</span>
+          <span className="requirements-label">需要卡牌:</span>
           <div className="requirements-list">
-            {requiredIdentitiesStatus.map((req, i) => (
+            {requiredCardsStatus.map((req, i) => (
               <span
                 key={i}
-                className={`requirement-tag ${req.isPresent ? 'present' : 'missing'}`}
+                className={`requirement-tag ${req.isCollected ? 'present' : 'missing'}`}
               >
-                {req.identity?.icon} {req.identity?.name || '未知身份'}
-                {req.isPresent ? ' ✓' : ' ✗'}
+                {req.card?.icon || '❓'} {req.card?.name || '未知'}
+                {req.isCollected ? ' ✓' : ' ✗'}
               </span>
             ))}
+          </div>
+        </div>
+
+        <div className="bond-group-progress">
+          <div className="progress-text">
+            收集进度: {collectedCount}/{requiredCount}
+          </div>
+          <div className="progress-bar">
+            <div
+              className="progress-fill"
+              style={{ width: `${(collectedCount / requiredCount) * 100}%` }}
+            />
           </div>
         </div>
 
@@ -123,7 +137,7 @@ const BondGroupCard: React.FC<BondGroupCardProps> = ({ group }) => {
               </span>
               {nextTier && (
                 <span className="next-tier">
-                  下一级需要: {totalRelationship}/{nextTier.totalRelationshipRequired} 关系值
+                  下一级需要: {status.duplicateCount}/{nextTier.duplicateCardsRequired} 羁绊碎片
                 </span>
               )}
             </div>
@@ -132,7 +146,7 @@ const BondGroupCard: React.FC<BondGroupCardProps> = ({ group }) => {
                 <div
                   className="tier-progress-fill"
                   style={{
-                    width: `${Math.min(100, (totalRelationship / nextTier.totalRelationshipRequired) * 100)}%`,
+                    width: `${Math.min(100, (status.duplicateCount / nextTier.duplicateCardsRequired) * 100)}%`,
                   }}
                 />
               </div>
@@ -163,16 +177,16 @@ const BondGroupCard: React.FC<BondGroupCardProps> = ({ group }) => {
 
             <div className="bond-detail-body">
               <div className="detail-section">
-                <h4>所需身份</h4>
+                <h4>所需卡牌</h4>
                 <div className="detail-requirements">
-                  {requiredIdentitiesStatus.map((req, i) => (
-                    <div key={i} className={`detail-requirement ${req.isPresent ? 'present' : 'missing'}`}>
-                      <span className="req-icon">{req.identity?.icon || '❓'}</span>
+                  {requiredCardsStatus.map((req, i) => (
+                    <div key={i} className={`detail-requirement ${req.isCollected ? 'present' : 'missing'}`}>
+                      <span className="req-icon">{req.card?.icon || '❓'}</span>
                       <div className="req-info">
-                        <span className="req-name">{req.identity?.name || '未知身份'}</span>
-                        <span className="req-desc">{req.identity?.description || ''}</span>
+                        <span className="req-name">{req.card?.name || '未知'}</span>
+                        <span className="req-desc">{req.card?.description || ''}</span>
                       </div>
-                      <span className="req-status">{req.isPresent ? '✓' : '✗'}</span>
+                      <span className="req-status">{req.isCollected ? '✓' : '✗'}</span>
                     </div>
                   ))}
                 </div>
@@ -191,7 +205,7 @@ const BondGroupCard: React.FC<BondGroupCardProps> = ({ group }) => {
                             <span className="tier-level">等级 {tier.tier}</span>
                             <span className="tier-name">{tier.name}</span>
                             <span className="tier-requirement">
-                              需要 {tier.totalRelationshipRequired} 关系值
+                              需要 {tier.duplicateCardsRequired} 羁绊碎片
                             </span>
                           </div>
                           <p className="tier-desc">{tier.description}</p>

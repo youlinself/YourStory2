@@ -255,9 +255,9 @@ const RecordDetailPage: React.FC = () => {
               <div className="space-y-4">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   <div className="text-center p-3 bg-bg-elevated rounded-lg">
-                    <div className="text-2xl mb-1">👥</div>
-                    <div className="text-lg font-bold text-ink">{record.bondNpcCount}</div>
-                    <div className="text-xs text-ink-muted">遇到NPC</div>
+                    <div className="text-2xl mb-1">🎴</div>
+                    <div className="text-lg font-bold text-ink">{record.bondCardCount}</div>
+                    <div className="text-xs text-ink-muted">收集卡牌</div>
                   </div>
                   <div className="text-center p-3 bg-bg-elevated rounded-lg">
                     <div className="text-2xl mb-1">🔗</div>

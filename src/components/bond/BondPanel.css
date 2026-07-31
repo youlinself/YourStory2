@@ -50,6 +50,7 @@
 .bond-panel-stats {
   display: flex;
   gap: 0.5rem;
+  margin-bottom: 1rem;
 }
 
 .bond-stat-card {
@@ -93,6 +94,60 @@
   font-size: 0.625rem;
   color: var(--color-ink-faint);
   white-space: nowrap;
+}
+
+/* Progress Bar */
+.bond-panel-progress {
+  margin-bottom: 1rem;
+}
+
+.bond-progress-bar {
+  height: 6px;
+  background: var(--color-bg-subtle);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 0.375rem;
+}
+
+.bond-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-brand), #a855f7);
+  border-radius: 3px;
+  transition: width 0.5s ease;
+}
+
+.bond-progress-text {
+  font-size: 0.7rem;
+  color: var(--color-ink-faint);
+}
+
+/* Draw Button */
+.bond-draw-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  color: #000;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.bond-draw-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(251, 191, 36, 0.4);
+}
+
+.bond-draw-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
 }
 
 /* Tabs */
@@ -184,57 +239,92 @@
   font-size: 0.875rem;
 }
 
-/* Sections */
-.bond-npc-sections {
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-}
-
-.bond-section {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.bond-section-header {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.bond-section-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.bond-section-dot-active {
-  background: var(--color-success);
-  box-shadow: 0 0 6px rgba(34, 197, 94, 0.4);
-}
-
-.bond-section-dot-inactive {
-  background: var(--color-warning, #f59e0b);
-}
-
-.bond-section-dot-gone {
-  background: var(--color-ink-faint);
-}
-
-.bond-section-title {
-  margin: 0;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--color-ink);
-}
-
-/* NPC Grid */
-.bond-npc-grid {
+/* Collection Grid */
+.bond-collection-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 0.625rem;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 1rem;
+  padding: 0.5rem 0;
+}
+
+.bond-collection-item {
+  position: relative;
+}
+
+.bond-duplicate-indicator {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  background: rgba(239, 68, 68, 0.9);
+  color: white;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  z-index: 5;
+}
+
+.bond-star-upgrade {
+  margin-top: 8px;
+  padding: 8px;
+  background: var(--color-bg-subtle);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-subtle);
+}
+
+.star-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+  font-size: 11px;
+}
+
+.star-count {
+  color: var(--color-ink-muted);
+  font-weight: 600;
+}
+
+.star-count.gold {
+  color: #fbbf24;
+}
+
+.upgrade-buttons {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.upgrade-btn {
+  flex: 1;
+  min-width: 70px;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.upgrade-btn.from-1 {
+  background: linear-gradient(135deg, #60a5fa, #3b82f6);
+  color: white;
+}
+
+.upgrade-btn.from-1:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(96, 165, 250, 0.4);
+}
+
+.upgrade-btn.from-2 {
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  color: #000;
+}
+
+.upgrade-btn.from-2:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(251, 191, 36, 0.5);
 }
 
 /* Empty State */
@@ -273,7 +363,63 @@
   gap: 0.625rem;
 }
 
-/* Rewards */
+/* History */
+.bond-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.bond-history-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 0.875rem;
+  background: var(--color-bg-subtle);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-subtle);
+  transition: all 0.15s var(--ease-out);
+}
+
+.bond-history-item:hover {
+  background: var(--color-bg-hover);
+  border-color: var(--color-brand-light);
+}
+
+.bond-history-year {
+  min-width: 60px;
+  padding: 0.25rem 0.5rem;
+  background: var(--color-brand-light);
+  color: var(--color-brand);
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.bond-history-card {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.bond-history-icon {
+  font-size: 1.25rem;
+}
+
+.bond-history-name {
+  font-weight: 600;
+  color: var(--color-ink);
+  font-size: 0.875rem;
+}
+
+.bond-history-discarded {
+  font-size: 0.75rem;
+  color: var(--color-ink-faint);
+}
+
+/* Rewards Header */
 .bond-rewards-header {
   display: flex;
   align-items: center;
@@ -296,73 +442,4 @@
   background: var(--color-bg-subtle);
   padding: 0.25rem 0.625rem;
   border-radius: var(--radius-full);
-}
-
-.bond-rewards-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.bond-reward-item {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem 0.875rem;
-  background: var(--color-bg-subtle);
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-border-subtle);
-  transition: all 0.15s var(--ease-out);
-}
-
-.bond-reward-item:hover {
-  background: var(--color-bg-hover);
-  border-color: var(--color-brand-light);
-}
-
-.bond-reward-icon-wrap {
-  width: 2.5rem;
-  height: 2.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--color-bg-elevated);
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-border-subtle);
-}
-
-.bond-reward-icon {
-  font-size: 1.25rem;
-}
-
-.bond-reward-info {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 0.125rem;
-}
-
-.bond-reward-name {
-  font-weight: 600;
-  color: var(--color-ink);
-  font-size: 0.875rem;
-}
-
-.bond-reward-tier {
-  font-size: 0.7rem;
-  color: var(--color-ink-faint);
-}
-
-.bond-reward-check {
-  width: 1.5rem;
-  height: 1.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--color-success-bg, rgba(34, 197, 94, 0.1));
-  color: var(--color-success);
-  border-radius: 50%;
-  font-size: 0.7rem;
-  font-weight: 700;
-  flex-shrink: 0;
 }
