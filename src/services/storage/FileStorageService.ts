@@ -1,4 +1,7 @@
 import StorageService from './StorageService';
+import { open as dialogOpen } from '@tauri-apps/plugin-dialog';
+import { mkdir, writeTextFile, readTextFile, exists, remove } from '@tauri-apps/plugin-fs';
+import * as path from '@tauri-apps/api/path';
 
 export type StorageType = 'localStorage' | 'file';
 
@@ -13,9 +16,6 @@ class FileStorageService {
   private static instance: FileStorageService;
   private config: StorageConfig = { type: 'localStorage', filePath: '' };
   private localStorageAdapter: StorageService;
-  private fsModule: any = null;
-  private pathModule: any = null;
-  private dialogModule: any = null;
 
   private constructor() {
     this.localStorageAdapter = StorageService.getInstance();
@@ -32,45 +32,6 @@ class FileStorageService {
     return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
   }
 
-  private async getFsModule() {
-    if (!this.fsModule) {
-      try {
-        const moduleName = '@tauri-apps/api/fs';
-        const module = await import(/* @vite-ignore */ moduleName);
-        this.fsModule = module.fs;
-      } catch {
-        throw new Error('Tauri fs 模块不可用');
-      }
-    }
-    return this.fsModule;
-  }
-
-  private async getPathModule() {
-    if (!this.pathModule) {
-      try {
-        const moduleName = '@tauri-apps/api/path';
-        const module = await import(/* @vite-ignore */ moduleName);
-        this.pathModule = module.path;
-      } catch {
-        throw new Error('Tauri path 模块不可用');
-      }
-    }
-    return this.pathModule;
-  }
-
-  private async getDialogModule() {
-    if (!this.dialogModule) {
-      try {
-        const moduleName = '@tauri-apps/api/dialog';
-        const module = await import(/* @vite-ignore */ moduleName);
-        this.dialogModule = module;
-      } catch {
-        throw new Error('Tauri dialog 模块不可用');
-      }
-    }
-    return this.dialogModule;
-  }
-
   getConfig(): StorageConfig {
     return { ...this.config };
   }
@@ -85,7 +46,6 @@ class FileStorageService {
       if (data) {
         this.config = data;
       } else {
-        const { path } = await this.getPathModule();
         const appDataDir = await path.appDataDir();
         this.config = { type: 'file', filePath: appDataDir };
         await this.saveConfig();
@@ -106,8 +66,7 @@ class FileStorageService {
     }
 
     try {
-      const dialog = await this.getDialogModule();
-      const selected = await dialog.open({
+      const selected = await dialogOpen({
         directory: true,
         multiple: false,
         title: '选择数据存储位置',
@@ -160,14 +119,13 @@ class FileStorageService {
 
   private async saveToFile(key: string, data: unknown): Promise<void> {
     try {
-      const fs = await this.getFsModule();
       const filePath = this.getFilePath(key);
       const dirPath = filePath.substring(0, filePath.lastIndexOf('\\'));
 
-      await fs.createDir(dirPath, { recursive: true });
+      await mkdir(dirPath, { recursive: true });
 
       const serializedData = JSON.stringify(data, null, 2);
-      await fs.writeTextFile(filePath, serializedData);
+      await writeTextFile(filePath, serializedData);
     } catch (error) {
       console.error('文件保存失败:', error);
       throw error;
@@ -176,13 +134,12 @@ class FileStorageService {
 
   private async loadFromFile<T>(key: string): Promise<T | null> {
     try {
-      const fs = await this.getFsModule();
       const filePath = this.getFilePath(key);
 
-      const exists = await fs.exists(filePath);
-      if (!exists) return null;
+      const fileExists = await exists(filePath);
+      if (!fileExists) return null;
 
-      const data = await fs.readTextFile(filePath);
+      const data = await readTextFile(filePath);
       return JSON.parse(data) as T;
     } catch (error) {
       console.error('文件加载失败:', error);
@@ -192,12 +149,11 @@ class FileStorageService {
 
   private async removeFile(key: string): Promise<void> {
     try {
-      const fs = await this.getFsModule();
       const filePath = this.getFilePath(key);
 
-      const exists = await fs.exists(filePath);
-      if (exists) {
-        await fs.removeFile(filePath);
+      const fileExists = await exists(filePath);
+      if (fileExists) {
+        await remove(filePath);
       }
     } catch (error) {
       console.error('文件删除失败:', error);
@@ -207,13 +163,12 @@ class FileStorageService {
 
   private async clearAllFiles(): Promise<void> {
     try {
-      const fs = await this.getFsModule();
       const basePath = this.config.filePath;
 
       if (basePath) {
-        const exists = await fs.exists(basePath);
-        if (exists) {
-          await fs.removeDir(basePath, { recursive: true });
+        const dirExists = await exists(basePath);
+        if (dirExists) {
+          await remove(basePath, { recursive: true });
         }
       }
     } catch (error) {

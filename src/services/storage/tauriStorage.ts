@@ -4,6 +4,9 @@
  * 否则回退到 localStorage
  */
 
+import { mkdir, writeTextFile, readTextFile, exists, remove } from '@tauri-apps/plugin-fs';
+import * as path from '@tauri-apps/api/path';
+
 /** 检查是否在 Tauri 环境中 */
 export function isTauriEnvironment(): boolean {
   return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
@@ -60,53 +63,21 @@ class LocalStorageAdapter implements TauriStorageInterface {
 
 /** Tauri 文件系统实现 */
 class TauriFileSystemAdapter implements TauriStorageInterface {
-  private fs: any = null;
-  private pathModule: any = null;
-
-  private async getFsModule() {
-    if (!this.fs) {
-      try {
-        // 使用动态导入避免 TypeScript 检查
-        const moduleName = '@tauri-apps/api/fs';
-        const module = await import(/* @vite-ignore */ moduleName);
-        this.fs = module.fs;
-      } catch {
-        throw new Error('Tauri fs 模块不可用');
-      }
-    }
-    return this.fs;
-  }
-
-  private async getPathModule() {
-    if (!this.pathModule) {
-      try {
-        const moduleName = '@tauri-apps/api/path';
-        const module = await import(/* @vite-ignore */ moduleName);
-        this.pathModule = module.path;
-      } catch {
-        throw new Error('Tauri path 模块不可用');
-      }
-    }
-    return this.pathModule;
-  }
-
   private async getDataDir(): Promise<string> {
-    const { path } = await this.getPathModule();
     const dataDir = await path.appDataDir();
     return dataDir;
   }
 
   async saveData(key: string, data: unknown): Promise<void> {
     try {
-      const fs = await this.getFsModule();
       const dataDir = await this.getDataDir();
       const filePath = `${dataDir}${key}.json`;
 
       // 确保目录存在
-      await fs.createDir(dataDir, { recursive: true });
+      await mkdir(dataDir, { recursive: true });
 
       const serializedData = JSON.stringify(data, null, 2);
-      await fs.writeTextFile(filePath, serializedData);
+      await writeTextFile(filePath, serializedData);
     } catch (error) {
       console.error('Tauri保存数据失败:', error);
       throw error;
@@ -115,15 +86,14 @@ class TauriFileSystemAdapter implements TauriStorageInterface {
 
   async loadData<T>(key: string): Promise<T | null> {
     try {
-      const fs = await this.getFsModule();
       const dataDir = await this.getDataDir();
       const filePath = `${dataDir}${key}.json`;
 
       // 检查文件是否存在
-      const exists = await fs.exists(filePath);
-      if (!exists) return null;
+      const fileExists = await exists(filePath);
+      if (!fileExists) return null;
 
-      const data = await fs.readTextFile(filePath);
+      const data = await readTextFile(filePath);
       return JSON.parse(data) as T;
     } catch (error) {
       console.error('Tauri加载数据失败:', error);
@@ -133,13 +103,12 @@ class TauriFileSystemAdapter implements TauriStorageInterface {
 
   async removeData(key: string): Promise<void> {
     try {
-      const fs = await this.getFsModule();
       const dataDir = await this.getDataDir();
       const filePath = `${dataDir}${key}.json`;
 
-      const exists = await fs.exists(filePath);
-      if (exists) {
-        await fs.removeFile(filePath);
+      const fileExists = await exists(filePath);
+      if (fileExists) {
+        await remove(filePath);
       }
     } catch (error) {
       console.error('Tauri删除数据失败:', error);
@@ -149,12 +118,11 @@ class TauriFileSystemAdapter implements TauriStorageInterface {
 
   async clearAll(): Promise<void> {
     try {
-      const fs = await this.getFsModule();
       const dataDir = await this.getDataDir();
 
-      const exists = await fs.exists(dataDir);
-      if (exists) {
-        await fs.removeDir(dataDir, { recursive: true });
+      const dirExists = await exists(dataDir);
+      if (dirExists) {
+        await remove(dataDir, { recursive: true });
       }
     } catch (error) {
       console.error('Tauri清空数据失败:', error);

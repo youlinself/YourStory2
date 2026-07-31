@@ -64,6 +64,9 @@ const useSettingsStore = create<SettingsState>((set, get) => ({
   saveSettings: async () => {
     try {
       const { autoSave, darkMode, notifications, storageType, storageFilePath } = get();
+      // 先更新 FileStorageService 的配置，确保 StorageService 能正确识别存储类型
+      fileStorageService.setConfig({ type: storageType, filePath: storageFilePath });
+      await fileStorageService.saveConfig();
       await storageService.saveData(STORAGE_KEY, {
         autoSave,
         darkMode,
@@ -71,8 +74,6 @@ const useSettingsStore = create<SettingsState>((set, get) => ({
         storageType,
         storageFilePath,
       });
-      fileStorageService.setConfig({ type: storageType, filePath: storageFilePath });
-      await fileStorageService.saveConfig();
     } catch (error) {
       console.error('保存设置失败:', error);
     }
