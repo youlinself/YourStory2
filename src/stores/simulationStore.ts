@@ -77,12 +77,12 @@ const ATTRIBUTE_BONUSES: AttributeThresholdBonus[] = [
   // ========== 精力 (energy) ==========
   // 30点: 卡牌奖励 - 精力充沛
   { attribute: 'energy', threshold: 30, name: '精力充沛', description: '获得卡牌【精力充沛】- 抽2张牌', effect: 'card_reward', value: 0, cardId: 'energy_tier1' },
-  // 50点: 被动 - 初始精力+1
-  { attribute: 'energy', threshold: 50, name: '精力充沛', description: '初始精力+1', effect: 'energy_bonus', value: 1 },
+  // 50点: 被动 - 首回合+1精力
+  { attribute: 'energy', threshold: 50, name: '精力充沛', description: '首回合+1精力', effect: 'first_turn_energy', value: 1 },
   // 70点: 卡牌奖励 - 活力爆发
   { attribute: 'energy', threshold: 70, name: '活力爆发', description: '获得卡牌【活力爆发】- 获得3点精力', effect: 'card_reward', value: 0, cardId: 'energy_tier3' },
-  // 90点: 被动 - 初始精力+1
-  { attribute: 'energy', threshold: 90, name: '神采奕奕', description: '初始精力+1', effect: 'energy_bonus', value: 1 },
+  // 90点: 被动 - 首回合+1精力
+  { attribute: 'energy', threshold: 90, name: '神采奕奕', description: '首回合+1精力', effect: 'first_turn_energy', value: 1 },
   // 100点: 卡牌奖励 - 超凡入圣
   { attribute: 'energy', threshold: 100, name: '超凡入圣', description: '获得卡牌【超凡入圣】- 最大精力+1', effect: 'card_reward', value: 0, cardId: 'energy_tier5' },
 
@@ -1039,7 +1039,8 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
     const s = get();
     const bonuses = getActiveBonuses(s.attributes);
     const maxHealth = s.attributes.health + bonuses.filter((b) => b.effect === 'max_health_bonus').reduce((sum, b) => sum + b.value, 0) + s.relics.reduce((sum, r) => sum + r.effects.filter((e) => e.type === 'max_health_bonus').reduce((a, e) => a + e.value, 0), 0);
-    const energy = BASE_ENERGY + bonuses.filter((b) => b.effect === 'energy_bonus').reduce((sum, b) => sum + b.value, 0);
+    const maxEnergy = BASE_ENERGY + bonuses.filter((b) => b.effect === 'energy_bonus').reduce((sum, b) => sum + b.value, 0) + s.relics.reduce((sum, r) => sum + r.effects.filter((e) => e.type === 'energy_bonus').reduce((a, e) => a + e.value, 0), 0);
+    const firstTurnEnergy = bonuses.filter((b) => b.effect === 'first_turn_energy').reduce((sum, b) => sum + b.value, 0) + s.relics.reduce((sum, r) => sum + r.effects.filter((e) => e.type === 'first_turn_energy').reduce((a, e) => a + e.value, 0), 0);
     const drawBonus = bonuses.filter((b) => b.effect === 'extra_draw').reduce((sum, b) => sum + b.value, 0) + s.relics.reduce((sum, r) => sum + r.effects.filter((e) => e.type === 'card_draw_bonus').reduce((a, e) => a + e.value, 0), 0);
     const startBlock = bonuses.filter((b) => b.effect === 'start_block').reduce((sum, b) => sum + b.value, 0);
 
@@ -1047,12 +1048,14 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
     const hand = drawPile.splice(0, Math.min(BASE_DRAW_COUNT + drawBonus, drawPile.length));
     const combatBonuses = generateCombatBonuses(s.remainingLife);
 
+    const startingEnergy = maxEnergy + firstTurnEnergy;
+
     set({
       combat: {
         isInCombat: true, phase: 'player_turn', currentTurn: 1,
         player: {
           currentHealth: s.combat.isInCombat ? s.combat.player.currentHealth : maxHealth,
-          maxHealth, block: startBlock, energy, maxEnergy: energy,
+          maxHealth, block: startBlock, energy: startingEnergy, maxEnergy,
           hand, drawPile, discardPile: [], exhaustPile: [], statusEffects: [],
         },
         enemies: enemies.map((e) => ({ ...e, id: generateId(), currentHealth: e.maxHealth, block: 0, statusEffects: [], currentIntentIndex: 0 })),

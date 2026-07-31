@@ -98,6 +98,8 @@ const formatRelicEffect = (effect: import('../../types/simulation').RelicEffect)
     case 'energy_bonus':
     case 'max_health_bonus':
       return `${label} +${effect.value}`;
+    case 'first_turn_energy':
+      return `首回合+${effect.value}精力`;
     case 'lifespan_extend':
       return `${label} +${effect.value}年`;
     case 'retention_bonus':
@@ -816,6 +818,7 @@ const EventRelicSelectionPhase: React.FC = () => {
                 <div key={idx} className="text-xs text-brand">
                   • {effect.type === 'max_health_bonus' && `生命上限+${effect.value}`}
                   {effect.type === 'energy_bonus' && `精力+${effect.value}`}
+                  {effect.type === 'first_turn_energy' && `首回合+${effect.value}精力`}
                   {effect.type === 'card_draw_bonus' && `抽牌+${effect.value}`}
                   {effect.type === 'discount' && `折扣${Math.round(effect.value * 100)}%`}
                   {effect.type === 'double_damage' && `伤害加成${Math.round(effect.value * 100)}%`}

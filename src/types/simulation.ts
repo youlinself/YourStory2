@@ -85,7 +85,7 @@ export interface LifeCard {
 export type RelicRarity = 'common' | 'uncommon' | 'rare' | 'boss' | 'legendary';
 
 export interface RelicEffect {
-  type: 'max_health_bonus' | 'energy_bonus' | 'card_draw_bonus' | 'discount'
+  type: 'max_health_bonus' | 'energy_bonus' | 'first_turn_energy' | 'card_draw_bonus' | 'discount'
     | 'double_damage' | 'heal_on_rest' | 'extra_card_reward' | 'card_type_bonus'
     | 'attribute_scaling' | 'lifespan_extend' | 'retention_bonus';
   value: number;
@@ -349,7 +349,7 @@ export interface AttributeThresholdBonus {
   name: string;
   description: string;
   effect: 'damage_boost' | 'extra_draw' | 'debuff_reduction' | 'max_health_bonus'
-    | 'energy_bonus' | 'shop_discount' | 'start_block' | 'interrupt_chance'
+    | 'energy_bonus' | 'first_turn_energy' | 'shop_discount' | 'start_block' | 'interrupt_chance'
     | 'card_reward';
   value: number;
   cardId?: string;
