@@ -1,11 +1,12 @@
-import type { GameState, GameEvent, Enemy, LifeCard, PlayerAttributes, EraPreGeneratedContent, EraMap, YearPreGeneratedContent, YearOptionPreGenerated } from '../../types/simulation';
+import type { GameState, GameEvent, Enemy, LifeCard, PlayerAttributes, EraPreGeneratedContent, EraMap, YearPreGeneratedContent, YearOptionPreGenerated, EnemyMechanic } from '../../types/simulation';
 import { getEventsByBirthYear } from '../../data/eraEvents';
-import { createAnnualBoss, getNormalMonsterVariant, createMonsterFromVariant } from '../../data/monsterMapping';
+import { createAnnualBoss, getNormalMonsterVariant, getEliteMonsterVariant, createMonsterFromVariant } from '../../data/monsterMapping';
 import { COMMON_ATTACK_CARDS, COMMON_SKILL_CARDS, RARE_CARDS, LEGENDARY_CARDS } from '../../data/simulationData';
 import { generateId } from '../../utils';
 import { safeParseJSON, validateGameEvent } from './ContentValidator';
 import AIService from './AIService';
 import useAIStore from '../../stores/aiStore';
+import { getMonsterTemplate, buildMonsterTemplatePrompt, buildMonsterExample } from './MonsterTemplateService';
 
 export interface GenerationContext {
   currentAge: number;
@@ -173,6 +174,10 @@ function buildEraContentPrompt(ctx: GenerationContext, requirements: MapContentR
   const shopAges = requirements.shopCards.map(e => e.age).join(', ');
   const bossAge = requirements.bossEnemies.length > 0 ? requirements.bossEnemies[0].age : ctx.targetAgeEnd;
 
+  const monsterTemplate = getMonsterTemplate();
+  const templatePrompt = buildMonsterTemplatePrompt(monsterTemplate, ctx.targetAgeStart);
+  const monsterExample = buildMonsterExample(ctx.targetAgeStart);
+
   return `请为${ageStage}(${ctx.targetAgeStart}-${ctx.targetAgeEnd}岁)生成完整的模拟人生内容。
 
 玩家状态：
@@ -188,30 +193,13 @@ ${requirements.eliteEnemies.length > 0 ? `- ${requirements.eliteEnemies.length}�
 ${requirements.shopCards.length > 0 ? `- ${requirements.shopCards.length}组商店卡牌（年龄段：${shopAges}）` : ''}
 ${requirements.bossEnemies.length > 0 ? `- 1个Boss（年龄段：${bossAge}）` : ''}
 
+${templatePrompt}
+
+${monsterExample}
+
 请输出以下JSON格式：
 {
-  "events": [
-    {
-      "id": "event_001",
-      "title": "事件标题（10字以内）",
-      "baseText": "事件描述（50-100字）",
-      "age": 5,
-      "options": [
-        {
-          "id": "opt_001_1",
-          "text": "选项文本（20字以内）",
-          "successOutcome": {
-            "description": "成功结果描述",
-            "attributeChanges": {"iq": 5, "eq": 3}
-          },
-          "failureOutcome": {
-            "description": "失败结果描述",
-            "attributeChanges": {"energy": -2}
-          }
-        }
-      ]
-    }
-  ],
+  "events": [...],
   "enemies": [
     {
       "id": "enemy_001",
@@ -222,58 +210,13 @@ ${requirements.bossEnemies.length > 0 ? `- 1个Boss（年龄段：${bossAge}）`
       "block": 0,
       "intents": [{"type": "attack", "damage": 5}],
       "goldReward": [5, 15],
-      "cardRewards": [
-        {
-          "id": "card_001",
-          "name": "打击",
-          "icon": "⚔️",
-          "description": "造成6点伤害",
-          "rarity": "common",
-          "type": "attack",
-          "cost": 1,
-          "effects": [{"type": "damage", "value": 6}]
-        }
-      ],
-      "age": 5
+      "cardRewards": [{"id": "card_001", "name": "打击", "icon": "⚔️", "description": "造成6点伤害", "rarity": "common", "type": "attack", "cost": 1, "effects": [{"type": "damage", "value": 6}]}],
+      "mechanics": [],
+      "age": ${ctx.targetAgeStart}
     }
   ],
-  "elites": [
-    {
-      "id": "elite_001",
-      "name": "精英名称",
-      "icon": "👺",
-      "description": "精英描述",
-      "maxHealth": 60,
-      "block": 5,
-      "intents": [{"type": "attack", "damage": 10}, {"type": "defend", "block": 5}],
-      "goldReward": [15, 30],
-      "cardRewards": [
-        {
-          "id": "card_002",
-          "name": "重击",
-          "icon": "🗡️",
-          "description": "造成10点伤害",
-          "rarity": "rare",
-          "type": "attack",
-          "cost": 2,
-          "effects": [{"type": "damage", "value": 10}]
-        }
-      ],
-      "age": 15
-    }
-  ],
-  "shopCards": [
-    {
-      "id": "card_003",
-      "name": "防御",
-      "icon": "🛡️",
-      "description": "获得5点格挡",
-      "rarity": "common",
-      "type": "skill",
-      "cost": 1,
-      "effects": [{"type": "block", "value": 5}]
-    }
-  ],
+  "elites": [...],
+  "shopCards": [...],
   "boss": {
     "id": "boss_001",
     "name": "Boss名称",
@@ -283,18 +226,8 @@ ${requirements.bossEnemies.length > 0 ? `- 1个Boss（年龄段：${bossAge}）`
     "block": 10,
     "intents": [{"type": "attack", "damage": 20}, {"type": "special", "name": "审判"}],
     "goldReward": [80, 150],
-    "cardRewards": [
-      {
-        "id": "card_004",
-        "name": "天罚",
-        "icon": "⚡",
-        "description": "造成20点伤害",
-        "rarity": "legendary",
-        "type": "attack",
-        "cost": 3,
-        "effects": [{"type": "damage", "value": 20}]
-      }
-    ]
+    "cardRewards": [{"id": "card_004", "name": "天罚", "icon": "⚡", "description": "造成20点伤害", "rarity": "legendary", "type": "attack", "cost": 3, "effects": [{"type": "damage", "value": 20}]}],
+    "mechanics": ["boss_aura"]
   }
 }
 
@@ -308,10 +241,14 @@ ${requirements.bossEnemies.length > 0 ? `- 1个Boss（年龄段：${bossAge}）`
 7. attributeChanges 的数值范围：-20 到 20
 8. 每个事件的options数组长度：2-3个
 9. 所有描述文本使用中文
-10. 事件类型应该多样化（个人成长、人际关系、危机、机遇、道德困境等）
+10. 事件类型应该多样化
 11. 怪物和Boss的强度应该与年龄段匹配
 12. 每个怪物必须包含cardRewards数组（1-2张卡牌奖励）
-13. Boss必须包含cardRewards数组（2-3张稀有或传说卡牌）`;
+13. Boss必须包含cardRewards数组（2-3张稀有或传说卡牌）
+14. 怪物应该根据模板自由创造，不必局限于现有类型
+15. 怪物的意图应该多样化，体现不同怪物的特色
+16. 可以添加mechanics数组来给怪物特殊能力
+17. 怪物名称和图标应该与年龄段特征相关`;
 }
 
 function buildEraContentSystemPrompt(): string {
@@ -326,6 +263,7 @@ function buildEraContentSystemPrompt(): string {
 6. 属性变化要合理，符合事件逻辑
 7. 怪物和Boss的强度应该与年龄段匹配
 8. 商店卡牌应该符合该年龄段的消费能力
+9. 每次生成的怪物类型应该多样化，不要重复
 
 设计原则：
 - 连贯性：事件要与玩家年龄相符
@@ -334,6 +272,7 @@ function buildEraContentSystemPrompt(): string {
 - 后果性：选择要有真实的影响
 - 时代感：体现不同年龄段的特征
 - 平衡性：怪物强度与玩家成长匹配
+- 多样性：怪物类型应该丰富多样（史莱姆、幽灵、傀儡、暗影等）
 
 输出格式：严格的JSON格式，不要包含任何额外文本或Markdown代码块标记。`;
 }
@@ -362,10 +301,10 @@ export async function generateEraContent(ctx: GenerationContext): Promise<EraPre
     const response = await aiService.sendCustomMessages(messages);
     const parsed = safeParseJSON<{
       events: Array<{ id?: string; title: string; baseText: string; age?: number; options: unknown[] }>;
-      enemies: Array<{ id?: string; name: string; icon: string; description: string; maxHealth: number; block: number; intents: unknown[]; goldReward: [number, number]; age: number; cardRewards: Array<{ id?: string; name: string; icon: string; description: string; rarity: string; type: string; cost: number; effects: unknown[] }> }>;
-      elites: Array<{ id?: string; name: string; icon: string; description: string; maxHealth: number; block: number; intents: unknown[]; goldReward: [number, number]; age: number; cardRewards: Array<{ id?: string; name: string; icon: string; description: string; rarity: string; type: string; cost: number; effects: unknown[] }> }>;
+      enemies: Array<{ id?: string; name: string; icon: string; description: string; maxHealth: number; block: number; intents: unknown[]; goldReward: [number, number]; age: number; cardRewards: Array<{ id?: string; name: string; icon: string; description: string; rarity: string; type: string; cost: number; effects: unknown[] }>; mechanics?: string[] }>;
+      elites: Array<{ id?: string; name: string; icon: string; description: string; maxHealth: number; block: number; intents: unknown[]; goldReward: [number, number]; age: number; cardRewards: Array<{ id?: string; name: string; icon: string; description: string; rarity: string; type: string; cost: number; effects: unknown[] }>; mechanics?: string[] }>;
       shopCards: Array<{ id?: string; name: string; icon: string; description: string; rarity: string; type: string; cost: number; effects: unknown[] }>;
-      boss: { id?: string; name: string; icon: string; description: string; maxHealth: number; block: number; intents: unknown[]; goldReward: [number, number]; cardRewards: Array<{ id?: string; name: string; icon: string; description: string; rarity: string; type: string; cost: number; effects: unknown[] }> } | null;
+      boss: { id?: string; name: string; icon: string; description: string; maxHealth: number; block: number; intents: unknown[]; goldReward: [number, number]; cardRewards: Array<{ id?: string; name: string; icon: string; description: string; rarity: string; type: string; cost: number; effects: unknown[] }>; mechanics?: string[] } | null;
     }>(response);
 
     if (parsed) {
@@ -416,7 +355,7 @@ export async function generateEraContent(ctx: GenerationContext): Promise<EraPre
             isBoss: false,
             cardRewards: enemyCardRewards,
             goldReward: rawEnemy.goldReward,
-            mechanics: [],
+            mechanics: (rawEnemy.mechanics as EnemyMechanic[]) || [],
             ageRange: [rawEnemy.age, rawEnemy.age + 9],
           });
         }
@@ -459,7 +398,7 @@ export async function generateEraContent(ctx: GenerationContext): Promise<EraPre
             isBoss: false,
             cardRewards: eliteCardRewards,
             goldReward: rawElite.goldReward,
-            mechanics: [],
+            mechanics: (rawElite.mechanics as EnemyMechanic[]) || [],
             ageRange: [rawElite.age, rawElite.age + 9],
           });
         }
@@ -519,7 +458,7 @@ export async function generateEraContent(ctx: GenerationContext): Promise<EraPre
           isBoss: true,
           cardRewards: bossCardRewards,
           goldReward: parsed.boss.goldReward,
-          mechanics: ['boss_aura'],
+          mechanics: ['boss_aura', ...((parsed.boss.mechanics as EnemyMechanic[]) || [])],
           ageRange: [ctx.targetAgeStart, ctx.targetAgeEnd],
         };
       }
@@ -656,9 +595,11 @@ export function getDefaultEraContent(era: number, ctx: GenerationContext): EraPr
           }
           case 'combat': {
             optionContent.enemies = [];
+            const monsterTypes = ['slime', 'ghost', 'golem', 'wraith'];
             for (let i = 0; i < 3; i++) {
-              const variant = getNormalMonsterVariant('slime', baseAge + yearIndex);
-              const partial = createMonsterFromVariant(variant, 'slime', baseAge + yearIndex, multiplier);
+              const monsterType = monsterTypes[Math.floor(Math.random() * monsterTypes.length)];
+              const variant = getNormalMonsterVariant(monsterType, baseAge + yearIndex);
+              const partial = createMonsterFromVariant(variant, monsterType, baseAge + yearIndex, multiplier);
               optionContent.enemies.push({
                 id: generateId(),
                 name: variant.name,
@@ -671,7 +612,7 @@ export function getDefaultEraContent(era: number, ctx: GenerationContext): EraPr
                 currentIntentIndex: 0,
                 statusEffects: [],
                 isBoss: false,
-                cardRewards: [],
+                cardRewards: COMMON_ATTACK_CARDS.slice(0, 1).map(c => ({ ...c, id: generateId() })),
                 goldReward: [5, 15],
                 mechanics: [],
                 ageRange: [baseAge, baseAge + 9],
@@ -681,14 +622,16 @@ export function getDefaultEraContent(era: number, ctx: GenerationContext): EraPr
           }
           case 'elite': {
             optionContent.enemies = [];
+            const eliteTypes = ['academic', 'burnout'];
             for (let i = 0; i < 2; i++) {
-              const variant = getNormalMonsterVariant('slime', baseAge + yearIndex);
+              const eliteType = eliteTypes[Math.floor(Math.random() * eliteTypes.length)];
+              const variant = getEliteMonsterVariant(eliteType, baseAge + yearIndex);
               const partial = createMonsterFromVariant(variant, 'slime', baseAge + yearIndex, multiplier * 1.5);
               optionContent.enemies.push({
                 id: generateId(),
-                name: variant.name + '精英',
-                icon: '👺',
-                description: variant.description + '（精英）',
+                name: variant.name,
+                icon: variant.icon,
+                description: variant.description,
                 maxHealth: Math.floor((partial.maxHealth || 30) * 1.5),
                 currentHealth: Math.floor((partial.currentHealth || 30) * 1.5),
                 block: (partial.block || 0) + 5,
@@ -696,7 +639,7 @@ export function getDefaultEraContent(era: number, ctx: GenerationContext): EraPr
                 currentIntentIndex: 0,
                 statusEffects: [],
                 isBoss: false,
-                cardRewards: [],
+                cardRewards: RARE_CARDS.slice(0, 1).map(c => ({ ...c, id: generateId() })),
                 goldReward: [15, 30],
                 mechanics: [],
                 ageRange: [baseAge, baseAge + 9],
