@@ -1621,6 +1621,8 @@ const ShopPhase: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         {shop.items.map((item, idx) => {
           const rarity = item.card?.rarity || item.relic?.rarity;
+          const isCard = !!item.card;
+          const isRelic = !!item.relic;
           const rarityColors: Record<string, string> = {
             common: 'border-gray-300 bg-gray-50/50',
             uncommon: 'border-green-400 bg-green-50/50',
@@ -1637,25 +1639,80 @@ const ShopPhase: React.FC = () => {
           };
           const borderClass = rarityColors[rarity || 'common'] || rarityColors.common;
 
+          const cardEffects = item.card?.effects.map((e) => formatEffectLabel(e.type, e.value)) || [];
+          const relicEffects = item.relic?.effects.map((e) => formatRelicEffect(e)) || [];
+
           return (
-            <div key={idx} className={`p-4 rounded-lg border-2 ${item.isPurchased ? 'opacity-50 bg-gray-100 !border-gray-200' : borderClass}`}>
-              <div className="flex items-center gap-2 mb-2">
-                {item.card && <span className="text-2xl">{item.card.icon}</span>}
-                {item.relic && <span className="text-2xl">{item.relic.icon}</span>}
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium text-sm">{item.card?.name || item.relic?.name}</span>
-                    <span className={`text-xs px-1.5 py-0.5 rounded ${rarity === 'legendary' ? 'bg-yellow-200 text-yellow-800' : rarity === 'rare' ? 'bg-blue-200 text-blue-800' : rarity === 'uncommon' ? 'bg-green-200 text-green-800' : rarity === 'boss' ? 'bg-purple-200 text-purple-800' : 'bg-gray-200 text-gray-600'}`}>
+            <div key={idx} className={`p-4 rounded-xl border-2 transition-all ${item.isPurchased ? 'opacity-50 bg-gray-100 !border-gray-200' : borderClass}`}>
+              <div className="flex items-start gap-3 mb-3">
+                <div className="text-3xl flex-shrink-0 mt-0.5">{item.card?.icon || item.relic?.icon}</div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                    {isCard && (
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700 flex items-center gap-0.5">
+                        <span>🎴</span>
+                        <span>卡牌</span>
+                      </span>
+                    )}
+                    {isRelic && (
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 flex items-center gap-0.5">
+                        <span>💎</span>
+                        <span>遗物</span>
+                      </span>
+                    )}
+                    {isCard && item.card && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">
+                        {CARD_TYPE_NAMES[item.card.type] || item.card.type}
+                      </span>
+                    )}
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded ${rarity === 'legendary' ? 'bg-yellow-200 text-yellow-800' : rarity === 'rare' ? 'bg-blue-200 text-blue-800' : rarity === 'uncommon' ? 'bg-green-200 text-green-800' : rarity === 'boss' ? 'bg-purple-200 text-purple-800' : 'bg-gray-200 text-gray-600'}`}>
                       {rarityLabels[rarity || 'common']}
                     </span>
                   </div>
-                  <div className="text-xs text-ink-muted">{item.card?.description || item.relic?.description}</div>
+                  <div className="font-semibold text-sm text-ink">{item.card?.name || item.relic?.name}</div>
                 </div>
               </div>
-              <div className="flex items-center justify-between mt-3 pt-2 border-t border-border-subtle/30">
+
+              {isCard && item.card && (
+                <div className="mb-3 p-2 rounded-lg bg-indigo-50/50 border border-indigo-100">
+                  <div className="text-[10px] font-medium text-indigo-600 mb-1">使用效果</div>
+                  <div className="flex flex-wrap gap-1">
+                    {cardEffects.map((effect, i) => (
+                      <span key={i} className="text-[11px] px-1.5 py-0.5 rounded bg-white text-indigo-700 border border-indigo-100">
+                        {effect}
+                      </span>
+                    ))}
+                  </div>
+                  {item.card.cost !== undefined && (
+                    <div className="mt-1.5 text-[10px] text-slate-500">
+                      费用: <span className="font-medium">{item.card.cost} ⚡</span>
+                      {item.card.target && <span className="ml-2">目标: {item.card.target === 'enemy' ? '敌人' : item.card.target === 'self' ? '自己' : item.card.target === 'all' ? '全体' : '无'}</span>}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {isRelic && item.relic && (
+                <div className="mb-3 p-2 rounded-lg bg-amber-50/50 border border-amber-100">
+                  <div className="text-[10px] font-medium text-amber-600 mb-1">遗物效果</div>
+                  <div className="space-y-0.5">
+                    {relicEffects.map((effect, i) => (
+                      <div key={i} className="text-[11px] px-1.5 py-0.5 rounded bg-white text-amber-700 border border-amber-100">
+                        ✦ {effect}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {!isCard && !isRelic && (
+                <div className="text-xs text-ink-muted mb-2">{item.card?.description || item.relic?.description}</div>
+              )}
+
+              <div className="flex items-center justify-between pt-2 border-t border-border-subtle/30">
                 <span className="text-sm font-bold text-brand">💰 {item.price}</span>
                 {!item.isPurchased ? (
-                  <button onClick={() => buyShopItem(idx)} disabled={gold < item.price} className={`px-3 py-1 rounded text-sm ${gold >= item.price ? 'bg-brand text-white hover:bg-brand/90' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}>购买</button>
+                  <button onClick={() => buyShopItem(idx)} disabled={gold < item.price} className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${gold >= item.price ? 'bg-brand text-white hover:bg-brand/90' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}>购买</button>
                 ) : <span className="text-xs text-gray-400">已购买</span>}
               </div>
             </div>
