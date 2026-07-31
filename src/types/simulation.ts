@@ -384,6 +384,37 @@ export interface PreGeneratedContent {
   isDefault?: boolean;
 }
 
+export interface YearPreGeneratedContent {
+  yearIndex: number;
+  year: number;
+  options: YearOptionPreGenerated[];
+}
+
+export interface YearOptionPreGenerated {
+  optionId: string;
+  type: OptionType;
+  event?: GameEvent;
+  enemies?: Enemy[];
+  shopCards?: LifeCard[];
+  goldReward?: [number, number];
+}
+
+export interface EraPreGeneratedContent {
+  era: number;
+  ageRange: [number, number];
+  years: YearPreGeneratedContent[];
+  boss: Enemy | null;
+  isComplete: boolean;
+  isDefault?: boolean;
+}
+
+export interface EraEventPool {
+  era: number;
+  events: GameEvent[];
+  usedEventIds: Set<string>;
+  currentIndex: number;
+}
+
 export type LoadingType = 'generation_wait' | 'initial_generation';
 
 export interface GameState {
@@ -433,7 +464,8 @@ export interface GameState {
     triggerCombatAfter: boolean;
   } | null;
   aiGenerationState: AIGenerationState;
-  preGeneratedContent: PreGeneratedContent | null;
+  preGeneratedContent: EraPreGeneratedContent | null;
+  currentEraEvents: EraEventPool | null;
   loadingType?: LoadingType;
 }
 

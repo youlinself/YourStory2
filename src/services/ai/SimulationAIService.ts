@@ -37,10 +37,18 @@ export class SimulationAIService {
     const service = this.getAIService();
     if (!service) return null;
 
+    const systemPrompt = `你是一位专业的人生叙事设计师，专门为模拟人生游戏生成个性化事件。
+你的职责是根据玩家的年龄、属性和时代背景，生成符合情境的事件。
+输出格式：严格的JSON格式，不要包含任何额外文本或Markdown代码块标记。`;
+
     const userPrompt = this.buildPrompt(prompt);
 
     try {
-      const response = await service.generateResponse(userPrompt, []);
+      const messages = [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
+      ];
+      const response = await service.sendCustomMessages(messages);
       const cleaned = response.replace(/```json\s*|\s*```/g, '').trim();
       const parsed = JSON.parse(cleaned);
 

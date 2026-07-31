@@ -242,6 +242,13 @@ class AIService {
     return this.sendRequest(messages);
   }
 
+  /** 发送自定义消息数组（用于模拟人生等非自传场景） */
+  async sendCustomMessages(
+    messages: Array<{ role: string; content: string }>,
+  ): Promise<string> {
+    return this.sendRequest(messages);
+  }
+
   /** 生成欢迎引导内容 */
   async generateWelcomeGuide(
     autobiography: Autobiography | null,

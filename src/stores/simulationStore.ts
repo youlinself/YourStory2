@@ -31,12 +31,7 @@ import {
 import { simulationAIService } from '../services/ai/SimulationAIService';
 import {
   buildGenerationContext,
-  generateEraEvents,
-  generateEraEnemies,
-  generateEraBoss,
-  generateEraShopCards,
-  validateAndAssemble,
-  getDefaultEraContent,
+  generateEraContent,
 } from '../services/ai/SimulationGenerationService';
 import type {
   GameState, BirthYear, PlayerAttributes, GameEvent, EventOption,
@@ -44,7 +39,7 @@ import type {
   LifeCard, LifeRelic, Enemy, CombatState, StatusEffect,
   YearOption, YearNode, OptionType, CultivationState, CultivationRealm, AttributeChange,
   AttributeThresholdBonus, EnemyMechanic, CombatBonus, WonderRewardOption, WonderRewardType,
-  PendingChoice, ShopItem, AIGenerationState, PreGeneratedContent,
+  PendingChoice, ShopItem, AIGenerationState, EraPreGeneratedContent, EraEventPool,
 } from '../types/simulation';
 import useBondStore from './bondStore';
 import useAchievementStore from './achievementStore';
@@ -331,7 +326,7 @@ function deepClone<T>(o: T): T {
   return result as T;
 }
 
-function getEnemyPool(type: OptionType, era: number, yearInEra: number, rand: () => number, age?: number, currentYear?: number): Enemy[] {
+export function _getEnemyPool(type: OptionType, era: number, yearInEra: number, rand: () => number, age?: number, currentYear?: number): Enemy[] {
   const totalYears = era * 10 + yearInEra;
   const multiplier = 1 + Math.floor(totalYears / 5) * 0.12;
   const resolvedAge = age ?? totalYears;
@@ -624,6 +619,7 @@ const initialState: GameState = {
   eventRelicSelection: null,
   aiGenerationState: { ...initialAIGenerationState },
   preGeneratedContent: null,
+  currentEraEvents: null,
 };
 
 interface SimulationState extends GameState {
@@ -683,8 +679,13 @@ interface SimulationState extends GameState {
   selectEventRelic: (relicId: string) => void;
   skipEventRelic: () => void;
   startBackgroundGeneration: (targetEra: number) => Promise<void>;
-  getPreGeneratedContent: (era: number) => PreGeneratedContent | null;
+  getPreGeneratedContent: (era: number) => EraPreGeneratedContent | null;
   clearPreGeneratedContent: () => void;
+  getNextPreGeneratedEvent: () => GameEvent | null;
+  initializeEraEventPool: (era: number, events: GameEvent[]) => void;
+  movePreGeneratedToCurrentEra: () => void;
+  generateShopWithCards: (cards: LifeCard[]) => void;
+  getCardPrice: (card: LifeCard, discount: number) => number;
   // 羁绊系统方法
   getBondNPCs: () => import('../types/bond').NPCBond[],
   getBondActiveGroups: () => string[],
@@ -764,11 +765,12 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
     set({
       aiGenerationState: { ...initialAIGenerationState },
       preGeneratedContent: null,
+      currentEraEvents: null,
     });
 
     if (simulationAIService.isAvailable()) {
       setTimeout(() => {
-        get().startBackgroundGeneration(1);
+        get().startBackgroundGeneration(0);
       }, 100);
     }
 
@@ -788,7 +790,6 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
     const s = get();
     if (s.remainingAttributePoints > 0) return;
 
-    // 发放属性阶层卡牌
     if (!s.attributeCardsGranted) {
       const cardsToAdd: LifeCard[] = [];
       const allBonuses = getActiveBonuses(s.attributes);
@@ -808,6 +809,12 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
 
     set({ phase: 'year_view' });
     get().generateMap();
+
+    if (simulationAIService.isAvailable()) {
+      setTimeout(() => {
+        get().startBackgroundGeneration(0);
+      }, 100);
+    }
   },
 
   generateMap: () => {
@@ -869,51 +876,53 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
           loadingType: 'generation_wait',
         });
         get().startBackgroundGeneration(nextEra).then(() => {
-          if (s.aiEnabled && simulationAIService.isAvailable()) {
-            set({
-              aiGenerationState: {
-                ...s.aiGenerationState,
-                isGenerating: false,
-                generationPhase: 'idle',
-              },
-              loadingType: undefined,
-            });
-            const currentState = get();
-            if (currentState.aiEnabled && simulationAIService.isAvailable()) {
-              set({ phase: 'event', aiGeneratedEvent: null, aiLoading: true });
-              get().generateAIEvent();
-            } else {
-              const availableEvents = get().getAvailableEvents();
-              const currentEvent = availableEvents.find(e => e.options.length > 0);
-              if (currentEvent) {
-                set({ phase: 'event', loadingType: undefined });
-              } else {
-                get().completeOption();
-              }
-            }
+          const currentState = get();
+          const yearContent = currentState.preGeneratedContent?.years.find(
+            y => y.yearIndex === currentState.currentMap!.currentYearIndex
+          );
+          const optionContent = yearContent?.options.find(o => o.optionId === opt.id);
+          const enemies = optionContent?.enemies || [];
+          if (enemies.length > 0) {
+            get().startCombat(enemies);
           } else {
-            const currentState = get();
             const rand = seededRandom(currentState.seed + currentState.currentEra * 100 + currentState.currentMap!.currentYearIndex * 10 + Date.now() % 100);
-            const enemies = getEnemyPool('boss', currentState.currentEra, year.eraIndex, rand, currentState.age, currentState.currentYear).map((e) => ({ ...e, id: generateId(), currentHealth: e.maxHealth }));
-            if (enemies.length > 0) get().startCombat(enemies);
+            const fallbackEnemies = _getEnemyPool('boss', currentState.currentEra, year.eraIndex, rand, currentState.age, currentState.currentYear).map((e) => ({ ...e, id: generateId(), currentHealth: e.maxHealth }));
+            if (fallbackEnemies.length > 0) get().startCombat(fallbackEnemies);
           }
+          set({
+            aiGenerationState: {
+              ...currentState.aiGenerationState,
+              isGenerating: false,
+              generationPhase: 'idle',
+            },
+            loadingType: undefined,
+          });
         });
         return;
       }
     }
 
+    const yearContent = s.preGeneratedContent?.years.find(
+      y => y.yearIndex === s.currentMap!.currentYearIndex
+    );
+    const optionContent = yearContent?.options.find(o => o.optionId === opt.id);
+
     switch (opt.type) {
       case 'combat': case 'elite': case 'boss': {
-        const rand = seededRandom(s.seed + s.currentEra * 100 + s.currentMap.currentYearIndex * 10 + Date.now() % 100);
-        const enemies = getEnemyPool(opt.type, s.currentEra, year.eraIndex, rand, s.age, s.currentYear).map((e) => ({ ...e, id: generateId(), currentHealth: e.maxHealth }));
-        if (enemies.length > 0) get().startCombat(enemies);
+        const enemies = optionContent?.enemies;
+        if (enemies && enemies.length > 0) {
+          get().startCombat(enemies);
+        } else {
+          const rand = seededRandom(s.seed + s.currentEra * 100 + s.currentMap.currentYearIndex * 10 + Date.now() % 100);
+          const fallbackEnemies = _getEnemyPool(opt.type, s.currentEra, year.eraIndex, rand, s.age, s.currentYear).map((e) => ({ ...e, id: generateId(), currentHealth: e.maxHealth }));
+          if (fallbackEnemies.length > 0) get().startCombat(fallbackEnemies);
+        }
         break;
       }
       case 'event': {
-        const currentState = get();
-        if (currentState.aiEnabled && simulationAIService.isAvailable()) {
-          set({ phase: 'event', aiGeneratedEvent: null, aiLoading: true });
-          get().generateAIEvent();
+        const event = optionContent?.event;
+        if (event) {
+          set({ phase: 'event', aiGeneratedEvent: event });
         } else {
           const availableEvents = get().getAvailableEvents();
           const currentEvent = availableEvents.find(e => e.options.length > 0);
@@ -937,7 +946,15 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
         });
         break;
       }
-      case 'shop': get().generateShop(); break;
+      case 'shop': {
+        const shopCards = optionContent?.shopCards;
+        if (shopCards && shopCards.length > 0) {
+          get().generateShopWithCards(shopCards);
+        } else {
+          get().generateShop();
+        }
+        break;
+      }
       case 'rest': set({ phase: 'rest' }); break;
     }
   },
@@ -971,6 +988,17 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
     const newTags = get().checkHiddenTags();
     const newLife = Math.max(0, s.remainingLife - lifeDec);
     const newPhase: GamePhase = (newLife <= 0 || s.attributes.health <= 0) ? 'ended' : 'year_view';
+
+    let newCurrentEraEvents: EraEventPool | null = null;
+    if (s.preGeneratedContent && s.preGeneratedContent.isComplete && s.preGeneratedContent.era === nextEra) {
+      newCurrentEraEvents = {
+        era: s.preGeneratedContent.era,
+        events: s.preGeneratedContent.years.flatMap(y => y.options.map(o => o.event).filter(Boolean)) as GameEvent[],
+        usedEventIds: new Set(),
+        currentIndex: 0,
+      };
+    }
+
     set({
       currentEra: nextEra,
       currentYear: nextYear,
@@ -982,6 +1010,7 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
       combat: { ...initialCombatState },
       shop: null,
       preGeneratedContent: null,
+      currentEraEvents: newCurrentEraEvents,
     });
     if (newPhase === 'year_view') get().generateMap();
 
@@ -1530,6 +1559,23 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
     set({ shop: { items, refreshCost: 25, era: s.currentEra, cardRemovalUsed: false, refreshCount: 0 }, phase: 'shop' });
   },
 
+  getCardPrice: (card: LifeCard, discount: number): number => {
+    const basePrice = card.rarity === 'legendary' ? 150 : card.rarity === 'rare' ? 50 : card.rarity === 'uncommon' ? 35 : 25;
+    return Math.floor(basePrice * (1 - discount));
+  },
+
+  generateShopWithCards: (cards: LifeCard[]) => {
+    const s = get();
+    const discount = get().getShopDiscount();
+    const cardPrice = get().getCardPrice;
+    const items: ShopItem[] = cards.map((card) => ({
+      card,
+      price: cardPrice(card, discount),
+      isPurchased: false,
+    }));
+    set({ shop: { items, refreshCost: 25, era: s.currentEra, cardRemovalUsed: false, refreshCount: 0 }, phase: 'shop' });
+  },
+
   refreshShop: () => {
     const s = get();
     if (!s.shop) return;
@@ -1859,9 +1905,15 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
       return filterEvents(SCRIPT_CULTIVATION_EVENTS);
     }
 
-    // AI大模型模式：如果有AI生成的事件，优先使用
-    if (s.aiEnabled && s.aiGeneratedEvent) {
-      return [s.aiGeneratedEvent];
+    // AI大模型模式：优先使用预生成的事件池
+    if (s.aiEnabled && s.currentEraEvents && s.currentEraEvents.events.length > 0) {
+      const unusedEvents = s.currentEraEvents.events.filter(
+        (e) => e.id && !s.currentEraEvents!.usedEventIds.has(e.id)
+      );
+      const filtered = filterEvents(unusedEvents);
+      if (filtered.length > 0) {
+        return filtered;
+      }
     }
 
     const events = getEventsByBirthYear(s.birthYear);
@@ -1972,6 +2024,7 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
   startBackgroundGeneration: async (targetEra: number) => {
     const s = get();
     if (s.aiGenerationState.isGenerating) return;
+    if (!s.aiEnabled) return;
 
     set({
       aiGenerationState: {
@@ -1980,7 +2033,7 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
         progress: 0,
         targetEra,
         startTime: Date.now(),
-        estimatedDuration: 3000,
+        estimatedDuration: 5000,
       },
     });
 
@@ -1996,68 +2049,69 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
       },
     });
 
-    let events: GameEvent[] = [];
-    let enemies: Enemy[] = [];
-    let boss: Enemy | null = null;
-    let shopCards: LifeCard[] = [];
-
     try {
-      [events, enemies, boss, shopCards] = await Promise.all([
-        generateEraEvents(context).then(result => {
-          set({ aiGenerationState: { ...get().aiGenerationState, progress: 30, generationPhase: 'generating_monsters' } });
-          return result;
-        }),
-        generateEraEnemies(context).then(result => {
-          set({ aiGenerationState: { ...get().aiGenerationState, progress: 50 } });
-          return result;
-        }),
-        generateEraBoss(context).then(result => {
-          set({ aiGenerationState: { ...get().aiGenerationState, progress: 70, generationPhase: 'generating_boss' } });
-          return result;
-        }),
-        generateEraShopCards(context).then(result => {
-          set({ aiGenerationState: { ...get().aiGenerationState, progress: 80, generationPhase: 'generating_shop' } });
-          return result;
-        }),
-      ]);
-    } catch (error) {
-      console.error('后台生成失败，使用默认内容:', error);
-    }
+      const content = await generateEraContent(context);
 
-    if (events.length === 0 || enemies.length === 0 || !boss) {
-      const defaultContent = getDefaultEraContent(targetEra, s);
+      if (!content) {
+        set({
+          aiGenerationState: {
+            ...get().aiGenerationState,
+            isGenerating: false,
+            generationPhase: 'idle',
+            progress: 100,
+          },
+        });
+        return;
+      }
+
+      if (targetEra === 0) {
+        const newPool: EraEventPool = {
+          era: targetEra,
+          events: content.years.flatMap(y => y.options.map(o => o.event).filter(Boolean)) as GameEvent[],
+          usedEventIds: new Set(),
+          currentIndex: 0,
+        };
+        set({
+          currentEraEvents: newPool,
+          aiGenerationState: {
+            isGenerating: false,
+            generationPhase: 'idle',
+            progress: 100,
+            targetEra,
+            startTime: Date.now(),
+            estimatedDuration: 0,
+          },
+        });
+
+        if (simulationAIService.isAvailable()) {
+          setTimeout(() => {
+            get().startBackgroundGeneration(1);
+          }, 100);
+        }
+      } else {
+        set({
+          preGeneratedContent: content,
+          aiGenerationState: {
+            isGenerating: false,
+            generationPhase: 'idle',
+            progress: 100,
+            targetEra,
+            startTime: Date.now(),
+            estimatedDuration: 0,
+          },
+        });
+      }
+    } catch (error) {
+      console.error('后台生成失败:', error);
       set({
-        preGeneratedContent: defaultContent,
         aiGenerationState: {
-          ...s.aiGenerationState,
+          ...get().aiGenerationState,
           isGenerating: false,
           generationPhase: 'idle',
           progress: 100,
         },
       });
-      return;
     }
-
-    const assembled = await validateAndAssemble({
-      era: targetEra,
-      ageRange: [targetEra * 10, targetEra * 10 + 9],
-      events,
-      enemies,
-      boss,
-      shopCards,
-    });
-
-    set({
-      preGeneratedContent: assembled,
-      aiGenerationState: {
-        isGenerating: false,
-        generationPhase: 'idle',
-        progress: 100,
-        targetEra,
-        startTime: Date.now(),
-        estimatedDuration: 0,
-      },
-    });
   },
 
   getPreGeneratedContent: (era: number) => {
@@ -2070,6 +2124,65 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
 
   clearPreGeneratedContent: () => {
     set({ preGeneratedContent: null });
+  },
+
+  getNextPreGeneratedEvent: (): GameEvent | null => {
+    const s = get();
+    if (!s.currentEraEvents || s.currentEraEvents.currentIndex >= s.currentEraEvents.events.length) {
+      return null;
+    }
+
+    const pool = s.currentEraEvents;
+    const event = pool.events[pool.currentIndex];
+
+    const newUsedIds = new Set(pool.usedEventIds);
+    if (event.id) {
+      newUsedIds.add(event.id);
+    }
+
+    set({
+      currentEraEvents: {
+        ...pool,
+        usedEventIds: newUsedIds,
+        currentIndex: pool.currentIndex + 1,
+      },
+    });
+
+    return event;
+  },
+
+  initializeEraEventPool: (era: number, events: GameEvent[]) => {
+    const newPool: EraEventPool = {
+      era,
+      events,
+      usedEventIds: new Set(),
+      currentIndex: 0,
+    };
+    set({ currentEraEvents: newPool });
+  },
+
+  movePreGeneratedToCurrentEra: () => {
+    const s = get();
+    if (!s.preGeneratedContent || !s.preGeneratedContent.isComplete) return;
+
+    const content = s.preGeneratedContent;
+    const newPool: EraEventPool = {
+      era: content.era,
+      events: content.years.flatMap(y => y.options.map(o => o.event).filter(Boolean)) as GameEvent[],
+      usedEventIds: new Set(),
+      currentIndex: 0,
+    };
+
+    set({
+      currentEraEvents: newPool,
+      preGeneratedContent: null,
+      aiGenerationState: {
+        ...s.aiGenerationState,
+        isGenerating: false,
+        generationPhase: 'idle',
+        progress: 100,
+      },
+    });
   },
 
   generateAIEvent: async () => {

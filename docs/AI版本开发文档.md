@@ -455,6 +455,241 @@ clearPreGeneratedContent: () => void
 
 ---
 
-*文档版本：v1.0*
+## 八、AI回调响应字段与问题修复
+
+### 8.1 AI回调响应字段
+
+当前 `AIService.sendRequest()` 从API响应中提取的字段路径为：
+
+```typescript
+// OpenAI标准格式
+const data = await response.json();
+return data.choices[0].message.content;
+```
+
+**响应字段结构**：
+```json
+{
+  "choices": [
+    {
+      "message": {
+        "role": "assistant",
+        "content": "AI生成的文本内容（JSON字符串）"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 100,
+    "completion_tokens": 200,
+    "total_tokens": 300
+  }
+}
+```
+
+**提取的字段**：`choices[0].message.content`
+
+### 8.2 已修复的问题
+
+#### 问题1：系统提示词错误
+
+**问题描述**：
+- `generateResponse()` 方法是为自传对话设计的，内部使用 `PromptComposer.buildMessages()` 加载自传助手的系统提示词
+- 在模拟人生事件生成场景中，AI收到的系统提示词是"自传助手"，但用户消息是"生成模拟人生事件"
+- 导致AI困惑，返回的内容格式不正确
+
+**修复方案**：
+1. 在 `AIService` 中添加 `sendCustomMessages()` 公开方法，允许发送完全自定义的messages数组
+2. 在 `SimulationGenerationService.buildEventSystemPrompt()` 中创建正确的系统提示词
+3. 修改 `generateEraEvents()` 使用 `sendCustomMessages()` 发送正确的系统提示词和用户消息
+
+**修复代码**：
+
+```typescript
+// AIService.ts - 添加公开方法
+async sendCustomMessages(
+  messages: Array<{ role: string; content: string }>,
+): Promise<string> {
+  return this.sendRequest(messages);
+}
+```
+
+```typescript
+// SimulationGenerationService.ts - 正确的系统提示词
+function buildEventSystemPrompt(): string {
+  return `你是一位专业的人生叙事设计师，专门为模拟人生游戏生成个性化事件。
+
+你的职责：
+1. 根据玩家的年龄、属性和时代背景，生成符合情境的事件
+2. 事件标题简洁有力，不超过10个字
+3. 事件描述生动有趣，50-100字
+4. 选项设计体现不同价值观，没有绝对正确的答案
+5. 成功/失败的结果描述要有戏剧性
+6. 属性变化要合理，符合事件逻辑
+
+设计原则：
+- 连贯性：事件要与玩家年龄相符
+- 个性化：根据玩家属性调整事件难度和选项
+- 戏剧性：事件要有冲突和转折
+- 后果性：选择要有真实的影响
+- 时代感：体现不同年龄段的特征
+
+输出格式：严格的JSON格式，不要包含任何额外文本或Markdown代码块标记。`;
+}
+```
+
+```typescript
+// SimulationGenerationService.ts - 使用正确的方法
+export async function generateEraEvents(context: GenerationContext): Promise<GameEvent[]> {
+  const aiService = await getAIService();
+  if (!aiService) {
+    return getDefaultEventsForEra(context.targetEra, context.targetAgeStart, context.birthYear);
+  }
+
+  try {
+    const systemPrompt = buildEventSystemPrompt();
+    const userPrompt = buildEventPrompt(context);
+    
+    const messages = [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userPrompt },
+    ];
+    
+    const response = await aiService.sendCustomMessages(messages);
+    const parsed = safeParseJSON<{ title: string; baseText: string; options: unknown[] }>(response);
+
+    if (parsed) {
+      const validationResult = validateGameEvent(parsed);
+      if (validationResult.valid && validationResult.data) {
+        return [validationResult.data];
+      }
+    }
+
+    return getDefaultEventsForEra(context.targetEra, context.targetAgeStart, context.birthYear);
+  } catch (error) {
+    console.error('AI事件生成失败:', error);
+    return getDefaultEventsForEra(context.targetEra, context.targetAgeStart, context.birthYear);
+  }
+}
+```
+
+#### 问题2：SimulationAIService.generateEvent() 同样问题
+
+**问题描述**：
+- `SimulationAIService.generateEvent()` 也使用了 `generateResponse()`，存在同样的系统提示词错误问题
+
+**修复方案**：
+- 修改为使用 `sendCustomMessages()` 和正确的系统提示词
+
+### 8.3 其他潜在问题
+
+| 问题 | 说明 | 排查方法 |
+|------|------|---------|
+| API格式不兼容 | 非OpenAI供应商可能返回不同格式 | 检查 `data.choices` 是否存在 |
+| AI返回非JSON | AI可能返回纯文本或带Markdown的文本 | 使用 `safeParseJSON()` 修复 |
+| 验证失败 | JSON结构不符合预期 | 检查 `validateGameEvent()` 日志 |
+| 网络超时 | API请求超时 | 添加超时处理和重试机制 |
+
+---
+
+## 九、AI生成架构重构：从按需生成到预生成
+
+### 9.1 问题描述
+
+**原设计（按需生成）**：
+- 遇到事件选项时才调用AI生成单个事件
+- 玩家每次遇到事件都需要等待AI响应
+- 体验差，等待时间长
+
+**新设计（预生成）**：
+- 游戏开始时预生成整个10年的事件列表
+- 时代切换时预生成下一个10年的事件列表
+- 玩家遇到事件时直接从预生成列表中取，无需等待
+
+### 9.2 核心变更
+
+#### 新增类型
+
+```typescript
+export interface EraEventPool {
+  era: number;           // 时代索引
+  events: GameEvent[];   // 预生成的事件列表
+  usedEventIds: Set<string>;  // 已使用的事件ID
+  currentIndex: number;  // 当前索引
+}
+```
+
+#### 新增Store字段
+
+```typescript
+interface GameState {
+  // ... 现有字段
+  currentEraEvents: EraEventPool | null;  // 当前时代的事件池
+  preGeneratedContent: PreGeneratedContent | null;  // 下一个时代的预生成内容
+}
+```
+
+#### 新增Store Action
+
+| Action | 功能 |
+|--------|------|
+| `getNextPreGeneratedEvent()` | 从当前事件池获取下一个未使用的事件 |
+| `initializeEraEventPool(era, events)` | 初始化新时代的事件池 |
+| `movePreGeneratedToCurrentEra()` | 将预生成的内容移动到当前时代 |
+
+#### 生成流程
+
+```
+startGame()
+    ↓
+startBackgroundGeneration(0)  // 预生成0-9年内容
+    ↓
+完成后：
+  - 初始化 currentEraEvents（0-9年事件池）
+  - 启动 startBackgroundGeneration(1)  // 预生成10-19年内容
+    ↓
+advanceEra()  // 时代切换
+    ↓
+  - 将 preGeneratedContent 移动到 currentEraEvents
+  - 启动 startBackgroundGeneration(nextEra + 1)
+    ↓
+enterOption() case 'event'
+    ↓
+getAvailableEvents()  // 从 currentEraEvents 获取未使用的事件
+```
+
+#### 事件批量生成
+
+修改 `SimulationGenerationService.generateEraEvents()` 批量生成15个事件：
+
+```typescript
+// 输出格式
+{
+  "events": [
+    {
+      "id": "event_001",
+      "title": "事件标题",
+      "baseText": "事件描述",
+      "age": 5,
+      "options": [...]
+    },
+    // ... 共15个事件
+  ]
+}
+```
+
+### 9.3 优势
+
+| 方面 | 原设计 | 新设计 |
+|------|--------|--------|
+| 等待时间 | 每次事件都等待 | 仅首次和时代切换时等待 |
+| 生成次数 | 每个事件生成1次 | 每10年批量生成1次 |
+| 网络请求 | 频繁 | 减少90% |
+| 体验 | 卡顿 | 流畅 |
+| AI成本 | 高 | 低 |
+
+---
+
+*文档版本：v1.2*
 *创建日期：2026-07-31*
 *维护者：AI Assistant*
