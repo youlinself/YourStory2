@@ -1158,6 +1158,15 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
         for (const crd of e.cardRewards) cardRewards.push({ ...crd, id: generateId() });
         if (e.relicReward && !relicReward) relicReward = { ...e.relicReward, id: generateId() };
       }
+      if (cardRewards.length === 0) {
+        const rand = seededRandom(get().seed + get().combat.currentTurn);
+        const allCards = [...COMMON_ATTACK_CARDS, ...COMMON_SKILL_CARDS, ...RARE_CARDS];
+        const rewardCount = c.enemies.some(e => e.isBoss) ? 3 : 2;
+        for (let i = 0; i < rewardCount; i++) {
+          const card = allCards[Math.floor(rand() * allCards.length)];
+          if (card) cardRewards.push({ ...card, id: generateId() });
+        }
+      }
       const newRelics = relicReward ? [...s.relics, relicReward] : s.relics;
       set({ gold: s.gold + gold, relics: newRelics });
       set({ combat: { ...c, phase: 'victory', rewards: { mode: 'battle', cards: cardRewards, attribute: undefined, relic: relicReward, wonderOptions: [] } }, phase: 'reward', pendingChoice: null });
@@ -1285,6 +1294,15 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
       for (const e of c.enemies) {
         for (const card of e.cardRewards) cardRewards.push({ ...card, id: generateId() });
         if (e.relicReward && !relicReward) relicReward = { ...e.relicReward, id: generateId() };
+      }
+      if (cardRewards.length === 0) {
+        const rand = seededRandom(get().seed + get().combat.currentTurn);
+        const allCards = [...COMMON_ATTACK_CARDS, ...COMMON_SKILL_CARDS, ...RARE_CARDS];
+        const rewardCount = c.enemies.some(e => e.isBoss) ? 3 : 2;
+        for (let i = 0; i < rewardCount; i++) {
+          const card = allCards[Math.floor(rand() * allCards.length)];
+          if (card) cardRewards.push({ ...card, id: generateId() });
+        }
       }
       const newRelics = relicReward ? [...s.relics, relicReward] : s.relics;
       set({ gold: s.gold + gold, relics: newRelics });

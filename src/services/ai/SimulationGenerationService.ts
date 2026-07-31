@@ -1,7 +1,7 @@
 import type { GameState, GameEvent, Enemy, LifeCard, PlayerAttributes, EraPreGeneratedContent, EraMap, YearPreGeneratedContent, YearOptionPreGenerated } from '../../types/simulation';
 import { getEventsByBirthYear } from '../../data/eraEvents';
 import { createAnnualBoss, getNormalMonsterVariant, createMonsterFromVariant } from '../../data/monsterMapping';
-import { COMMON_ATTACK_CARDS, COMMON_SKILL_CARDS, LEGENDARY_CARDS } from '../../data/simulationData';
+import { COMMON_ATTACK_CARDS, COMMON_SKILL_CARDS, RARE_CARDS, LEGENDARY_CARDS } from '../../data/simulationData';
 import { generateId } from '../../utils';
 import { safeParseJSON, validateGameEvent } from './ContentValidator';
 import AIService from './AIService';
@@ -222,6 +222,18 @@ ${requirements.bossEnemies.length > 0 ? `- 1个Boss（年龄段：${bossAge}）`
       "block": 0,
       "intents": [{"type": "attack", "damage": 5}],
       "goldReward": [5, 15],
+      "cardRewards": [
+        {
+          "id": "card_001",
+          "name": "打击",
+          "icon": "⚔️",
+          "description": "造成6点伤害",
+          "rarity": "common",
+          "type": "attack",
+          "cost": 1,
+          "effects": [{"type": "damage", "value": 6}]
+        }
+      ],
       "age": 5
     }
   ],
@@ -235,19 +247,31 @@ ${requirements.bossEnemies.length > 0 ? `- 1个Boss（年龄段：${bossAge}）`
       "block": 5,
       "intents": [{"type": "attack", "damage": 10}, {"type": "defend", "block": 5}],
       "goldReward": [15, 30],
+      "cardRewards": [
+        {
+          "id": "card_002",
+          "name": "重击",
+          "icon": "🗡️",
+          "description": "造成10点伤害",
+          "rarity": "rare",
+          "type": "attack",
+          "cost": 2,
+          "effects": [{"type": "damage", "value": 10}]
+        }
+      ],
       "age": 15
     }
   ],
   "shopCards": [
     {
-      "id": "card_001",
-      "name": "卡牌名称",
-      "icon": "⚔️",
-      "description": "卡牌描述",
+      "id": "card_003",
+      "name": "防御",
+      "icon": "🛡️",
+      "description": "获得5点格挡",
       "rarity": "common",
-      "type": "attack",
+      "type": "skill",
       "cost": 1,
-      "effects": [{"type": "damage", "value": 6}]
+      "effects": [{"type": "block", "value": 5}]
     }
   ],
   "boss": {
@@ -258,7 +282,19 @@ ${requirements.bossEnemies.length > 0 ? `- 1个Boss（年龄段：${bossAge}）`
     "maxHealth": 150,
     "block": 10,
     "intents": [{"type": "attack", "damage": 20}, {"type": "special", "name": "审判"}],
-    "goldReward": [80, 150]
+    "goldReward": [80, 150],
+    "cardRewards": [
+      {
+        "id": "card_004",
+        "name": "天罚",
+        "icon": "⚡",
+        "description": "造成20点伤害",
+        "rarity": "legendary",
+        "type": "attack",
+        "cost": 3,
+        "effects": [{"type": "damage", "value": 20}]
+      }
+    ]
   }
 }
 
@@ -273,7 +309,9 @@ ${requirements.bossEnemies.length > 0 ? `- 1个Boss（年龄段：${bossAge}）`
 8. 每个事件的options数组长度：2-3个
 9. 所有描述文本使用中文
 10. 事件类型应该多样化（个人成长、人际关系、危机、机遇、道德困境等）
-11. 怪物和Boss的强度应该与年龄段匹配`;
+11. 怪物和Boss的强度应该与年龄段匹配
+12. 每个怪物必须包含cardRewards数组（1-2张卡牌奖励）
+13. Boss必须包含cardRewards数组（2-3张稀有或传说卡牌）`;
 }
 
 function buildEraContentSystemPrompt(): string {
@@ -324,10 +362,10 @@ export async function generateEraContent(ctx: GenerationContext): Promise<EraPre
     const response = await aiService.sendCustomMessages(messages);
     const parsed = safeParseJSON<{
       events: Array<{ id?: string; title: string; baseText: string; age?: number; options: unknown[] }>;
-      enemies: Array<{ id?: string; name: string; icon: string; description: string; maxHealth: number; block: number; intents: unknown[]; goldReward: [number, number]; age: number }>;
-      elites: Array<{ id?: string; name: string; icon: string; description: string; maxHealth: number; block: number; intents: unknown[]; goldReward: [number, number]; age: number }>;
+      enemies: Array<{ id?: string; name: string; icon: string; description: string; maxHealth: number; block: number; intents: unknown[]; goldReward: [number, number]; age: number; cardRewards: Array<{ id?: string; name: string; icon: string; description: string; rarity: string; type: string; cost: number; effects: unknown[] }> }>;
+      elites: Array<{ id?: string; name: string; icon: string; description: string; maxHealth: number; block: number; intents: unknown[]; goldReward: [number, number]; age: number; cardRewards: Array<{ id?: string; name: string; icon: string; description: string; rarity: string; type: string; cost: number; effects: unknown[] }> }>;
       shopCards: Array<{ id?: string; name: string; icon: string; description: string; rarity: string; type: string; cost: number; effects: unknown[] }>;
-      boss: { id?: string; name: string; icon: string; description: string; maxHealth: number; block: number; intents: unknown[]; goldReward: [number, number] } | null;
+      boss: { id?: string; name: string; icon: string; description: string; maxHealth: number; block: number; intents: unknown[]; goldReward: [number, number]; cardRewards: Array<{ id?: string; name: string; icon: string; description: string; rarity: string; type: string; cost: number; effects: unknown[] }> } | null;
     }>(response);
 
     if (parsed) {
@@ -344,6 +382,26 @@ export async function generateEraContent(ctx: GenerationContext): Promise<EraPre
       const validEnemies: Enemy[] = [];
       if (Array.isArray(parsed.enemies)) {
         for (const rawEnemy of parsed.enemies) {
+          const enemyCardRewards: LifeCard[] = [];
+          if (Array.isArray(rawEnemy.cardRewards)) {
+            for (const rawCard of rawEnemy.cardRewards) {
+              enemyCardRewards.push({
+                id: rawCard.id || generateId(),
+                name: rawCard.name,
+                icon: rawCard.icon,
+                description: rawCard.description,
+                rarity: rawCard.rarity as LifeCard['rarity'],
+                type: rawCard.type as LifeCard['type'],
+                cost: rawCard.cost,
+                effects: rawCard.effects as LifeCard['effects'],
+                target: 'enemy',
+                tags: [],
+              });
+            }
+          }
+          if (enemyCardRewards.length === 0) {
+            enemyCardRewards.push(...COMMON_ATTACK_CARDS.slice(0, 1).map(c => ({ ...c, id: generateId() })));
+          }
           validEnemies.push({
             id: rawEnemy.id || generateId(),
             name: rawEnemy.name,
@@ -356,7 +414,7 @@ export async function generateEraContent(ctx: GenerationContext): Promise<EraPre
             currentIntentIndex: 0,
             statusEffects: [],
             isBoss: false,
-            cardRewards: [],
+            cardRewards: enemyCardRewards,
             goldReward: rawEnemy.goldReward,
             mechanics: [],
             ageRange: [rawEnemy.age, rawEnemy.age + 9],
@@ -367,6 +425,26 @@ export async function generateEraContent(ctx: GenerationContext): Promise<EraPre
       const validElites: Enemy[] = [];
       if (Array.isArray(parsed.elites)) {
         for (const rawElite of parsed.elites) {
+          const eliteCardRewards: LifeCard[] = [];
+          if (Array.isArray(rawElite.cardRewards)) {
+            for (const rawCard of rawElite.cardRewards) {
+              eliteCardRewards.push({
+                id: rawCard.id || generateId(),
+                name: rawCard.name,
+                icon: rawCard.icon,
+                description: rawCard.description,
+                rarity: rawCard.rarity as LifeCard['rarity'],
+                type: rawCard.type as LifeCard['type'],
+                cost: rawCard.cost,
+                effects: rawCard.effects as LifeCard['effects'],
+                target: 'enemy',
+                tags: [],
+              });
+            }
+          }
+          if (eliteCardRewards.length === 0) {
+            eliteCardRewards.push(...RARE_CARDS.slice(0, 1).map(c => ({ ...c, id: generateId() })));
+          }
           validElites.push({
             id: rawElite.id || generateId(),
             name: rawElite.name,
@@ -379,7 +457,7 @@ export async function generateEraContent(ctx: GenerationContext): Promise<EraPre
             currentIntentIndex: 0,
             statusEffects: [],
             isBoss: false,
-            cardRewards: [],
+            cardRewards: eliteCardRewards,
             goldReward: rawElite.goldReward,
             mechanics: [],
             ageRange: [rawElite.age, rawElite.age + 9],
@@ -407,6 +485,26 @@ export async function generateEraContent(ctx: GenerationContext): Promise<EraPre
 
       let validBoss: Enemy | null = null;
       if (parsed.boss) {
+        const bossCardRewards: LifeCard[] = [];
+        if (Array.isArray(parsed.boss.cardRewards)) {
+          for (const rawCard of parsed.boss.cardRewards) {
+            bossCardRewards.push({
+              id: rawCard.id || generateId(),
+              name: rawCard.name,
+              icon: rawCard.icon,
+              description: rawCard.description,
+              rarity: rawCard.rarity as LifeCard['rarity'],
+              type: rawCard.type as LifeCard['type'],
+              cost: rawCard.cost,
+              effects: rawCard.effects as LifeCard['effects'],
+              target: 'enemy',
+              tags: [],
+            });
+          }
+        }
+        if (bossCardRewards.length === 0) {
+          bossCardRewards.push(...LEGENDARY_CARDS.slice(0, 2).map(c => ({ ...c, id: generateId() })));
+        }
         validBoss = {
           id: parsed.boss.id || generateId(),
           name: parsed.boss.name,
@@ -419,7 +517,7 @@ export async function generateEraContent(ctx: GenerationContext): Promise<EraPre
           currentIntentIndex: 0,
           statusEffects: [],
           isBoss: true,
-          cardRewards: LEGENDARY_CARDS.slice(0, 2).map(c => ({ ...c, id: generateId() })),
+          cardRewards: bossCardRewards,
           goldReward: parsed.boss.goldReward,
           mechanics: ['boss_aura'],
           ageRange: [ctx.targetAgeStart, ctx.targetAgeEnd],
