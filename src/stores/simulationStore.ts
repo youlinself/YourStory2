@@ -29,13 +29,22 @@ import {
   type ApplyCardEffectResult,
 } from '../combat/combatEngine';
 import { simulationAIService } from '../services/ai/SimulationAIService';
+import {
+  buildGenerationContext,
+  generateEraEvents,
+  generateEraEnemies,
+  generateEraBoss,
+  generateEraShopCards,
+  validateAndAssemble,
+  getDefaultEraContent,
+} from '../services/ai/SimulationGenerationService';
 import type {
   GameState, BirthYear, PlayerAttributes, GameEvent, EventOption,
   ChoiceRecord, LifeRecord, WorldState, GameMode, GamePhase,
   LifeCard, LifeRelic, Enemy, CombatState, StatusEffect,
   YearOption, YearNode, OptionType, CultivationState, CultivationRealm, AttributeChange,
   AttributeThresholdBonus, EnemyMechanic, CombatBonus, WonderRewardOption, WonderRewardType,
-  PendingChoice, ShopItem,
+  PendingChoice, ShopItem, AIGenerationState, PreGeneratedContent,
 } from '../types/simulation';
 import useBondStore from './bondStore';
 import useAchievementStore from './achievementStore';
@@ -531,6 +540,15 @@ const initialCombatState: CombatState = {
   enemies: [], currentEnemyIndex: 0, rewards: { mode: 'battle', cards: [], attribute: undefined, relic: undefined, wonderOptions: [] }, availableBonuses: [], log: [], burnLifeUsed: false, selectedForDiscard: [], requiredDiscardCount: 0,
 };
 
+const initialAIGenerationState: AIGenerationState = {
+  isGenerating: false,
+  generationPhase: 'idle',
+  progress: 0,
+  targetEra: 0,
+  startTime: 0,
+  estimatedDuration: 3000,
+};
+
 const initialCultivationState: CultivationState = { realm: 'mortal', maxLifespan: 70, tribulationThreshold: 0, realmBonus: {} };
 
 export interface DamageEvent {
@@ -604,6 +622,8 @@ const initialState: GameState = {
   aiGeneratedEvent: null,
   aiLoading: false,
   eventRelicSelection: null,
+  aiGenerationState: { ...initialAIGenerationState },
+  preGeneratedContent: null,
 };
 
 interface SimulationState extends GameState {
@@ -662,6 +682,9 @@ interface SimulationState extends GameState {
   generateAIEvent: () => Promise<void>;
   selectEventRelic: (relicId: string) => void;
   skipEventRelic: () => void;
+  startBackgroundGeneration: (targetEra: number) => Promise<void>;
+  getPreGeneratedContent: (era: number) => PreGeneratedContent | null;
+  clearPreGeneratedContent: () => void;
   // 羁绊系统方法
   getBondNPCs: () => import('../types/bond').NPCBond[],
   getBondActiveGroups: () => string[],
@@ -735,9 +758,19 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
     if (mode === 'endless') state.cultivation = { ...initialCultivationState, maxLifespan: era.baseLifeExpectancy };
     set(state as GameState);
 
-    // 初始化羁绊系统
     useBondStore.getState().resetBondSystem();
     useBondStore.getState().initializeBondSystem(0);
+
+    set({
+      aiGenerationState: { ...initialAIGenerationState },
+      preGeneratedContent: null,
+    });
+
+    if (simulationAIService.isAvailable()) {
+      setTimeout(() => {
+        get().startBackgroundGeneration(1);
+      }, 100);
+    }
 
     storageService.removeData(STORAGE_KEY);
   },
@@ -820,6 +853,55 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
     const year = s.currentMap.years[s.currentMap.currentYearIndex];
     const opt = year.options.find((o) => o.id === year.selectedOptionId);
     if (!opt) return;
+
+    if (opt.type === 'boss') {
+      const nextEra = s.currentEra + 1;
+      const preGenerated = get().getPreGeneratedContent(nextEra);
+      if (!preGenerated) {
+        set({
+          aiGenerationState: {
+            ...s.aiGenerationState,
+            isGenerating: true,
+            generationPhase: 'preparing',
+            targetEra: nextEra,
+            startTime: Date.now(),
+          },
+          loadingType: 'generation_wait',
+        });
+        get().startBackgroundGeneration(nextEra).then(() => {
+          if (s.aiEnabled && simulationAIService.isAvailable()) {
+            set({
+              aiGenerationState: {
+                ...s.aiGenerationState,
+                isGenerating: false,
+                generationPhase: 'idle',
+              },
+              loadingType: undefined,
+            });
+            const currentState = get();
+            if (currentState.aiEnabled && simulationAIService.isAvailable()) {
+              set({ phase: 'event', aiGeneratedEvent: null, aiLoading: true });
+              get().generateAIEvent();
+            } else {
+              const availableEvents = get().getAvailableEvents();
+              const currentEvent = availableEvents.find(e => e.options.length > 0);
+              if (currentEvent) {
+                set({ phase: 'event', loadingType: undefined });
+              } else {
+                get().completeOption();
+              }
+            }
+          } else {
+            const currentState = get();
+            const rand = seededRandom(currentState.seed + currentState.currentEra * 100 + currentState.currentMap!.currentYearIndex * 10 + Date.now() % 100);
+            const enemies = getEnemyPool('boss', currentState.currentEra, year.eraIndex, rand, currentState.age, currentState.currentYear).map((e) => ({ ...e, id: generateId(), currentHealth: e.maxHealth }));
+            if (enemies.length > 0) get().startCombat(enemies);
+          }
+        });
+        return;
+      }
+    }
+
     switch (opt.type) {
       case 'combat': case 'elite': case 'boss': {
         const rand = seededRandom(s.seed + s.currentEra * 100 + s.currentMap.currentYearIndex * 10 + Date.now() % 100);
@@ -828,19 +910,16 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
         break;
       }
       case 'event': {
-        // AI大模型模式：生成AI事件
         const currentState = get();
         if (currentState.aiEnabled && simulationAIService.isAvailable()) {
           set({ phase: 'event', aiGeneratedEvent: null, aiLoading: true });
           get().generateAIEvent();
         } else {
-          // 检查当前年龄是否有可用事件
           const availableEvents = get().getAvailableEvents();
           const currentEvent = availableEvents.find(e => e.options.length > 0);
           if (currentEvent) {
             set({ phase: 'event' });
           } else {
-            // 没有可用事件，自动跳过
             get().completeOption();
           }
         }
@@ -866,6 +945,11 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
   completeOption: () => {
     const s = get();
     if (!s.currentMap) return;
+
+    if (s.loadingType === 'generation_wait' && s.aiGenerationState.isGenerating) {
+      return;
+    }
+
     const yearIdx = s.currentMap.currentYearIndex;
     const newYears = [...s.currentMap.years];
     newYears[yearIdx] = { ...newYears[yearIdx], isCompleted: true };
@@ -874,7 +958,7 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
     const nextYearIndex = completed ? yearIdx : nextIdx;
     const newCurrentYear = (s.birthYear || 1950) + s.currentEra * 10 + nextYearIndex;
     const newAge = newCurrentYear - (s.birthYear || 1950);
-    set({ currentMap: { ...s.currentMap, years: newYears, currentYearIndex: nextYearIndex, completed }, currentYear: newCurrentYear, age: newAge, phase: completed ? 'era_transition' : 'year_view' });
+    set({ currentMap: { ...s.currentMap, years: newYears, currentYearIndex: nextYearIndex, completed }, currentYear: newCurrentYear, age: newAge, phase: completed ? 'era_transition' : 'year_view', loadingType: undefined });
     if (completed) get().advanceEra();
   },
 
@@ -887,13 +971,28 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
     const newTags = get().checkHiddenTags();
     const newLife = Math.max(0, s.remainingLife - lifeDec);
     const newPhase: GamePhase = (newLife <= 0 || s.attributes.health <= 0) ? 'ended' : 'year_view';
-    set({ currentEra: nextEra, currentYear: nextYear, age: newAge, remainingLife: newLife, hiddenTags: newTags, phase: newPhase, currentMap: null, combat: { ...initialCombatState }, shop: null });
+    set({
+      currentEra: nextEra,
+      currentYear: nextYear,
+      age: newAge,
+      remainingLife: newLife,
+      hiddenTags: newTags,
+      phase: newPhase,
+      currentMap: null,
+      combat: { ...initialCombatState },
+      shop: null,
+      preGeneratedContent: null,
+    });
     if (newPhase === 'year_view') get().generateMap();
 
-    // 触发羁绊系统年龄增长事件
+    if (simulationAIService.isAvailable() && newPhase === 'year_view') {
+      setTimeout(() => {
+        get().startBackgroundGeneration(nextEra + 1);
+      }, 200);
+    }
+
     const newNPCs = useBondStore.getState().onAgeUp(newAge);
     if (newNPCs.length > 0) {
-      // 可以在这里添加通知逻辑
       console.log(`新遇到了 ${newNPCs.length} 位NPC:`, newNPCs.map(n => n.name));
     }
   },
@@ -1868,6 +1967,109 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
   toggleAI: () => {
     const s = get();
     set({ aiEnabled: !s.aiEnabled });
+  },
+
+  startBackgroundGeneration: async (targetEra: number) => {
+    const s = get();
+    if (s.aiGenerationState.isGenerating) return;
+
+    set({
+      aiGenerationState: {
+        isGenerating: true,
+        generationPhase: 'preparing',
+        progress: 0,
+        targetEra,
+        startTime: Date.now(),
+        estimatedDuration: 3000,
+      },
+    });
+
+    const context = buildGenerationContext({ ...s, currentEra: targetEra - 1 });
+
+    set({
+      aiGenerationState: {
+        ...s.aiGenerationState,
+        isGenerating: true,
+        generationPhase: 'generating_events',
+        progress: 10,
+        targetEra,
+      },
+    });
+
+    let events: GameEvent[] = [];
+    let enemies: Enemy[] = [];
+    let boss: Enemy | null = null;
+    let shopCards: LifeCard[] = [];
+
+    try {
+      [events, enemies, boss, shopCards] = await Promise.all([
+        generateEraEvents(context).then(result => {
+          set({ aiGenerationState: { ...get().aiGenerationState, progress: 30, generationPhase: 'generating_monsters' } });
+          return result;
+        }),
+        generateEraEnemies(context).then(result => {
+          set({ aiGenerationState: { ...get().aiGenerationState, progress: 50 } });
+          return result;
+        }),
+        generateEraBoss(context).then(result => {
+          set({ aiGenerationState: { ...get().aiGenerationState, progress: 70, generationPhase: 'generating_boss' } });
+          return result;
+        }),
+        generateEraShopCards(context).then(result => {
+          set({ aiGenerationState: { ...get().aiGenerationState, progress: 80, generationPhase: 'generating_shop' } });
+          return result;
+        }),
+      ]);
+    } catch (error) {
+      console.error('后台生成失败，使用默认内容:', error);
+    }
+
+    if (events.length === 0 || enemies.length === 0 || !boss) {
+      const defaultContent = getDefaultEraContent(targetEra, s);
+      set({
+        preGeneratedContent: defaultContent,
+        aiGenerationState: {
+          ...s.aiGenerationState,
+          isGenerating: false,
+          generationPhase: 'idle',
+          progress: 100,
+        },
+      });
+      return;
+    }
+
+    const assembled = await validateAndAssemble({
+      era: targetEra,
+      ageRange: [targetEra * 10, targetEra * 10 + 9],
+      events,
+      enemies,
+      boss,
+      shopCards,
+    });
+
+    set({
+      preGeneratedContent: assembled,
+      aiGenerationState: {
+        isGenerating: false,
+        generationPhase: 'idle',
+        progress: 100,
+        targetEra,
+        startTime: Date.now(),
+        estimatedDuration: 0,
+      },
+    });
+  },
+
+  getPreGeneratedContent: (era: number) => {
+    const s = get();
+    if (s.preGeneratedContent && s.preGeneratedContent.era === era && s.preGeneratedContent.isComplete) {
+      return s.preGeneratedContent;
+    }
+    return null;
+  },
+
+  clearPreGeneratedContent: () => {
+    set({ preGeneratedContent: null });
   },
 
   generateAIEvent: async () => {

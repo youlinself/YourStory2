@@ -362,6 +362,30 @@ export interface PendingChoice {
   options: ChoiceOption[];
 }
 
+export type AIGenerationPhase = 'idle' | 'preparing' | 'generating_events' | 'generating_monsters' | 'generating_boss' | 'generating_shop' | 'finalizing';
+
+export interface AIGenerationState {
+  isGenerating: boolean;
+  generationPhase: AIGenerationPhase;
+  progress: number;
+  targetEra: number;
+  startTime: number;
+  estimatedDuration: number;
+}
+
+export interface PreGeneratedContent {
+  era: number;
+  ageRange: [number, number];
+  events: GameEvent[];
+  enemies: Enemy[];
+  boss: Enemy | null;
+  shopCards: LifeCard[];
+  isComplete: boolean;
+  isDefault?: boolean;
+}
+
+export type LoadingType = 'generation_wait' | 'initial_generation';
+
 export interface GameState {
   phase: GamePhase;
   mode: GameMode;
@@ -408,6 +432,9 @@ export interface GameState {
     sourceOutcome: EventOutcome | null;
     triggerCombatAfter: boolean;
   } | null;
+  aiGenerationState: AIGenerationState;
+  preGeneratedContent: PreGeneratedContent | null;
+  loadingType?: LoadingType;
 }
 
 export interface WorldState {

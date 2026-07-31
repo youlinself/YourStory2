@@ -3,6 +3,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { useNavigate } from 'react-router-dom';
 import useSimulationStore, { getEffectDisplayValue, MAX_HAND_SIZE, BASE_DRAW_COUNT, getAttributeTierInfo } from '../../stores/simulationStore';
 import useBondStore from '../../stores/bondStore';
+import AIGenerationLoading from '../../components/AIGenerationLoading';
 
 import {
   ERAS,
@@ -1966,6 +1967,9 @@ const SimulationPage: React.FC = () => {
   const bondActiveGroups = useBondStore((s) => s.activeBondGroups);
   const bondActiveTiers = useBondStore((s) => s.activeBondTiers);
 
+  const aiGenerationState = useSimulationStore((s) => s.aiGenerationState);
+  const loadingType = useSimulationStore((s) => s.loadingType);
+
   useEffect(() => {
     const initGame = async () => {
       const saved = await hasSavedGame();
@@ -2338,6 +2342,14 @@ const SimulationPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      <AIGenerationLoading
+        isVisible={aiGenerationState.isGenerating || loadingType === 'generation_wait'}
+        phase={aiGenerationState.generationPhase}
+        progress={aiGenerationState.progress}
+        estimatedDuration={aiGenerationState.estimatedDuration}
+        startTime={aiGenerationState.startTime}
+      />
     </div>
   );
 };
