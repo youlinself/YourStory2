@@ -8,14 +8,11 @@
     "opener:default",
     "dialog:allow-open",
     "fs:default",
+    "fs:write-all",
+    "fs:read-all",
     {
       "identifier": "fs:scope",
       "allow": [
-        { "path": "$APPDATA/**" },
-        { "path": "$DOCUMENT/**" },
-        { "path": "$DOWNLOAD/**" },
-        { "path": "$DESKTOP/**" },
-        { "path": "$HOME/**" },
         { "path": "**" }
       ]
     }

@@ -15,6 +15,7 @@ class StorageService {
   async saveData(key: string, data: any): Promise<void> {
     const fileStorage = FileStorageService.getInstance();
     const config = fileStorage.getConfig();
+    console.log('[StorageService.saveData] key:', key, 'config:', config);
     if (config.type === 'file') {
       return fileStorage.saveData(key, data);
     }

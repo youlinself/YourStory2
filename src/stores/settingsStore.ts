@@ -54,6 +54,11 @@ const useSettingsStore = create<SettingsState>((set, get) => ({
           storageType: settings.storageType ?? 'localStorage',
           storageFilePath: settings.storageFilePath ?? '',
         });
+        // 同步配置到 FileStorageService
+        fileStorageService.setConfig({ 
+          type: settings.storageType ?? 'localStorage', 
+          filePath: settings.storageFilePath ?? '' 
+        });
       }
       await fileStorageService.loadConfig();
     } catch (error) {
