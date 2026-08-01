@@ -1,7 +1,5 @@
-import StorageService from './StorageService';
 import { open as dialogOpen } from '@tauri-apps/plugin-dialog';
 import { mkdir, writeTextFile, readTextFile, exists, remove } from '@tauri-apps/plugin-fs';
-import * as path from '@tauri-apps/api/path';
 
 export type StorageType = 'localStorage' | 'file';
 
@@ -10,16 +8,13 @@ export interface StorageConfig {
   filePath: string;
 }
 
-const STORAGE_CONFIG_KEY = 'storage_config_v1';
+const STORAGE_CONFIG_KEY = 'storage_config';
 
 class FileStorageService {
   private static instance: FileStorageService;
   private config: StorageConfig = { type: 'localStorage', filePath: '' };
-  private localStorageAdapter: StorageService;
 
-  private constructor() {
-    this.localStorageAdapter = StorageService.getInstance();
-  }
+  private constructor() {}
 
   static getInstance(): FileStorageService {
     if (!FileStorageService.instance) {
@@ -42,13 +37,9 @@ class FileStorageService {
 
   async loadConfig(): Promise<StorageConfig> {
     try {
-      const data = await this.localStorageAdapter.loadData<StorageConfig>(STORAGE_CONFIG_KEY);
+      const data = this.loadFromLocalStorage<StorageConfig>(STORAGE_CONFIG_KEY);
       if (data) {
         this.config = data;
-      } else {
-        const appDataDir = await path.appDataDir();
-        this.config = { type: 'file', filePath: appDataDir };
-        await this.saveConfig();
       }
     } catch {
       this.config = { type: 'localStorage', filePath: '' };
@@ -57,7 +48,7 @@ class FileStorageService {
   }
 
   async saveConfig(): Promise<void> {
-    await this.localStorageAdapter.saveData(STORAGE_CONFIG_KEY, this.config);
+    this.saveToLocalStorage(STORAGE_CONFIG_KEY, this.config);
   }
 
   async selectDirectory(): Promise<string | null> {
@@ -83,7 +74,7 @@ class FileStorageService {
     if (this.config.type === 'file' && this.isTauriEnvironment()) {
       await this.saveToFile(key, data);
     } else {
-      await this.localStorageAdapter.saveData(key, data);
+      this.saveToLocalStorage(key, data);
     }
   }
 
@@ -91,7 +82,7 @@ class FileStorageService {
     if (this.config.type === 'file' && this.isTauriEnvironment()) {
       return this.loadFromFile<T>(key);
     } else {
-      return this.localStorageAdapter.loadData<T>(key);
+      return this.loadFromLocalStorage<T>(key);
     }
   }
 
@@ -99,7 +90,7 @@ class FileStorageService {
     if (this.config.type === 'file' && this.isTauriEnvironment()) {
       await this.removeFile(key);
     } else {
-      await this.localStorageAdapter.removeData(key);
+      try { localStorage.removeItem(key); } catch {}
     }
   }
 
@@ -107,7 +98,24 @@ class FileStorageService {
     if (this.config.type === 'file' && this.isTauriEnvironment()) {
       await this.clearAllFiles();
     } else {
-      await this.localStorageAdapter.clearAll();
+      try { localStorage.clear(); } catch {}
+    }
+  }
+
+  private saveToLocalStorage(key: string, data: unknown): void {
+    try {
+      localStorage.setItem(key, JSON.stringify(data));
+    } catch (error) {
+      console.error('localStorage保存失败:', error);
+    }
+  }
+
+  private loadFromLocalStorage<T>(key: string): T | null {
+    try {
+      const data = localStorage.getItem(key);
+      return data ? JSON.parse(data) : null;
+    } catch {
+      return null;
     }
   }
 
@@ -161,6 +169,25 @@ class FileStorageService {
     }
   }
 
+  async migrateFromLocalStorage(keys: string[]): Promise<{ success: string[]; failed: string[] }> {
+    const success: string[] = [];
+    const failed: string[] = [];
+
+    for (const key of keys) {
+      try {
+        const data = this.loadFromLocalStorage<unknown>(key);
+        if (data !== null) {
+          await this.saveData(key, data);
+          success.push(key);
+        }
+      } catch {
+        failed.push(key);
+      }
+    }
+
+    return { success, failed };
+  }
+
   private async clearAllFiles(): Promise<void> {
     try {
       const basePath = this.config.filePath;
@@ -175,34 +202,6 @@ class FileStorageService {
       console.error('清空文件失败:', error);
       throw error;
     }
-  }
-
-  async migrateFromLocalStorage(keys: string[]): Promise<{ success: string[]; failed: string[] }> {
-    const success: string[] = [];
-    const failed: string[] = [];
-
-    for (const key of keys) {
-      try {
-        const data = await this.localStorageAdapter.loadData(key);
-        if (data) {
-          await this.saveData(key, data);
-          success.push(key);
-        }
-      } catch (error) {
-        console.error(`迁移 ${key} 失败:`, error);
-        failed.push(key);
-      }
-    }
-
-    return { success, failed };
-  }
-
-  async migrateToFile(keys: string[]): Promise<{ success: string[]; failed: string[] }> {
-    if (this.config.type !== 'file') {
-      return { success: [], failed: keys };
-    }
-
-    return this.migrateFromLocalStorage(keys);
   }
 }
 

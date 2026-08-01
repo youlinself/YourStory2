@@ -365,7 +365,18 @@ export interface PendingChoice {
   options: ChoiceOption[];
 }
 
-export type AIGenerationPhase = 'idle' | 'preparing' | 'generating_events' | 'generating_monsters' | 'generating_boss' | 'generating_shop' | 'finalizing';
+export type AIGenerationPhase =
+  | 'idle'
+  | 'preparing'
+  | 'generating_events'
+  | 'generating_enemies'
+  | 'generating_elites'
+  | 'generating_shop_cards'
+  | 'generating_bond_cards'
+  | 'generating_boss'
+  | 'assembling'
+  | 'complete'
+  | 'error';
 
 export interface AIGenerationState {
   isGenerating: boolean;
@@ -374,6 +385,9 @@ export interface AIGenerationState {
   targetEra: number;
   startTime: number;
   estimatedDuration: number;
+  currentStep: number;
+  totalSteps: number;
+  message: string;
 }
 
 export interface PreGeneratedContent {

@@ -7,26 +7,37 @@ interface AIGenerationLoadingProps {
   progress: number;
   estimatedDuration: number;
   startTime: number;
+  currentStep?: number;
+  totalSteps?: number;
+  message?: string;
 }
 
 const PHASE_LABELS: Record<AIGenerationPhase, string> = {
   idle: '准备中',
   preparing: '正在准备',
   generating_events: '生成事件',
-  generating_monsters: '生成怪物',
+  generating_enemies: '生成普通怪物',
+  generating_elites: '生成精英怪物',
+  generating_shop_cards: '生成商店卡牌',
+  generating_bond_cards: '生成羁绊卡片',
   generating_boss: '生成Boss',
-  generating_shop: '生成商店',
-  finalizing: '完成中',
+  assembling: '组装内容',
+  complete: '生成完成',
+  error: '生成失败',
 };
 
 const PHASE_ICONS: Record<AIGenerationPhase, string> = {
   idle: '⏳',
   preparing: '🔧',
   generating_events: '📜',
-  generating_monsters: '👹',
+  generating_enemies: '👾',
+  generating_elites: '👹',
+  generating_shop_cards: '🃏',
+  generating_bond_cards: '💕',
   generating_boss: '💀',
-  generating_shop: '🏪',
-  finalizing: '✨',
+  assembling: '🧩',
+  complete: '✅',
+  error: '❌',
 };
 
 export const AIGenerationLoading: React.FC<AIGenerationLoadingProps> = ({
@@ -35,6 +46,9 @@ export const AIGenerationLoading: React.FC<AIGenerationLoadingProps> = ({
   progress,
   estimatedDuration,
   startTime,
+  currentStep = 0,
+  totalSteps = 0,
+  message = '',
 }) => {
   const [elapsedTime, setElapsedTime] = useState(0);
   const [dots, setDots] = useState('');
@@ -112,10 +126,32 @@ export const AIGenerationLoading: React.FC<AIGenerationLoadingProps> = ({
           color: 'rgba(255, 255, 255, 0.7)',
           textAlign: 'center',
           fontSize: '14px',
-          margin: '0 0 25px 0',
+          margin: '0 0 10px 0',
         }}>
           {PHASE_LABELS[phase]}{dots}
         </p>
+
+        {message && (
+          <p style={{
+            color: 'rgba(255, 255, 255, 0.5)',
+            textAlign: 'center',
+            fontSize: '12px',
+            margin: '0 0 15px 0',
+          }}>
+            {message}
+          </p>
+        )}
+
+        {totalSteps > 0 && (
+          <p style={{
+            color: 'rgba(255, 255, 255, 0.4)',
+            textAlign: 'center',
+            fontSize: '11px',
+            margin: '0 0 15px 0',
+          }}>
+            步骤 {currentStep} / {totalSteps}
+          </p>
+        )}
 
         <div style={{
           width: '100%',

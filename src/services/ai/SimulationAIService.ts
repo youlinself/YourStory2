@@ -10,6 +10,17 @@ interface AIEventPrompt {
   era: number;
 }
 
+const ATTR_NAMES: Record<string, string> = {
+  energy: '精力',
+  physique: '体魄',
+  health: '健康',
+  iq: '智商',
+  eq: '情商',
+  wealth: '财富',
+  network: '人脉',
+  fame: '名望',
+};
+
 export class SimulationAIService {
   private aiService: AIService | null = null;
 
@@ -37,11 +48,8 @@ export class SimulationAIService {
     const service = this.getAIService();
     if (!service) return null;
 
-    const systemPrompt = `你是一位专业的人生叙事设计师，专门为模拟人生游戏生成个性化事件。
-你的职责是根据玩家的年龄、属性和时代背景，生成符合情境的事件。
-输出格式：严格的JSON格式，不要包含任何额外文本或Markdown代码块标记。`;
-
-    const userPrompt = this.buildPrompt(prompt);
+    const systemPrompt = this.buildEventSystemPrompt();
+    const userPrompt = this.buildSingleEventPrompt(prompt);
 
     try {
       const messages = [
@@ -59,12 +67,47 @@ export class SimulationAIService {
     }
   }
 
-  private buildPrompt(prompt: AIEventPrompt): string {
+  private buildEventSystemPrompt(): string {
+    return `你是一位专业的人生叙事设计师，专门为模拟人生游戏生成个性化事件。
+
+你的职责：
+1. 根据玩家的年龄、属性和时代背景，生成符合情境的事件
+2. 事件标题简洁有力，不超过10个字
+3. 事件描述生动有趣，50-100字
+4. 选项设计体现不同价值观，没有绝对正确的答案
+5. 成功/失败的结果描述要有戏剧性
+6. 属性变化要合理，符合事件逻辑
+
+输出格式：严格的JSON格式，不要包含任何额外文本或Markdown代码块标记。
+
+返回格式示例：
+{
+  "title": "事件标题",
+  "baseText": "事件描述文本...",
+  "options": [
+    {
+      "id": "option_1",
+      "text": "选项文本",
+      "successRate": { "iq": 0.7 },
+      "successOutcome": {
+        "description": "成功结果描述",
+        "attributeChanges": { "iq": 3, "fame": 5 }
+      },
+      "failureOutcome": {
+        "description": "失败结果描述",
+        "attributeChanges": { "eq": -2 }
+      }
+    }
+  ]
+}`;
+  }
+
+  private buildSingleEventPrompt(prompt: AIEventPrompt): string {
     const eraNames = ['童年', '少年', '青年', '壮年', '中年', '暮年', '老年', '耄耋', '期颐', '修仙'];
     const eraName = eraNames[prompt.era] || '人生';
 
     const attrSummary = Object.entries(prompt.attributes)
-      .map(([key, value]) => `${this.getAttributeName(key)}:${value}`)
+      .map(([key, value]) => `${ATTR_NAMES[key] || key}:${value}`)
       .join(', ');
 
     const recentChoices = prompt.choiceHistory
@@ -72,13 +115,20 @@ export class SimulationAIService {
       .map((c) => `- ${c.description}(${c.success ? '成功' : '失败'})`)
       .join('\n');
 
-    return `玩家状态：
+    return `请为以下玩家生成一个适合其年龄的年度事件：
+
+玩家状态：
 - 年龄：${prompt.age}岁（${prompt.birthYear + prompt.age}年）
 - 年代：${eraName}时期
 - 属性：${attrSummary}
 - 近期经历：${recentChoices || '无'}
 
-请生成一个适合该玩家的年度事件：`;
+约束条件：
+1. 事件必须与${prompt.age}岁年龄段相符
+2. 选项数量：2-3个
+3. attributeChanges的键名必须是：energy, physique, health, iq, eq, wealth, network, fame
+4. attributeChanges的数值范围：-20到20
+5. 所有描述文本使用中文`;
   }
 
   private validateAndFormatEvent(parsed: any, era: number): GameEvent | null {
@@ -123,20 +173,6 @@ export class SimulationAIService {
     }
 
     return result;
-  }
-
-  private getAttributeName(key: string): string {
-    const names: Record<string, string> = {
-      energy: '精力',
-      physique: '体魄',
-      health: '健康',
-      iq: '智商',
-      eq: '情商',
-      wealth: '财富',
-      network: '人脉',
-      fame: '名望',
-    };
-    return names[key] || key;
   }
 
   isAvailable(): boolean {

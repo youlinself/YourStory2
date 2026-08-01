@@ -20,9 +20,11 @@ interface AIState extends AISettings {
   saveSettings: () => Promise<void>;
 }
 
-const storageService = StorageService.getInstance();
-
 const STORAGE_KEY = 'ai-settings';
+
+function getStorageService(): StorageService {
+  return StorageService.getInstance();
+}
 
 const useAIStore = create<AIState>((set, get) => ({
   apiKey: '',
@@ -55,7 +57,7 @@ const useAIStore = create<AIState>((set, get) => ({
 
   loadSettings: async () => {
     try {
-      const settings = await storageService.loadData<AISettings & { customModelName?: string; testUrl?: string }>(STORAGE_KEY);
+      const settings = await getStorageService().loadData<AISettings & { customModelName?: string; testUrl?: string }>(STORAGE_KEY);
       if (settings) {
         set({
           apiKey: settings.apiKey ? decrypt(settings.apiKey) : '',
@@ -77,7 +79,7 @@ const useAIStore = create<AIState>((set, get) => ({
   saveSettings: async () => {
     try {
       const { apiKey, model, baseUrl, vendor, temperature, maxInputTokens, maxOutputTokens, customModelName, testUrl } = get();
-      await storageService.saveData(STORAGE_KEY, {
+      await getStorageService().saveData(STORAGE_KEY, {
         apiKey: apiKey ? encrypt(apiKey) : '',
         model,
         baseUrl,

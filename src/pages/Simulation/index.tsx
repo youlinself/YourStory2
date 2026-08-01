@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useNavigate } from 'react-router-dom';
 import useSimulationStore, { getEffectDisplayValue, MAX_HAND_SIZE, BASE_DRAW_COUNT, getAttributeTierInfo } from '../../stores/simulationStore';
+import useAIStore from '../../stores/aiStore';
 import useBondStore from '../../stores/bondStore';
 import AIGenerationLoading from '../../components/AIGenerationLoading';
 
@@ -249,6 +250,7 @@ const ModeSelectPhase: React.FC = () => {
   const mode = useSimulationStore((s) => s.mode);
   const aiEnabled = useSimulationStore((s) => s.aiEnabled);
   const toggleAI = useSimulationStore((s) => s.toggleAI);
+  const apiKey = useAIStore((s) => s.apiKey);
   const selectedEra = ERAS.find((e) => e.year === selectedYear);
   const { addToast } = useToast();
   const navigate = useNavigate();
@@ -256,7 +258,11 @@ const ModeSelectPhase: React.FC = () => {
   const handleAiToggle = () => {
     toggleAI();
     if (!aiEnabled) {
-      addToast({ type: 'success', message: '🤖 AI大模型模式已开启 - 事件将由AI动态生成' });
+      if (!apiKey) {
+        addToast({ type: 'warning', message: '⚠️ 请先配置AI API密钥 - 前往设置页面配置' });
+      } else {
+        addToast({ type: 'success', message: '🤖 AI大模型模式已开启 - 事件将由AI动态生成' });
+      }
     } else {
       addToast({ type: 'info', message: '🔄 AI大模型模式已关闭' });
     }
@@ -2413,6 +2419,9 @@ const SimulationPage: React.FC = () => {
         progress={aiGenerationState.progress}
         estimatedDuration={aiGenerationState.estimatedDuration}
         startTime={aiGenerationState.startTime}
+        currentStep={aiGenerationState.currentStep}
+        totalSteps={aiGenerationState.totalSteps}
+        message={aiGenerationState.message}
       />
     </div>
   );

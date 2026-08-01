@@ -45,6 +45,7 @@ const useSettingsStore = create<SettingsState>((set, get) => ({
 
   loadSettings: async () => {
     try {
+      await fileStorageService.loadConfig();
       const settings = await storageService.loadData<Omit<SettingsState, 'setAutoSave' | 'setDarkMode' | 'setNotifications' | 'setStorageType' | 'setStorageFilePath' | 'selectStorageDirectory' | 'loadSettings' | 'saveSettings'>>(STORAGE_KEY);
       if (settings) {
         set({
@@ -54,13 +55,7 @@ const useSettingsStore = create<SettingsState>((set, get) => ({
           storageType: settings.storageType ?? 'localStorage',
           storageFilePath: settings.storageFilePath ?? '',
         });
-        // 同步配置到 FileStorageService
-        fileStorageService.setConfig({ 
-          type: settings.storageType ?? 'localStorage', 
-          filePath: settings.storageFilePath ?? '' 
-        });
       }
-      await fileStorageService.loadConfig();
     } catch (error) {
       console.error('加载设置失败:', error);
     }
@@ -69,7 +64,6 @@ const useSettingsStore = create<SettingsState>((set, get) => ({
   saveSettings: async () => {
     try {
       const { autoSave, darkMode, notifications, storageType, storageFilePath } = get();
-      // 先更新 FileStorageService 的配置，确保 StorageService 能正确识别存储类型
       fileStorageService.setConfig({ type: storageType, filePath: storageFilePath });
       await fileStorageService.saveConfig();
       await storageService.saveData(STORAGE_KEY, {

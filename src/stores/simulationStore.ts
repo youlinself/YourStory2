@@ -29,10 +29,9 @@ import {
   type ApplyCardEffectResult,
 } from '../combat/combatEngine';
 import { simulationAIService } from '../services/ai/SimulationAIService';
-import {
-  buildGenerationContext,
-  generateEraContent,
-} from '../services/ai/SimulationGenerationService';
+import { buildGenerationContext } from '../services/ai/SimulationGenerationService';
+import { simulationGenerationPipeline } from '../services/ai/SimulationGenerationPipeline';
+import type { PipelineContext } from '../services/ai/SimulationGenerationPipeline';
 import { registerAIGeneratedBondCards } from '../data/bondCards';
 import type {
   GameState, BirthYear, PlayerAttributes, GameEvent, EventOption,
@@ -558,6 +557,9 @@ const initialAIGenerationState: AIGenerationState = {
   targetEra: 0,
   startTime: 0,
   estimatedDuration: 3000,
+  currentStep: 0,
+  totalSteps: 0,
+  message: '',
 };
 
 const initialCultivationState: CultivationState = { realm: 'mortal', maxLifespan: 70, tribulationThreshold: 0, realmBonus: {} };
@@ -2193,6 +2195,7 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
     const s = get();
     if (s.aiGenerationState.isGenerating) return;
     if (!s.aiEnabled) return;
+    if (!simulationAIService.isAvailable()) return;
 
     set({
       aiGenerationState: {
@@ -2202,23 +2205,43 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
         targetEra,
         startTime: Date.now(),
         estimatedDuration: 5000,
+        currentStep: 0,
+        totalSteps: 0,
+        message: '准备生成...',
       },
     });
 
-    const context = buildGenerationContext({ ...s, currentEra: targetEra - 1 });
+    const gameStateWithEra = { ...s, currentEra: targetEra - 1 };
+    const genContext = buildGenerationContext(gameStateWithEra);
 
-    set({
-      aiGenerationState: {
-        ...s.aiGenerationState,
-        isGenerating: true,
-        generationPhase: 'generating_events',
-        progress: 10,
-        targetEra,
-      },
+    const pipelineContext: PipelineContext = {
+      currentAge: genContext.currentAge,
+      currentYear: genContext.currentYear,
+      birthYear: genContext.birthYear,
+      targetEra: genContext.targetEra,
+      targetAgeStart: genContext.targetAgeStart,
+      targetAgeEnd: genContext.targetAgeEnd,
+      playerAttributes: genContext.playerAttributes,
+      difficulty: genContext.difficulty,
+      eraMap: genContext.eraMap,
+    };
+
+    simulationGenerationPipeline.setProgressCallback((progress) => {
+      set({
+        aiGenerationState: {
+          ...get().aiGenerationState,
+          isGenerating: true,
+          generationPhase: progress.phase,
+          progress: Math.min(95, Math.floor((progress.currentStep / Math.max(1, progress.totalSteps)) * 100)),
+          currentStep: progress.currentStep,
+          totalSteps: progress.totalSteps,
+          message: progress.message,
+        },
+      });
     });
 
     try {
-      const content = await generateEraContent(context);
+      const content = await simulationGenerationPipeline.generateEraContent(pipelineContext);
 
       if (!content) {
         set({
@@ -2227,6 +2250,7 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
             isGenerating: false,
             generationPhase: 'idle',
             progress: 100,
+            message: '生成失败',
           },
         });
         return;
@@ -2246,11 +2270,14 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
           currentEraEvents: newPool,
           aiGenerationState: {
             isGenerating: false,
-            generationPhase: 'idle',
+            generationPhase: 'complete',
             progress: 100,
             targetEra,
             startTime: Date.now(),
             estimatedDuration: 0,
+            currentStep: 0,
+            totalSteps: 0,
+            message: '生成完成',
           },
         });
 
@@ -2267,11 +2294,14 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
           preGeneratedContent: content,
           aiGenerationState: {
             isGenerating: false,
-            generationPhase: 'idle',
+            generationPhase: 'complete',
             progress: 100,
             targetEra,
             startTime: Date.now(),
             estimatedDuration: 0,
+            currentStep: 0,
+            totalSteps: 0,
+            message: '生成完成',
           },
         });
       }
@@ -2281,8 +2311,9 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
         aiGenerationState: {
           ...get().aiGenerationState,
           isGenerating: false,
-          generationPhase: 'idle',
+          generationPhase: 'error',
           progress: 100,
+          message: '生成失败',
         },
       });
     }
