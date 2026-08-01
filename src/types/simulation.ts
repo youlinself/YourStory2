@@ -3,6 +3,7 @@
 // ==========================================
 
 import type { LifespanExtensionState } from './lifespan';
+import type { BondCardDefinition } from './bond';
 
 export type BirthYear = 1950 | 1960 | 1970 | 1980 | 1990 | 2000 | 2010 | 2020 | 2030 | 2040 | 2050 | 2060 | 2070;
 
@@ -406,6 +407,7 @@ export interface EraPreGeneratedContent {
   ageRange: [number, number];
   years: YearPreGeneratedContent[];
   boss: Enemy | null;
+  bondCards: BondCardDefinition[];
   isComplete: boolean;
   isDefault?: boolean;
 }

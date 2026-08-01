@@ -1,7 +1,9 @@
 import type { GameState, GameEvent, Enemy, LifeCard, PlayerAttributes, EraPreGeneratedContent, EraMap, YearPreGeneratedContent, YearOptionPreGenerated, EnemyMechanic } from '../../types/simulation';
+import type { BondCardDefinition } from '../../types/bond';
 import { getEventsByBirthYear } from '../../data/eraEvents';
 import { createAnnualBoss, getNormalMonsterVariant, getEliteMonsterVariant, createMonsterFromVariant } from '../../data/monsterMapping';
 import { COMMON_ATTACK_CARDS, COMMON_SKILL_CARDS, RARE_CARDS, LEGENDARY_CARDS } from '../../data/simulationData';
+import { BOND_CARDS, registerAIGeneratedBondCards } from '../../data/bondCards';
 import { generateId } from '../../utils';
 import { safeParseJSON, validateGameEvent } from './ContentValidator';
 import AIService from './AIService';
@@ -178,6 +180,8 @@ function buildEraContentPrompt(ctx: GenerationContext, requirements: MapContentR
   const templatePrompt = buildMonsterTemplatePrompt(monsterTemplate, ctx.targetAgeStart);
   const monsterExample = buildMonsterExample(ctx.targetAgeStart);
 
+  const existingBondCardNames = BOND_CARDS.map(c => c.name).join('、');
+
   return `请为${ageStage}(${ctx.targetAgeStart}-${ctx.targetAgeEnd}岁)生成完整的模拟人生内容。
 
 玩家状态：
@@ -192,6 +196,7 @@ ${requirements.normalEnemies.length > 0 ? `- ${requirements.normalEnemies.length
 ${requirements.eliteEnemies.length > 0 ? `- ${requirements.eliteEnemies.length}组精英怪物（年龄段：${eliteAges}）` : ''}
 ${requirements.shopCards.length > 0 ? `- ${requirements.shopCards.length}组商店卡牌（年龄段：${shopAges}）` : ''}
 ${requirements.bossEnemies.length > 0 ? `- 1个Boss（年龄段：${bossAge}）` : ''}
+- 3-5张羁绊卡片（年龄段：${ctx.targetAgeStart}-${ctx.targetAgeEnd}）
 
 ${templatePrompt}
 
@@ -217,6 +222,20 @@ ${monsterExample}
   ],
   "elites": [...],
   "shopCards": [...],
+  "bondCards": [
+    {
+      "id": "ai_bond_001",
+      "name": "羁绊名称",
+      "category": "family",
+      "icon": "👨",
+      "rarity": "common",
+      "description": "羁绊描述",
+      "flavorText": "羁绊风味文本",
+      "minAge": ${ctx.targetAgeStart},
+      "maxAge": ${ctx.targetAgeEnd + 10},
+      "appearWeight": 40
+    }
+  ],
   "boss": {
     "id": "boss_001",
     "name": "Boss名称",
@@ -237,18 +256,25 @@ ${monsterExample}
 3. 精英怪物组数：${requirements.eliteEnemies.length}组，每组1-2个
 4. 商店卡牌组数：${requirements.shopCards.length}组，每组3-5张
 5. Boss：${requirements.bossEnemies.length > 0 ? '1个' : '0个'}
-6. attributeChanges 的键名必须是：energy, physique, health, iq, eq, wealth, network, fame
-7. attributeChanges 的数值范围：-20 到 20
-8. 每个事件的options数组长度：2-3个
-9. 所有描述文本使用中文
-10. 事件类型应该多样化
-11. 怪物和Boss的强度应该与年龄段匹配
-12. 每个怪物必须包含cardRewards数组（1-2张卡牌奖励）
-13. Boss必须包含cardRewards数组（2-3张稀有或传说卡牌）
-14. 怪物应该根据模板自由创造，不必局限于现有类型
-15. 怪物的意图应该多样化，体现不同怪物的特色
-16. 可以添加mechanics数组来给怪物特殊能力
-17. 怪物名称和图标应该与年龄段特征相关`;
+6. 羁绊卡片数量：3-5张
+7. attributeChanges 的键名必须是：energy, physique, health, iq, eq, wealth, network, fame
+8. attributeChanges 的数值范围：-20 到 20
+9. 每个事件的options数组长度：2-3个
+10. 所有描述文本使用中文
+11. 事件类型应该多样化
+12. 怪物和Boss的强度应该与年龄段匹配
+13. 每个怪物必须包含cardRewards数组（1-2张卡牌奖励）
+14. Boss必须包含cardRewards数组（2-3张稀有或传说卡牌）
+15. 怪物应该根据模板自由创造，不必局限于现有类型
+16. 怪物的意图应该多样化，体现不同怪物的特色
+17. 可以添加mechanics数组来给怪物特殊能力
+18. 怪物名称和图标应该与年龄段特征相关
+19. 羁绊卡片分类(category)必须是：family、friendship、education、career、romance、rival 之一
+20. 羁绊卡片稀有度(rarity)必须是：common、uncommon、rare、legendary 之一
+21. 羁绊卡片appearWeight数值：common=40、uncommon=25、rare=10、legendary=3
+22. 羁绊卡片名称不能与现有羁绊重复，现有羁绊包括：${existingBondCardNames}
+23. 羁绊卡片应该体现该年龄段的人际关系特征
+24. 羁绊卡片的flavorText应该富有情感和故事性`;
 }
 
 function buildEraContentSystemPrompt(): string {
@@ -264,6 +290,9 @@ function buildEraContentSystemPrompt(): string {
 7. 怪物和Boss的强度应该与年龄段匹配
 8. 商店卡牌应该符合该年龄段的消费能力
 9. 每次生成的怪物类型应该多样化，不要重复
+10. 羁绊卡片应该体现该年龄段的人际关系特色
+11. 羁绊卡片名称不能与现有羁绊重复
+12. 羁绊卡片的描述和风味文本应该富有情感
 
 设计原则：
 - 连贯性：事件要与玩家年龄相符
@@ -273,6 +302,7 @@ function buildEraContentSystemPrompt(): string {
 - 时代感：体现不同年龄段的特征
 - 平衡性：怪物强度与玩家成长匹配
 - 多样性：怪物类型应该丰富多样（史莱姆、幽灵、傀儡、暗影等）
+- 羁绊深度：羁绊卡片应该展现人际关系的复杂性
 
 输出格式：严格的JSON格式，不要包含任何额外文本或Markdown代码块标记。`;
 }
@@ -304,6 +334,7 @@ export async function generateEraContent(ctx: GenerationContext): Promise<EraPre
       enemies: Array<{ id?: string; name: string; icon: string; description: string; maxHealth: number; block: number; intents: unknown[]; goldReward: [number, number]; age: number; cardRewards: Array<{ id?: string; name: string; icon: string; description: string; rarity: string; type: string; cost: number; effects: unknown[] }>; mechanics?: string[] }>;
       elites: Array<{ id?: string; name: string; icon: string; description: string; maxHealth: number; block: number; intents: unknown[]; goldReward: [number, number]; age: number; cardRewards: Array<{ id?: string; name: string; icon: string; description: string; rarity: string; type: string; cost: number; effects: unknown[] }>; mechanics?: string[] }>;
       shopCards: Array<{ id?: string; name: string; icon: string; description: string; rarity: string; type: string; cost: number; effects: unknown[] }>;
+      bondCards: Array<{ id?: string; name: string; category: string; icon: string; rarity: string; description: string; flavorText: string; minAge: number; maxAge?: number; appearWeight: number }>;
       boss: { id?: string; name: string; icon: string; description: string; maxHealth: number; block: number; intents: unknown[]; goldReward: [number, number]; cardRewards: Array<{ id?: string; name: string; icon: string; description: string; rarity: string; type: string; cost: number; effects: unknown[] }>; mechanics?: string[] } | null;
     }>(response);
 
@@ -465,7 +496,40 @@ export async function generateEraContent(ctx: GenerationContext): Promise<EraPre
 
       const allEnemies = [...validEnemies, ...validElites];
 
-      return assembleEraContent(ctx, requirements, validEvents, allEnemies, validBoss, validShopCards);
+      const validBondCards: BondCardDefinition[] = [];
+      if (Array.isArray(parsed.bondCards)) {
+        const existingIds = new Set(BOND_CARDS.map(c => c.id));
+        const existingNames = new Set(BOND_CARDS.map(c => c.name));
+        const validCategories: BondCardDefinition['category'][] = ['family', 'friendship', 'education', 'career', 'romance', 'rival'];
+        const validRarities: BondCardDefinition['rarity'][] = ['common', 'uncommon', 'rare', 'legendary'];
+
+        for (const rawCard of parsed.bondCards) {
+          if (!rawCard.name || !rawCard.category || !rawCard.rarity) continue;
+          if (rawCard.id && existingIds.has(rawCard.id)) continue;
+          if (existingNames.has(rawCard.name)) continue;
+          if (!validCategories.includes(rawCard.category as BondCardDefinition['category'])) continue;
+          if (!validRarities.includes(rawCard.rarity as BondCardDefinition['rarity'])) continue;
+
+          validBondCards.push({
+            id: rawCard.id || generateId(),
+            name: rawCard.name,
+            category: rawCard.category as BondCardDefinition['category'],
+            icon: rawCard.icon || '👤',
+            rarity: rawCard.rarity as BondCardDefinition['rarity'],
+            description: rawCard.description || '',
+            flavorText: rawCard.flavorText || '',
+            minAge: rawCard.minAge ?? ctx.targetAgeStart,
+            maxAge: rawCard.maxAge,
+            appearWeight: rawCard.appearWeight ?? 40,
+          });
+        }
+
+        if (validBondCards.length > 0) {
+          registerAIGeneratedBondCards(validBondCards);
+        }
+      }
+
+      return assembleEraContent(ctx, requirements, validEvents, allEnemies, validBoss, validShopCards, validBondCards);
     }
 
     return getDefaultEraContent(ctx.targetEra, ctx);
@@ -482,6 +546,7 @@ function assembleEraContent(
   enemies: Enemy[],
   boss: Enemy | null,
   shopCards: LifeCard[],
+  bondCards: BondCardDefinition[],
 ): EraPreGeneratedContent {
   const years: YearPreGeneratedContent[] = [];
   const baseAge = ctx.targetAgeStart;
@@ -492,6 +557,7 @@ function assembleEraContent(
       ageRange: [baseAge, baseAge + 9],
       years: [],
       boss,
+      bondCards,
       isComplete: true,
     };
   }
@@ -561,6 +627,7 @@ function assembleEraContent(
     ageRange: [baseAge, baseAge + 9],
     years,
     boss,
+    bondCards,
     isComplete: true,
   };
 }
@@ -717,6 +784,7 @@ export function getDefaultEraContent(era: number, ctx: GenerationContext): EraPr
     ageRange: [baseAge, baseAge + 9],
     years,
     boss,
+    bondCards: [],
     isComplete: true,
     isDefault: true,
   };

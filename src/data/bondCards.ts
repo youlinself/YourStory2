@@ -1087,3 +1087,43 @@ export function weightedRandomSelect(cards: BondCardDefinition[], count: number)
 
   return result;
 }
+
+// ==========================================
+// AI生成羁绊卡片管理
+// ==========================================
+
+let aiGeneratedBondCards: BondCardDefinition[] = [];
+
+export function registerAIGeneratedBondCards(cards: BondCardDefinition[]): void {
+  const existingIds = new Set(BOND_CARDS.map(c => c.id));
+  const existingNames = new Set(BOND_CARDS.map(c => c.name));
+  const existingAiIds = new Set(aiGeneratedBondCards.map(c => c.id));
+  const existingAiNames = new Set(aiGeneratedBondCards.map(c => c.name));
+
+  for (const card of cards) {
+    if (existingIds.has(card.id) || existingNames.has(card.name) || existingAiIds.has(card.id) || existingAiNames.has(card.name)) {
+      continue;
+    }
+    aiGeneratedBondCards.push(card);
+  }
+}
+
+export function getAIGeneratedBondCards(): BondCardDefinition[] {
+  return [...aiGeneratedBondCards];
+}
+
+export function getAllBondCardsIncludingAI(): BondCardDefinition[] {
+  return [...BOND_CARDS, ...aiGeneratedBondCards];
+}
+
+export function clearAIGeneratedBondCards(): void {
+  aiGeneratedBondCards = [];
+}
+
+export function getAvailableCardsIncludingAI(age: number): BondCardDefinition[] {
+  return getAllBondCardsIncludingAI().filter((c) => {
+    if (age < c.minAge) return false;
+    if (c.maxAge !== undefined && age > c.maxAge) return false;
+    return true;
+  });
+}

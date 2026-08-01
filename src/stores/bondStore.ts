@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { generateId } from '../utils';
 import type {
+  BondCardDefinition,
   BondCardInstance,
   BondGroupDefinition,
   BondReward,
@@ -10,11 +11,15 @@ import type {
 } from '../types/bond';
 import type { PlayerAttributes, LifeCard, LifeRelic } from '../types/simulation';
 import {
-  BOND_CARDS,
+  BOND_CARD_MAP,
   BOND_GROUPS,
-  getAvailableCards,
+  getAvailableCardsIncludingAI,
+  getAllBondCardsIncludingAI,
+  getAIGeneratedBondCards,
   weightedRandomSelect,
 } from '../data/bondCards';
+
+const AI_BOND_CARD_MAP: Record<string, BondCardDefinition> = Object.fromEntries(getAIGeneratedBondCards().map((c) => [c.id, c]));
 
 // ==========================================
 // 羁绊Store定义
@@ -95,7 +100,7 @@ const useBondStore = create<BondStoreState>((set, get) => ({
     if (state.drawChances <= 0) return false;
     if (state.currentDraw?.isSelecting) return false;
 
-    const availableCards = getAvailableCards(year);
+    const availableCards = getAvailableCardsIncludingAI(year);
     const drawnCards = weightedRandomSelect(availableCards, 5);
 
     set({
@@ -188,13 +193,14 @@ const useBondStore = create<BondStoreState>((set, get) => ({
     };
 
     for (const cardId of uniqueIds) {
-      const card = BOND_CARDS.find((c) => c.id === cardId);
+      const card = BOND_CARD_MAP[cardId] || AI_BOND_CARD_MAP[cardId];
       if (card) {
         byRarity[card.rarity]++;
       }
     }
 
-    const completionRate = BOND_CARDS.length > 0 ? unique / BOND_CARDS.length : 0;
+    const totalCards = getAllBondCardsIncludingAI();
+    const completionRate = totalCards.length > 0 ? unique / totalCards.length : 0;
 
     return { total, unique, byRarity, completionRate };
   },

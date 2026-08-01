@@ -33,6 +33,7 @@ import {
   buildGenerationContext,
   generateEraContent,
 } from '../services/ai/SimulationGenerationService';
+import { registerAIGeneratedBondCards } from '../data/bondCards';
 import type {
   GameState, BirthYear, PlayerAttributes, GameEvent, EventOption,
   ChoiceRecord, LifeRecord, WorldState, GameMode, GamePhase,
@@ -2238,6 +2239,9 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
           usedEventIds: new Set(),
           currentIndex: 0,
         };
+        if (content.bondCards && content.bondCards.length > 0) {
+          registerAIGeneratedBondCards(content.bondCards);
+        }
         set({
           currentEraEvents: newPool,
           aiGenerationState: {
@@ -2256,6 +2260,9 @@ const useSimulationStore = create<SimulationState>((set, get) => ({
           }, 100);
         }
       } else {
+        if (content.bondCards && content.bondCards.length > 0) {
+          registerAIGeneratedBondCards(content.bondCards);
+        }
         set({
           preGeneratedContent: content,
           aiGenerationState: {
