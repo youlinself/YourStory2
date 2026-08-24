@@ -1,4 +1,5 @@
 export * from './session'
 export * from './tools'
 export * from './events'
+export * from './skills'
 export * from './AutobiographyAgent'

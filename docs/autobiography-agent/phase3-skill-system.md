@@ -608,14 +608,14 @@ export function registerAutobiographySkills(registry: SkillRegistry): () => void
 
 ## 5. 验收清单
 
-- [ ] SkillRegistry 正常工作
-- [ ] 技能可注册和发现
-- [ ] 技能工具隔离正常
-- [ ] Prompt 片段正确组装
-- [ ] 命令系统正常工作
-- [ ] 事件处理器正确触发
-- [ ] 所有单元测试通过
-- [ ] 集成测试通过
+- [x] SkillRegistry 正常工作
+- [x] 技能可注册和发现
+- [x] 技能工具隔离正常
+- [x] Prompt 片段正确组装
+- [x] 命令系统正常工作
+- [x] 事件处理器正确触发
+- [x] 所有单元测试通过
+- [x] 集成测试通过
 
 ---
 
@@ -624,9 +624,24 @@ export function registerAutobiographySkills(registry: SkillRegistry): () => void
 | 日期 | 内容 | 状态 |
 |------|------|------|
 | - | 初始化阶段文档 | ✅ |
+| 2026-08-24 | 实现 SkillRegistry 核心功能 | ✅ |
+| 2026-08-24 | 实现 4 个自传技能 | ✅ |
+| 2026-08-24 | 编写并运行测试（54项全部通过） | ✅ |
 
 ---
 
 ## 7. 总结
 
-_（阶段完成后填写）_
+阶段 3 技能系统已完成。实现了以下核心组件：
+
+1. **SkillRegistry** - 技能注册中心，支持技能的注册、激活、停用和清理
+2. **DeepInterview** - 深度访谈技能，引导用户深入回忆
+3. **TimelineOrganize** - 时间线整理技能，分析时间线完整性
+4. **StyleCheck** - 风格检查技能，检查写作风格一致性
+5. **GuidedQuestioning** - 引导提问技能，智能生成引导性问题
+
+技能系统支持：
+- 技能工具隔离（每个技能激活时会话获得对应工具）
+- Prompt 片段合并（多技能 prompt 片段按 order 排序）
+- 事件处理器（技能可监听系统事件）
+- 命令系统（技能可提供 /command 命令）
