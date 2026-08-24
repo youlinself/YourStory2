@@ -1,6 +1,8 @@
 import { SessionManager, type StorageAdapter } from './session'
 import { ToolRegistry } from './tools'
 import { EventEmitter } from './events'
+import { SkillRegistry } from './skills'
+import type { SkillContext } from './skills/SkillTypes'
 import type { AutobiographySession, SessionContext, ConversationTurn } from './session/types'
 import type { ToolDefinition, ToolResult, ToolExecutionContext } from './tools/ToolTypes'
 
@@ -12,11 +14,13 @@ export class AutobiographyAgent {
   readonly sessionManager: SessionManager
   readonly toolRegistry: ToolRegistry
   readonly events: EventEmitter
+  readonly skillRegistry: SkillRegistry
 
   constructor(config: AutobiographyAgentConfig) {
     this.sessionManager = new SessionManager(config.storage)
     this.toolRegistry = new ToolRegistry()
     this.events = new EventEmitter()
+    this.skillRegistry = new SkillRegistry(this.toolRegistry, this.events)
     this.setupEventListeners()
   }
 
@@ -31,6 +35,7 @@ export class AutobiographyAgent {
     })
 
     this.events.on('session/closed', ({ sessionId }) => {
+      this.skillRegistry.cleanupSession(sessionId)
       this.toolRegistry.cleanupSession(sessionId)
     })
 
@@ -85,6 +90,33 @@ export class AutobiographyAgent {
   /** 停用会话工具 */
   deactivateTools(sessionId: string, toolNames: string[]): void {
     this.toolRegistry.deactivateForSession(sessionId, toolNames)
+  }
+
+  /** 激活技能 */
+  async activateSkill(sessionId: string, skillName: string): Promise<void> {
+    const session = await this.sessionManager.resume(sessionId)
+    if (!session) {
+      throw new Error(`Session not found: ${sessionId}`)
+    }
+
+    const context: SkillContext = {
+      sessionId,
+      chapterId: session.chapterId,
+      sessionContext: session.context,
+      agent: this
+    }
+
+    await this.skillRegistry.activate(sessionId, skillName, context)
+  }
+
+  /** 停用技能 */
+  async deactivateSkill(sessionId: string, skillName: string): Promise<void> {
+    await this.skillRegistry.deactivate(sessionId, skillName)
+  }
+
+  /** 获取会话激活的技能 */
+  getActiveSkills(sessionId: string): string[] {
+    return this.skillRegistry.getActiveSkills(sessionId).map(as => as.skill.name)
   }
 
   /** 执行工具 */
@@ -144,6 +176,91 @@ export class AutobiographyAgent {
       this.events.emit('tool/failed', { sessionId, tool: toolName, error: err })
       throw err
     }
+  }
+
+  /** 处理用户消息（完整对话流程） */
+  async handleMessage(
+    sessionId: string,
+    userMessage: string,
+    options: {
+      generateFollowUpQuestions?: boolean
+      autoExtract?: boolean
+    } = {}
+  ): Promise<{
+    extractedContent?: ToolResult
+    followUpQuestions?: ToolResult
+    response: string
+  }> {
+    const session = await this.sessionManager.resume(sessionId)
+    if (!session) {
+      throw new Error(`Session not found: ${sessionId}`)
+    }
+
+    const userTurn: ConversationTurn = {
+      role: 'user',
+      content: userMessage,
+      timestamp: Date.now()
+    }
+    await this.sessionManager.addTurn(sessionId, userTurn)
+
+    this.events.emit('turn/start', { sessionId, userMessage })
+
+    const result: {
+      extractedContent?: ToolResult
+      followUpQuestions?: ToolResult
+      response: string
+    } = {
+      response: ''
+    }
+
+    const autoExtract = options.autoExtract ?? session.context.userPreferences?.autoExtract ?? true
+
+    if (autoExtract) {
+      try {
+        const extractedResult = await this.executeTool(sessionId, 'extract_content', {
+          conversationSegments: [userMessage],
+          extractOptions: {
+            narrativeStyle: session.context.userPreferences?.perspective === 'first' ? 'first_person' : 'third_person',
+            includeTimeTag: true,
+            includeEmotions: true,
+            includePeople: true
+          }
+        })
+        result.extractedContent = extractedResult
+
+        this.events.emit('content/extracted', {
+          sessionId,
+          extraction: extractedResult.data
+        })
+      } catch (error) {
+        console.error('[Agent] Content extraction failed:', error)
+      }
+    }
+
+    if (options.generateFollowUpQuestions) {
+      try {
+        const questionsResult = await this.executeTool(sessionId, 'generate_questions', {
+          chapterContent: userMessage,
+          count: 3,
+          difficulty: 'medium'
+        })
+        result.followUpQuestions = questionsResult
+        result.response = '已为你生成了一些引导性问题，可以帮助你更深入地回忆。'
+      } catch (error) {
+        console.error('[Agent] Question generation failed:', error)
+        result.response = '我已经记录了你的分享，想继续聊聊吗？'
+      }
+    } else {
+      result.response = '我已经记录了你的分享，想继续聊聊吗？'
+    }
+
+    this.events.emit('turn/complete', {
+      sessionId,
+      assistantResponse: result.response,
+      tokensUsed: 0
+    })
+
+    return result
   }
 
   /** 添加对话轮次 */

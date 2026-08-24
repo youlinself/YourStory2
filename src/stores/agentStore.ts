@@ -34,6 +34,11 @@ interface AgentActions {
   resumeSession: (sessionId: string) => Promise<void>
   pauseSession: () => Promise<void>
   sendMessage: (content: string) => Promise<string>
+  handleMessage: (content: string, options?: { generateFollowUpQuestions?: boolean }) => Promise<{
+    extractedContent?: any
+    followUpQuestions?: any
+    response: string
+  }>
   activateSkill: (skillName: string) => Promise<void>
   deactivateSkill: (skillName: string) => Promise<void>
   executeTool: (toolName: string, args: any) => Promise<any>
@@ -62,7 +67,7 @@ export const useAgentStore = create<AgentState & AgentActions>()(
       registerAutobiographyTools(agent.toolRegistry)
 
       const { registerAutobiographySkills } = await import('@/agent/skills/autobiography')
-      registerAutobiographySkills(agent.events as any)
+      registerAutobiographySkills(agent.skillRegistry)
 
       setupEventListeners(agent)
 
@@ -79,9 +84,13 @@ export const useAgentStore = create<AgentState & AgentActions>()(
         const context = await loadChapterContext(chapterId)
         const session = await agent.createSession(chapterId, context)
 
+        await agent.activateSkill(session.id, 'deep_interview')
+
+        const activeSkills = agent.getActiveSkills(session.id)
+
         set({
           currentSession: session,
-          activeSkills: ['deep_interview'],
+          activeSkills,
           isLoading: false
         })
       } catch (error) {
@@ -101,7 +110,8 @@ export const useAgentStore = create<AgentState & AgentActions>()(
       try {
         const session = await agent.resumeSession(sessionId)
         if (session) {
-          set({ currentSession: session, isLoading: false })
+          const activeSkills = agent.getActiveSkills(sessionId)
+          set({ currentSession: session, activeSkills, isLoading: false })
         } else {
           set({ error: '会话不存在', isLoading: false })
         }
@@ -127,15 +137,50 @@ export const useAgentStore = create<AgentState & AgentActions>()(
       set({ isLoading: true, error: null })
 
       try {
-        const response = await agent.executeTool(currentSession.id, 'extract_content', {
-          conversationSegments: [content]
+        const result = await agent.handleMessage(currentSession.id, content, {
+          autoExtract: true,
+          generateFollowUpQuestions: false
         })
 
-        set({ isLoading: false })
-        return response.data?.message || '处理完成'
+        const updatedSession = agent.getSession(currentSession.id)
+        if (updatedSession) {
+          set({ currentSession: updatedSession, isLoading: false })
+        } else {
+          set({ isLoading: false })
+        }
+
+        return result.response
       } catch (error) {
         set({
           error: error instanceof Error ? error.message : '发送消息失败',
+          isLoading: false
+        })
+        throw error
+      }
+    },
+
+    handleMessage: async (content: string, options = {}) => {
+      const { agent, currentSession } = get()
+      if (!agent || !currentSession) throw new Error('No active session')
+
+      set({ isLoading: true, error: null })
+
+      try {
+        const result = await agent.handleMessage(currentSession.id, content, {
+          generateFollowUpQuestions: options.generateFollowUpQuestions ?? false
+        })
+
+        const updatedSession = agent.getSession(currentSession.id)
+        if (updatedSession) {
+          set({ currentSession: updatedSession, isLoading: false })
+        } else {
+          set({ isLoading: false })
+        }
+
+        return result
+      } catch (error) {
+        set({
+          error: error instanceof Error ? error.message : '处理消息失败',
           isLoading: false
         })
         throw error
@@ -146,18 +191,36 @@ export const useAgentStore = create<AgentState & AgentActions>()(
       const { agent, currentSession } = get()
       if (!agent || !currentSession) return
 
-      set(state => ({
-        activeSkills: [...state.activeSkills, skillName]
-      }))
+      set({ isLoading: true, error: null })
+
+      try {
+        await agent.activateSkill(currentSession.id, skillName)
+        const activeSkills = agent.getActiveSkills(currentSession.id)
+        set({ activeSkills, isLoading: false })
+      } catch (error) {
+        set({
+          error: error instanceof Error ? error.message : '激活技能失败',
+          isLoading: false
+        })
+      }
     },
 
     deactivateSkill: async (skillName: string) => {
       const { agent, currentSession } = get()
       if (!agent || !currentSession) return
 
-      set(state => ({
-        activeSkills: state.activeSkills.filter(s => s !== skillName)
-      }))
+      set({ isLoading: true, error: null })
+
+      try {
+        await agent.deactivateSkill(currentSession.id, skillName)
+        const activeSkills = agent.getActiveSkills(currentSession.id)
+        set({ activeSkills, isLoading: false })
+      } catch (error) {
+        set({
+          error: error instanceof Error ? error.message : '停用技能失败',
+          isLoading: false
+        })
+      }
     },
 
     executeTool: async (toolName: string, args: any) => {
@@ -179,6 +242,11 @@ export const useAgentStore = create<AgentState & AgentActions>()(
             call.name === toolName ? { ...call, status: 'completed' as const } : call
           )
         }))
+
+        const updatedSession = agent.getSession(currentSession.id)
+        if (updatedSession) {
+          set({ currentSession: updatedSession })
+        }
 
         return result
       } catch (error) {
@@ -243,6 +311,10 @@ function setupEventListeners(agent: AutobiographyAgent): void {
 
   agent.events.on('skill/activated', (payload: AutobiographyEventMap['skill/activated']) => {
     console.log('[Agent] Skill activated:', payload.skill)
+  })
+
+  agent.events.on('skill/deactivated', (payload: AutobiographyEventMap['skill/deactivated']) => {
+    console.log('[Agent] Skill deactivated:', payload.skill)
   })
 }
 

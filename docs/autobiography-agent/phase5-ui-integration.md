@@ -780,13 +780,13 @@ export function EventLogPanel() {
 
 ## 7. 验收清单
 
-- [ ] Agent Store 正常工作
-- [ ] 会话创建和恢复正常
-- [ ] 消息发送和接收正常
-- [ ] 技能切换 UI 正常
-- [ ] 命令面板功能正常
-- [ ] 事件日志显示正确
-- [ ] 错误处理正常
+- [x] Agent Store 正常工作
+- [x] 会话创建和恢复正常
+- [x] 消息发送和接收正常
+- [x] 技能切换 UI 正常
+- [x] 命令面板功能正常
+- [x] 事件日志显示正确
+- [x] 错误处理正常
 - [ ] 所有集成测试通过
 
 ---
@@ -796,9 +796,42 @@ export function EventLogPanel() {
 | 日期 | 内容 | 状态 |
 |------|------|------|
 | - | 初始化阶段文档 | ✅ |
+| 2026-08-24 | 创建 agentStore，集成 Agent、ToolRegistry、SkillRegistry | ✅ |
+| 2026-08-24 | 实现会话创建、恢复、暂停功能 | ✅ |
+| 2026-08-24 | 实现 sendMessage 完整对话流程（含内容提取） | ✅ |
+| 2026-08-24 | 修复技能激活/停用未与 Agent 实际交互的问题 | ✅ |
+| 2026-08-24 | 修复 registerAutobiographySkills 的 as any 类型断言 | ✅ |
+| 2026-08-24 | 添加 handleMessage 方法支持完整消息处理 | ✅ |
+| 2026-08-24 | 在 AutobiographyAgent 中集成 SkillRegistry | ✅ |
+| 2026-08-24 | 实现技能激活/停用功能 | ✅ |
+| 2026-08-24 | 创建 CommandPanel 命令面板组件 | ✅ |
+| 2026-08-24 | 创建 SkillSwitcher 技能切换器组件 | ✅ |
+| 2026-08-24 | 创建 EventLogPanel 事件日志面板组件 | ✅ |
+| 2026-08-24 | 更新 DialoguePage 集成 Agent Store | ✅ |
 
 ---
 
 ## 9. 总结
 
-_（阶段完成后填写）_
+Phase 5 UI 集成阶段已完成核心功能。实现了以下核心组件：
+
+### Store 层
+- **agentStore** - 集成 AutobiographyAgent、ToolRegistry、SkillRegistry
+- 支持会话创建、恢复、暂停
+- 支持技能激活/停用（与 Agent 实际交互）
+- 支持完整消息处理流程（含内容提取、问题生成）
+
+### 组件层
+- **CommandPanel** - 命令面板，支持 /timeline、/style、/questions、/compact 命令
+- **SkillSwitcher** - 技能切换器，可切换 4 种技能
+- **EventLogPanel** - 事件日志面板，显示 Agent 事件
+
+### 页面层
+- **DialoguePage** - 对话页面，集成 Agent Store，支持消息发送和会话管理
+
+### 修复项
+1. 修复了技能激活/停用未与 Agent 实际交互的问题
+2. 修复了 sendMessage 仅调用 extract_content 的问题，实现了完整对话流程
+3. 修复了 registerAutobiographySkills 的 as any 类型断言
+4. 在 AutobiographyAgent 中集成了 SkillRegistry
+5. 添加了 handleMessage 方法支持完整消息处理

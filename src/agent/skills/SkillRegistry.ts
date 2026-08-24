@@ -1,6 +1,7 @@
 import type { Skill, SkillContext, ActiveSkill, SkillPromptSection } from './SkillTypes'
 import type { ToolRegistry } from '../tools/ToolRegistry'
 import type { EventEmitter } from '../events/EventEmitter'
+import type { AutobiographyEventMap } from '../events/types'
 
 export class SkillRegistry {
   private skills: Map<string, Skill> = new Map()
@@ -61,7 +62,7 @@ export class SkillRegistry {
     if (skill.on) {
       for (const [event, handler] of Object.entries(skill.on)) {
         const wrappedHandler = (payload: any) => handler(payload, context)
-        const disposer = this.events.on(event, wrappedHandler)
+        const disposer = this.events.on(event as keyof AutobiographyEventMap, wrappedHandler)
         disposers.push(disposer)
       }
     }

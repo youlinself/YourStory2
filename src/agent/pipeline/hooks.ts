@@ -1,4 +1,5 @@
-import type { PreExecutionHook, PostExecutionHook, PipelineContext } from './types'
+import type { PreExecutionHook, PostExecutionHook } from './ExtractionPipeline'
+import type { PipelineContext } from './types'
 
 /** 参数验证钩子 */
 export const validationHook: PreExecutionHook = async (context, next) => {
@@ -75,6 +76,7 @@ export const executionTimeHook = (maxExecutionTimeMs: number): PreExecutionHook 
     try {
       const result = await next()
       clearTimeout(timeoutId)
+      originalSignal.removeEventListener('abort', handleAbort)
       return result
     } catch (error) {
       clearTimeout(timeoutId)
@@ -94,7 +96,7 @@ export const rateLimitHook = (
 ): PreExecutionHook => {
   const requestTimestamps: number[] = []
 
-  return async (context, next) => {
+  return async (_context, next) => {
     const now = Date.now()
     const windowStart = now - windowMs
 
