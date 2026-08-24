@@ -5,3 +5,4 @@ export { default as useSettingsStore } from './settingsStore';
 export { default as useSimulationStore } from './simulationStore';
 export { default as useBondStore } from './bondStore';
 export { default as useGameRecordStore } from './gameRecordStore';
+export { useAgentStore } from './agentStore';
