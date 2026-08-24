@@ -675,9 +675,45 @@ export class UnifiedLLMAdapter implements LLMAdapter {
 | 日期 | 内容 | 状态 |
 |------|------|------|
 | - | 初始化阶段文档 | ✅ |
+| 2026-08-24 | 创建管道类型定义 | ✅ |
+| 2026-08-24 | 实现 ExtractionPipeline 执行管道 | ✅ |
+| 2026-08-24 | 实现内置钩子 (validation, tokenBudget, abortCheck, resultValidation, sessionExists, rateLimit) | ✅ |
+| 2026-08-24 | 实现 Token 预算管理器 | ✅ |
+| 2026-08-24 | 实现上下文压缩器 | ✅ |
+| 2026-08-24 | 实现重试策略 | ✅ |
+| 2026-08-24 | 创建 LLM 适配层 | ✅ |
+| 2026-08-24 | 编写并运行单元测试 (68 个测试全部通过) | ✅ |
 
 ---
 
 ## 9. 总结
 
-_（阶段完成后填写）_
+Phase 4 管道与优化阶段已完成。实现了以下核心功能：
+
+### 执行管道 (ExtractionPipeline)
+- 实现了 pre-execute、execute、post-execute 三阶段执行模型
+- 支持 hook 链式执行，可按需注册/注销钩子
+- 内置 6 个常用钩子：参数验证、Token 预算检查、取消信号检查、结果验证、会话存在性检查、速率限制
+
+### Token 预算管理 (TokenBudgetManager)
+- 支持多会话 Token 使用追踪
+- 可配置警告和限制阈值
+- 支持回调注册，超限时自动触发警告或限制动作
+- 内置 Token 估算功能（支持中英文混合文本）
+
+### 上下文压缩 (ContextCompressor)
+- 自动检测是否需要压缩（基于轮次数或 Token 数）
+- 保留最近 N 轮对话，压缩历史对话为摘要
+- 使用 LLM 生成高质量摘要
+
+### 重试策略 (RetryPolicy)
+- 支持指数退避算法
+- 可配置重试次数、延迟时间和退避因子
+- 支持自定义可重试错误类型
+
+### LLM 适配层 (UnifiedLLMAdapter)
+- 统一的 LLM 接口设计
+- 支持多供应商切换
+- 支持流式生成
+
+**测试覆盖：** 68 个单元测试全部通过，覆盖了所有核心功能和边界情况。
