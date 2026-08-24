@@ -86,6 +86,41 @@ export interface ChapterContext {
   timeRange?: string;
 }
 
+/** 写作偏好 */
+export interface WritingPreferences {
+  /** 写作风格 */
+  style: 'formal' | 'casual' | 'literary' | 'concise'
+  /** 语言 */
+  language: 'zh' | 'en'
+  /** 人称视角 */
+  perspective: 'first' | 'third'
+  /** 是否自动提取内容 */
+  autoExtract: boolean
+  /** 自定义提示 */
+  customPrompts?: string[]
+}
+
+/** 时间线上下文 */
+export interface TimelineContext {
+  /** 当前章节时间范围 */
+  currentEra?: string
+  /** 已发生的关键事件 */
+  keyEvents?: TimelineEvent[]
+  /** 人物年龄映射 */
+  characterAges?: Record<string, number>
+}
+
+/** 时间线事件 */
+export interface TimelineEvent {
+  id: string
+  title: string
+  description: string
+  year: number
+  month?: number
+  day?: number
+  relatedCharacters?: string[]
+}
+
 // 羁绊系统类型导出
 export type {
   IdentityCategory,
