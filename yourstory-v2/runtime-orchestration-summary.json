@@ -1,0 +1,227 @@
+{
+  "project": {
+    "resolvedLane": "variants_multi_scheme",
+    "selectedIntentWorkflowRead": true,
+    "skillProvenance": {
+      "name": "solo-design",
+      "version": "2026.08.06.19.15.08",
+      "version_source": "skill-release-manifest.json"
+    },
+    "contextRequirementsLoaded": [
+      {
+        "path": "shared-runtime/runtime-boundaries/lane-runtime-contracts.md",
+        "readStatus": "loaded",
+        "bodyRead": true
+      },
+      {
+        "path": "shared-runtime/agent-dispatch-runtime/lane-dispatch-index.md",
+        "readStatus": "loaded",
+        "bodyRead": true
+      },
+      {
+        "path": "delivery-quality/page-rendering-quality-gate.md",
+        "readStatus": "loaded",
+        "bodyRead": true
+      },
+      {
+        "path": "delivery-quality/design-artifact-validation.md",
+        "readStatus": "loaded",
+        "bodyRead": true
+      },
+      {
+        "path": "delivery-quality/delivery-evidence-contract.md",
+        "readStatus": "loaded",
+        "bodyRead": true
+      },
+      {
+        "path": "visual-experience/visual-experience-guidelines.md",
+        "readStatus": "loaded",
+        "bodyRead": true
+      }
+    ],
+    "contextReadScope": "variants_multi_scheme full context load with visual-experience for source project continuity",
+    "validationRunDiscipline": "validate-design-workspace.mjs then validate-finish-readiness.mjs",
+    "lowValueCallWatchdog": {
+      "noProgressNextAction": "move to readiness or minimal blocked summary"
+    },
+    "sourcePageId": "page-dialogue",
+    "sourceHtmlSrc": "pages/dialogue.html",
+    "baselinePageId": "page-dialogue-optimized",
+    "baselineHtmlSrc": "pages/dialogue-optimized.html",
+    "variantAxis": "dialogue-creation-states",
+    "variantCount": 6,
+    "comparisonGrouping": "state-based-variants",
+    "expectedDispatches": [
+      {
+        "nodeId": "page-dialogue-welcome",
+        "packetType": "VariantPagePacket",
+        "status": "completed",
+        "changedFiles": ["pages/dialogue-welcome.html"],
+        "toolCallLedger": {
+          "todoWriteCalls": 0,
+          "previewCalls": 0,
+          "validationScriptCalls": 0,
+          "helperScriptWrites": 0,
+          "source": "main-agent-runtime-trace",
+          "traceDigest": "dialogue-welcome-variant"
+        }
+      },
+      {
+        "nodeId": "page-dialogue-conversation",
+        "packetType": "VariantPagePacket",
+        "status": "completed",
+        "changedFiles": ["pages/dialogue-conversation.html"],
+        "toolCallLedger": {
+          "todoWriteCalls": 0,
+          "previewCalls": 0,
+          "validationScriptCalls": 0,
+          "helperScriptWrites": 0,
+          "source": "main-agent-runtime-trace",
+          "traceDigest": "dialogue-conversation-variant"
+        }
+      },
+      {
+        "nodeId": "page-dialogue-loading",
+        "packetType": "VariantPagePacket",
+        "status": "completed",
+        "changedFiles": ["pages/dialogue-loading.html"],
+        "toolCallLedger": {
+          "todoWriteCalls": 0,
+          "previewCalls": 0,
+          "validationScriptCalls": 0,
+          "helperScriptWrites": 0,
+          "source": "main-agent-runtime-trace",
+          "traceDigest": "dialogue-loading-variant"
+        }
+      },
+      {
+        "nodeId": "page-dialogue-topic-deep",
+        "packetType": "VariantPagePacket",
+        "status": "completed",
+        "changedFiles": ["pages/dialogue-topic-deep.html"],
+        "toolCallLedger": {
+          "todoWriteCalls": 0,
+          "previewCalls": 0,
+          "validationScriptCalls": 0,
+          "helperScriptWrites": 0,
+          "source": "main-agent-runtime-trace",
+          "traceDigest": "dialogue-topic-deep-variant"
+        }
+      },
+      {
+        "nodeId": "page-dialogue-chapter-complete",
+        "packetType": "VariantPagePacket",
+        "status": "completed",
+        "changedFiles": ["pages/dialogue-chapter-complete.html"],
+        "toolCallLedger": {
+          "todoWriteCalls": 0,
+          "previewCalls": 0,
+          "validationScriptCalls": 0,
+          "helperScriptWrites": 0,
+          "source": "main-agent-runtime-trace",
+          "traceDigest": "dialogue-chapter-complete-variant"
+        }
+      },
+      {
+        "nodeId": "page-dialogue-review",
+        "packetType": "VariantPagePacket",
+        "status": "completed",
+        "changedFiles": ["pages/dialogue-review.html"],
+        "toolCallLedger": {
+          "todoWriteCalls": 0,
+          "previewCalls": 0,
+          "validationScriptCalls": 0,
+          "helperScriptWrites": 0,
+          "source": "main-agent-runtime-trace",
+          "traceDigest": "dialogue-review-variant"
+        }
+      }
+    ],
+    "dispatchPreflightManifest": [
+      {
+        "nodeId": "page-dialogue-welcome",
+        "htmlSrc": "pages/dialogue-welcome.html",
+        "title": "对话创作 · 欢迎状态",
+        "toolPolicy": {
+          "todoWriteAllowed": false,
+          "validationScriptsAllowed": false,
+          "previewAllowed": false,
+          "helperScriptsAllowed": false,
+          "designFileWriteAllowed": false,
+          "allowedWritePaths": ["pages/dialogue-welcome.html", "assets/"]
+        },
+        "allowedWritePaths": ["pages/dialogue-welcome.html", "assets/"]
+      },
+      {
+        "nodeId": "page-dialogue-conversation",
+        "htmlSrc": "pages/dialogue-conversation.html",
+        "title": "对话创作 · 进行中",
+        "toolPolicy": {
+          "todoWriteAllowed": false,
+          "validationScriptsAllowed": false,
+          "previewAllowed": false,
+          "helperScriptsAllowed": false,
+          "designFileWriteAllowed": false,
+          "allowedWritePaths": ["pages/dialogue-conversation.html", "assets/"]
+        },
+        "allowedWritePaths": ["pages/dialogue-conversation.html", "assets/"]
+      },
+      {
+        "nodeId": "page-dialogue-loading",
+        "htmlSrc": "pages/dialogue-loading.html",
+        "title": "对话创作 · AI思考中",
+        "toolPolicy": {
+          "todoWriteAllowed": false,
+          "validationScriptsAllowed": false,
+          "previewAllowed": false,
+          "helperScriptsAllowed": false,
+          "designFileWriteAllowed": false,
+          "allowedWritePaths": ["pages/dialogue-loading.html", "assets/"]
+        },
+        "allowedWritePaths": ["pages/dialogue-loading.html", "assets/"]
+      },
+      {
+        "nodeId": "page-dialogue-topic-deep",
+        "htmlSrc": "pages/dialogue-topic-deep.html",
+        "title": "对话创作 · 话题深入",
+        "toolPolicy": {
+          "todoWriteAllowed": false,
+          "validationScriptsAllowed": false,
+          "previewAllowed": false,
+          "helperScriptsAllowed": false,
+          "designFileWriteAllowed": false,
+          "allowedWritePaths": ["pages/dialogue-topic-deep.html", "assets/"]
+        },
+        "allowedWritePaths": ["pages/dialogue-topic-deep.html", "assets/"]
+      },
+      {
+        "nodeId": "page-dialogue-chapter-complete",
+        "htmlSrc": "pages/dialogue-chapter-complete.html",
+        "title": "对话创作 · 章节完成",
+        "toolPolicy": {
+          "todoWriteAllowed": false,
+          "validationScriptsAllowed": false,
+          "previewAllowed": false,
+          "helperScriptsAllowed": false,
+          "designFileWriteAllowed": false,
+          "allowedWritePaths": ["pages/dialogue-chapter-complete.html", "assets/"]
+        },
+        "allowedWritePaths": ["pages/dialogue-chapter-complete.html", "assets/"]
+      },
+      {
+        "nodeId": "page-dialogue-review",
+        "htmlSrc": "pages/dialogue-review.html",
+        "title": "对话创作 · 回顾模式",
+        "toolPolicy": {
+          "todoWriteAllowed": false,
+          "validationScriptsAllowed": false,
+          "previewAllowed": false,
+          "helperScriptsAllowed": false,
+          "designFileWriteAllowed": false,
+          "allowedWritePaths": ["pages/dialogue-review.html", "assets/"]
+        },
+        "allowedWritePaths": ["pages/dialogue-review.html", "assets/"]
+      }
+    ]
+  }
+}

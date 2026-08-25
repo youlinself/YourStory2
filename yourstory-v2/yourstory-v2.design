@@ -9,7 +9,14 @@
       "canvasData": {
         "x": 0,
         "y": 0,
-        "group": 0
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 900,
+          "viewportWidth": 1440,
+          "sourceHash": "fnv1a-827575ca",
+          "measuredAt": 1787629806732
+        }
       },
       "devMetadata": {
         "htmlSrc": "pages/home.html",
@@ -23,12 +30,138 @@
       "version": 1,
       "createdAt": 1712476800000,
       "canvasData": {
-        "x": 620,
+        "x": 480,
+        "y": 0,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 900,
+          "viewportWidth": 1440,
+          "sourceHash": "fnv1a-4cc9f3b4",
+          "measuredAt": 1787629806732
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/dialogue.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-dialogue-optimized",
+      "title": "对话创作 · 优化版",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1712476800000,
+      "canvasData": {
+        "x": 960,
+        "y": 0,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 900,
+          "viewportWidth": 1440,
+          "sourceHash": "fnv1a-d9f5e558",
+          "measuredAt": 1787629806732
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/dialogue-optimized.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-dialogue-welcome",
+      "title": "对话创作 · 欢迎状态",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1712476800000,
+      "canvasData": {
+        "x": 1440,
         "y": 0,
         "group": 0
       },
       "devMetadata": {
-        "htmlSrc": "pages/dialogue.html",
+        "htmlSrc": "pages/dialogue-welcome.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-dialogue-conversation",
+      "title": "对话创作 · 进行中",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1712476800000,
+      "canvasData": {
+        "x": 1920,
+        "y": 0,
+        "group": 0
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/dialogue-conversation.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-dialogue-loading",
+      "title": "对话创作 · AI思考中",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1712476800000,
+      "canvasData": {
+        "x": 2400,
+        "y": 0,
+        "group": 0
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/dialogue-loading.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-dialogue-topic-deep",
+      "title": "对话创作 · 话题深入",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1712476800000,
+      "canvasData": {
+        "x": 2880,
+        "y": 0,
+        "group": 0
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/dialogue-topic-deep.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-dialogue-chapter-complete",
+      "title": "对话创作 · 章节完成",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1712476800000,
+      "canvasData": {
+        "x": 3360,
+        "y": 0,
+        "group": 0
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/dialogue-chapter-complete.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-dialogue-review",
+      "title": "对话创作 · 回顾模式",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1712476800000,
+      "canvasData": {
+        "x": 3840,
+        "y": 0,
+        "group": 0
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/dialogue-review.html",
         "interactions": []
       }
     },
@@ -39,9 +172,16 @@
       "version": 1,
       "createdAt": 1712476800000,
       "canvasData": {
-        "x": 1240,
+        "x": 4320,
         "y": 0,
-        "group": 0
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 900,
+          "viewportWidth": 1440,
+          "sourceHash": "fnv1a-4f6a1333",
+          "measuredAt": 1787629806732
+        }
       },
       "devMetadata": {
         "htmlSrc": "pages/autobiography.html",
@@ -55,9 +195,16 @@
       "version": 1,
       "createdAt": 1712476800000,
       "canvasData": {
-        "x": 1860,
+        "x": 4800,
         "y": 0,
-        "group": 0
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 900,
+          "viewportWidth": 1440,
+          "sourceHash": "fnv1a-ac47b865",
+          "measuredAt": 1787629806732
+        }
       },
       "devMetadata": {
         "htmlSrc": "pages/settings.html",
@@ -71,9 +218,16 @@
       "version": 1,
       "createdAt": 1712476800000,
       "canvasData": {
-        "x": 2480,
+        "x": 5280,
         "y": 0,
-        "group": 0
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 900,
+          "viewportWidth": 1440,
+          "sourceHash": "fnv1a-b0fc37f2",
+          "measuredAt": 1787629806732
+        }
       },
       "devMetadata": {
         "htmlSrc": "pages/simulation.html",
@@ -84,6 +238,7 @@
   "config": {
     "autoLayout": true,
     "deviceType": "desktop",
-    "projectName": "YourStory 全新设计"
+    "projectName": "YourStory 全新设计",
+    "showEdge": false
   }
 }

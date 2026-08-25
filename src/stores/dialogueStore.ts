@@ -197,6 +197,8 @@ const useDialogueStore = create<DialogueState>((set, get) => ({
       activeSession: updatedSession,
       sessions: updatedSessions,
     });
+
+    storageService.saveData(SESSIONS_KEY, updatedSessions).catch(console.error);
   },
 
   deleteMessage: (messageId: string) => {

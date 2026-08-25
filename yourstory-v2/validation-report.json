@@ -1,42 +1,152 @@
 {
   "success": true,
+  "outcome": "passed",
+  "repairable": true,
+  "terminalViolations": [],
+  "terminalBlockingSummary": null,
   "skillProvenance": {
     "name": "solo-design",
-    "version": null,
-    "version_source": "unknown",
-    "runtime_skill_dir": null,
+    "version": "2026.08.06.19.15.08",
+    "version_source": "skill-release-manifest.json",
+    "runtime_skill_dir": "c:\\Users\\Administrator\\.trae\\builtin\\design\\default\\skills\\solo-design",
     "recorded_at": null,
-    "read_status": "missing",
-    "reason": "orchestration-summary.json missing skillProvenance"
+    "expected_version": "2026.08.06.19.15.08",
+    "status": "manifest_fallback",
+    "read_status": "ok",
+    "reason": "runtime-orchestration-summary.json missing skillProvenance; used skill-release-manifest.json"
   },
   "operatingMode": "free-explore",
   "renderBlockingErrorCount": 0,
-  "softWarningCount": 7,
+  "softWarningCount": 16,
   "renderBlockingErrors": [],
+  "errorSignatures": [],
   "softWarnings": [
-    "[orchestration-summary] orchestration-summary.json is missing. Canvas validation can still pass, but quality-context checks (operatingMode, visualNorthStar, compositionPattern, continuityAnchors, miniProgramStyle) are degraded.",
+    "[orchestration-summary] runtime-orchestration-summary.json is missing skillProvenance.name/version/version_source. Version provenance will be reported as observed_unknown by external evaluators.",
     "[html-quality] colors_and_type.css: free-explore brand CSS must use one primary hue only; forbidden secondary/accent brand variables found (--secondary, --secondary-foreground, --accent, --accent-foreground). Use --state-success/warning/error/info only for semantic states.",
     "[html-quality] colors_and_type.css: free-explore radius tokens must stay within the restrained 2/4/8/12/16px scale; oversized or forbidden radius tokens found (--radius-xl: 18px, --radius-large: 14px). Do not use 20px+ radii unless the user explicitly requested large rounded shapes.",
     "[html-quality] autobiography.html: free-explore pages must not use secondary/accent brand variables. Use the single primary hue, neutral tints, or --state-success/warning/error/info for real semantic states.",
+    "[html-quality] dialogue-chapter-complete.html: free-explore pages must not use secondary/accent brand variables. Use the single primary hue, neutral tints, or --state-success/warning/error/info for real semantic states.",
+    "[html-quality] dialogue-conversation.html: free-explore pages must not use secondary/accent brand variables. Use the single primary hue, neutral tints, or --state-success/warning/error/info for real semantic states.",
+    "[html-quality] dialogue-loading.html: free-explore pages must not use secondary/accent brand variables. Use the single primary hue, neutral tints, or --state-success/warning/error/info for real semantic states.",
+    "[html-quality] dialogue-optimized.html: free-explore pages must not use secondary/accent brand variables. Use the single primary hue, neutral tints, or --state-success/warning/error/info for real semantic states.",
+    "[html-quality] dialogue-review.html: free-explore pages must not use secondary/accent brand variables. Use the single primary hue, neutral tints, or --state-success/warning/error/info for real semantic states.",
+    "[html-quality] dialogue-topic-deep.html: free-explore pages must not use secondary/accent brand variables. Use the single primary hue, neutral tints, or --state-success/warning/error/info for real semantic states.",
+    "[html-quality] dialogue-welcome.html: free-explore pages must not use secondary/accent brand variables. Use the single primary hue, neutral tints, or --state-success/warning/error/info for real semantic states.",
     "[html-quality] dialogue.html: free-explore pages must not use secondary/accent brand variables. Use the single primary hue, neutral tints, or --state-success/warning/error/info for real semantic states.",
     "[html-quality] home.html: free-explore pages must not use secondary/accent brand variables. Use the single primary hue, neutral tints, or --state-success/warning/error/info for real semantic states.",
-    "[html-quality] settings.html: free-explore pages must not use secondary/accent brand variables. Use the single primary hue, neutral tints, or --state-success/warning/error/info for real semantic states."
+    "[html-quality] settings.html: free-explore pages must not use secondary/accent brand variables. Use the single primary hue, neutral tints, or --state-success/warning/error/info for real semantic states.",
+    "[html-quality] simulation.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] simulation.html: free-explore pages must not use secondary/accent brand variables. Use the single primary hue, neutral tints, or --state-success/warning/error/info for real semantic states."
   ],
-  "repairPlanHints": [],
+  "repairPlanHints": [
+    {
+      "errorClass": "hardcoded-color-in-body",
+      "owner": "sub-agent",
+      "repairScope": "targeted-token-replace",
+      "strategy": "targeted_token_replace_once",
+      "affectedFiles": [
+        "simulation.html"
+      ],
+      "repairReportPath": null,
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 2
+    }
+  ],
+  "repairActionTable": [],
   "errorCount": 0,
-  "warningCount": 7,
+  "warningCount": 16,
   "errors": [],
   "warnings": [
-    "[orchestration-summary] orchestration-summary.json is missing. Canvas validation can still pass, but quality-context checks (operatingMode, visualNorthStar, compositionPattern, continuityAnchors, miniProgramStyle) are degraded.",
+    "[orchestration-summary] runtime-orchestration-summary.json is missing skillProvenance.name/version/version_source. Version provenance will be reported as observed_unknown by external evaluators.",
     "[html-quality] colors_and_type.css: free-explore brand CSS must use one primary hue only; forbidden secondary/accent brand variables found (--secondary, --secondary-foreground, --accent, --accent-foreground). Use --state-success/warning/error/info only for semantic states.",
     "[html-quality] colors_and_type.css: free-explore radius tokens must stay within the restrained 2/4/8/12/16px scale; oversized or forbidden radius tokens found (--radius-xl: 18px, --radius-large: 14px). Do not use 20px+ radii unless the user explicitly requested large rounded shapes.",
     "[html-quality] autobiography.html: free-explore pages must not use secondary/accent brand variables. Use the single primary hue, neutral tints, or --state-success/warning/error/info for real semantic states.",
+    "[html-quality] dialogue-chapter-complete.html: free-explore pages must not use secondary/accent brand variables. Use the single primary hue, neutral tints, or --state-success/warning/error/info for real semantic states.",
+    "[html-quality] dialogue-conversation.html: free-explore pages must not use secondary/accent brand variables. Use the single primary hue, neutral tints, or --state-success/warning/error/info for real semantic states.",
+    "[html-quality] dialogue-loading.html: free-explore pages must not use secondary/accent brand variables. Use the single primary hue, neutral tints, or --state-success/warning/error/info for real semantic states.",
+    "[html-quality] dialogue-optimized.html: free-explore pages must not use secondary/accent brand variables. Use the single primary hue, neutral tints, or --state-success/warning/error/info for real semantic states.",
+    "[html-quality] dialogue-review.html: free-explore pages must not use secondary/accent brand variables. Use the single primary hue, neutral tints, or --state-success/warning/error/info for real semantic states.",
+    "[html-quality] dialogue-topic-deep.html: free-explore pages must not use secondary/accent brand variables. Use the single primary hue, neutral tints, or --state-success/warning/error/info for real semantic states.",
+    "[html-quality] dialogue-welcome.html: free-explore pages must not use secondary/accent brand variables. Use the single primary hue, neutral tints, or --state-success/warning/error/info for real semantic states.",
     "[html-quality] dialogue.html: free-explore pages must not use secondary/accent brand variables. Use the single primary hue, neutral tints, or --state-success/warning/error/info for real semantic states.",
     "[html-quality] home.html: free-explore pages must not use secondary/accent brand variables. Use the single primary hue, neutral tints, or --state-success/warning/error/info for real semantic states.",
-    "[html-quality] settings.html: free-explore pages must not use secondary/accent brand variables. Use the single primary hue, neutral tints, or --state-success/warning/error/info for real semantic states."
+    "[html-quality] settings.html: free-explore pages must not use secondary/accent brand variables. Use the single primary hue, neutral tints, or --state-success/warning/error/info for real semantic states.",
+    "[html-quality] simulation.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] simulation.html: free-explore pages must not use secondary/accent brand variables. Use the single primary hue, neutral tints, or --state-success/warning/error/info for real semantic states."
   ],
+  "validationRunDisciplineStatus": {
+    "declared": true,
+    "restoreMode": false,
+    "maxFullValidationRuns": null,
+    "validationHistoryCount": 0,
+    "repairLedgerCount": 0,
+    "softWarningsTriggerRepair": null,
+    "terminalState": null,
+    "nextAction": null,
+    "violations": [],
+    "success": true
+  },
+  "terminalState": null,
+  "nextCheck": {
+    "type": "finish-readiness",
+    "command": "node \"c:\\Users\\Administrator\\.trae\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\validate-finish-readiness.mjs\" \"f:\\self_work\\yourStory2\\YourStory2\\yourstory-v2\" --check=all",
+    "fullValidationAllowed": false,
+    "reason": "workspace validation passed; run complete finish readiness before final delivery"
+  },
+  "repairBatch": [],
+  "repairContextPacket": {
+    "schema_version": "1.0",
+    "purpose": "small-context repair packet; read this before full validation-report.json",
+    "success": true,
+    "terminalState": null,
+    "skillProvenance": {
+      "name": "solo-design",
+      "version": "2026.08.06.19.15.08",
+      "version_source": "skill-release-manifest.json",
+      "runtime_skill_dir": "c:\\Users\\Administrator\\.trae\\builtin\\design\\default\\skills\\solo-design",
+      "recorded_at": null,
+      "expected_version": "2026.08.06.19.15.08",
+      "status": "manifest_fallback",
+      "read_status": "ok",
+      "reason": "runtime-orchestration-summary.json missing skillProvenance; used skill-release-manifest.json"
+    },
+    "renderBlockingErrorCount": 0,
+    "softWarningCount": 16,
+    "renderBlockingErrors": [],
+    "repairActionTable": [],
+    "nextCheck": {
+      "type": "finish-readiness",
+      "command": "node \"c:\\Users\\Administrator\\.trae\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\validate-finish-readiness.mjs\" \"f:\\self_work\\yourStory2\\YourStory2\\yourstory-v2\" --check=all",
+      "fullValidationAllowed": false,
+      "reason": "workspace validation passed; run complete finish readiness before final delivery"
+    },
+    "forbidden": [
+      "do not read validator source",
+      "do not rerun full validation when nextCheck.fullValidationAllowed=false",
+      "do not start preview/browser unless user explicitly asks",
+      "do not hand-edit repair ledger fields"
+    ]
+  },
+  "projectFileHashes": {
+    "yourstory-v2.design": "73b73d9d9c70a6422c47fdd690ed47f34e6c6371f6b9d02374af596e1ad41338",
+    "colors_and_type.css": "f983fe66074a362ce14986bb9cf844736db3b56cc91c9db9a2eb1c5f1a49d37d",
+    "runtime-orchestration-summary.json": "530aeb411232c436f4914ad6a1386867e0871b823949009a70d3123c231be31d",
+    "pages/autobiography.html": "8e6b2bb432fb77c8cd7e83a01e5c53d2ca59ee380e80cad695f39a2993a444a1",
+    "pages/dialogue-chapter-complete.html": "3bbd6c9473614b9f28dc704723576fad137ec133127723201f303361bf51715c",
+    "pages/dialogue-conversation.html": "bc0edb37b9d4c0d1ab454616ea44b448980bb7064c2f3d54a494bef3534daef9",
+    "pages/dialogue-loading.html": "ffd1f6e97195d8fe5e07fa08db1d3933f405616543c4c647ccfd260a66c8ff62",
+    "pages/dialogue-optimized.html": "1b4f7cb5088aa8f06afb1e81896d1085338218dc8065aced65e26b14e74ea573",
+    "pages/dialogue-review.html": "e36b5b7ac5dce1731e3591f2aaf34569fdf8bc418e406c90aca300bd66f0ff64",
+    "pages/dialogue-topic-deep.html": "2a1e4e05329de23eaa748c20b8d36b44f2063acea516ed5abc64b24daee98b2f",
+    "pages/dialogue-welcome.html": "c96176dc23ec8e09dc01b21be54b904b19b32ac00cbb9614f66190a7fd2ed075",
+    "pages/dialogue.html": "71c281298e0f2003f0f1255dd03daff84d2e95b7293e4017dd5ab7a61aa5c02f",
+    "pages/home.html": "80fdef632c65fc6d44ea4686b8e8ade04f3065c3d96a5b7579ec92f94762f547",
+    "pages/settings.html": "1a7792c5d1c8802ded5337c441a87b835eab19270fcd3faf05fde0907ac674ff",
+    "pages/simulation.html": "da21d9e8b09c28a84ea765ffc7025830bbb9f1c037c9d0c6593f8dffd8119b4b"
+  },
   "designDir": "f:\\self_work\\yourStory2\\YourStory2\\yourstory-v2",
-  "expectedPages": 4,
+  "expectedPages": null,
   "requireInteractions": null,
-  "checkedAt": "2026-07-19T04:45:19.815Z"
+  "checkedAt": "2026-08-25T04:08:38.483Z"
 }

@@ -5,22 +5,27 @@ import {
   MessageSquareText,
   BookOpen,
   Settings,
-  Bell,
-  Download,
   Sparkles,
   Send,
-  Sun,
-  GraduationCap,
-  Briefcase,
-  Heart,
-  ChevronRight,
   PenLine,
+  TreePine,
+  Users,
+  Cake,
+  School,
+  Lightbulb,
+  List,
+  Info,
+  MoreHorizontal,
+  Save,
+  Download,
+  CheckCircle,
+  Clock,
+  Target,
+  PencilLine,
+  MessagesSquare,
+  Bookmark,
 } from 'lucide-react';
 import { useAgentStore } from '@/stores/agentStore';
-import MessageBubble from '@/components/common/MessageBubble';
-import SuggestionBar from '@/components/dialogue/SuggestionBar';
-import { CommandPanel } from '@/components/dialogue/CommandPanel';
-import { SkillSwitcher } from '@/components/dialogue/SkillSwitcher';
 import { useChatScroll, useRunTimer } from '@/hooks/useChatScroll';
 import '../../styles/dialogue.css';
 
@@ -45,31 +50,34 @@ const DialoguePage: React.FC = () => {
     initialize,
     createSession,
     sendMessage,
-    activeSkills,
-    pendingToolCalls
   } = useAgentStore();
 
-  const suggestions = [
-    { color: 'bg-brand', text: '聊聊童年' },
-    { color: 'bg-gold', text: '校园时光' },
-    { color: 'bg-sage', text: '工作经历' },
-    { color: 'bg-info', text: '人生感悟' },
-  ];
-
   const topicItems = [
-    { icon: Sun, label: '童年趣事', color: 'text-amber-500' },
-    { icon: GraduationCap, label: '学生时代', color: 'text-blue-500' },
-    { icon: Briefcase, label: '工作生涯', color: 'text-emerald-500' },
-    { icon: Heart, label: '婚姻家庭', color: 'text-rose-500' },
+    { icon: TreePine, label: '老家的环境', color: 'sage', description: '那条小河，那棵老槐树，那个宁静的小镇' },
+    { icon: Users, label: '童年的玩伴们', color: 'gold', description: '一起长大的朋友，那些无忧无虑的时光' },
+    { icon: Cake, label: '难忘的生日', color: 'brand', description: '那些特别的庆祝时刻，收到过的礼物' },
+    { icon: School, label: '小学的时光', color: 'sage', description: '校园里的记忆，第一份友谊' },
   ];
 
   const followupItems = [
-    '童年最难忘的一件事是什么？',
-    '小时候的家庭环境如何？',
-    '童年时期对你影响最大的人是谁？',
+    '那条小河里，你和小伙伴们有没有一起玩耍的回忆？比如捉鱼、戏水？',
+    '老槐树下发生过什么令你难忘的事情吗？夏天的树荫下，一定藏着许多故事。',
+    '这个小镇给你的整体感觉是什么？它和你后来生活的城市有什么不同？',
   ];
 
-  // 智能滚动管理
+  const suggestions = [
+    { color: 'sage', text: '聊聊老家的环境', icon: TreePine },
+    { color: 'gold', text: '童年的玩伴们', icon: Users },
+    { color: 'brand', text: '难忘的生日', icon: Cake },
+  ];
+
+  const outlineItems = [
+    { title: '老家的环境', status: '进行中', words: 780, color: 'brand' },
+    { title: '童年的玩伴', status: '待探索', words: 0, color: 'gold' },
+    { title: '难忘的生日', status: '待探索', words: 0, color: 'muted' },
+    { title: '小学的时光', status: '待探索', words: 0, color: 'muted' },
+  ];
+
   const { listRef, columnRef, atBottom, scrollToBottom } = useChatScroll(messages);
   const { elapsedMs, formatDuration } = useRunTimer(isLoading ? Date.now() : null);
 
@@ -131,6 +139,10 @@ const DialoguePage: React.FC = () => {
     setInputValue(text);
   };
 
+  const handleTopicClick = (label: string) => {
+    setInputValue(`我想先聊聊${label}`);
+  };
+
   if (!currentSession) {
     return (
       <div className="main-area">
@@ -138,7 +150,7 @@ const DialoguePage: React.FC = () => {
           <div className="sidebar-header">
             <div className="logo-container">
               <div className="logo-icon brand-gradient">
-                <BookOpen size={16} strokeWidth={2.5} />
+                <BookOpen size={18} strokeWidth={1.5} />
               </div>
               <span className="logo-text">YourStory</span>
             </div>
@@ -149,13 +161,16 @@ const DialoguePage: React.FC = () => {
               <span>首页</span>
             </Link>
             <span className="nav-link active">
-              <MessageSquareText size={18} className="text-brand" />
+              <MessageSquareText size={18} />
               <span>对话创作</span>
             </span>
             <Link to="/autobiography" className="nav-link">
               <BookOpen size={18} />
               <span>我的自传</span>
             </Link>
+            <div className="nav-section">
+              <span className="nav-section-title">设置</span>
+            </div>
             <Link to="/settings" className="nav-link">
               <Settings size={18} />
               <span>设置</span>
@@ -174,211 +189,190 @@ const DialoguePage: React.FC = () => {
 
   return (
     <div className="main-area">
-      {/* Sidebar */}
+      {/* ==================== 左侧 Sidebar ==================== */}
       <aside className="sidebar">
+        {/* Logo */}
         <div className="sidebar-header">
           <div className="logo-container">
             <div className="logo-icon brand-gradient">
-              <BookOpen size={16} strokeWidth={2.5} />
+              <BookOpen size={18} strokeWidth={1.5} />
             </div>
             <span className="logo-text">YourStory</span>
           </div>
         </div>
 
+        {/* Navigation */}
         <nav className="sidebar-nav">
           <Link to="/" className="nav-link">
             <Home size={18} />
             <span>首页</span>
           </Link>
           <span className="nav-link active">
-            <MessageSquareText size={18} className="text-brand" />
+            <MessageSquareText size={18} />
             <span>对话创作</span>
           </span>
           <Link to="/autobiography" className="nav-link">
             <BookOpen size={18} />
             <span>我的自传</span>
           </Link>
+          <div className="nav-section">
+            <span className="nav-section-title">设置</span>
+          </div>
           <Link to="/settings" className="nav-link">
             <Settings size={18} />
             <span>设置</span>
           </Link>
         </nav>
 
+        {/* Current Chapter Info */}
         <div className="sidebar-chapter-card">
           <div className="chapter-card-header">
-            <div className="chapter-icon">
-              <PenLine size={14} className="text-white" />
-            </div>
-            <div className="chapter-info">
-              <p className="chapter-title">当前章节</p>
-              <p className="chapter-subtitle">会话 ID: {currentSession.id.slice(0, 8)}</p>
-            </div>
+            <Bookmark size={14} className="text-brand" />
+            <span className="chapter-card-title">当前章节</span>
           </div>
+          <p className="chapter-name">第一章 · 童年记忆</p>
           <div className="progress-track">
-            <div className="progress-fill in-progress" style={{ width: '50%' }} />
+            <div className="progress-fill" style={{ width: '42%' }} />
           </div>
-          <p className="chapter-status">进行中</p>
+          <p className="chapter-status">进度 42% · 已完成 5 个话题</p>
         </div>
 
+        {/* Session Stats */}
         <div className="sidebar-stats">
-          <p className="stats-title">本次会话</p>
+          <p className="stats-title">会话统计</p>
           <div className="stat-row">
-            <span className="stat-label">对话轮次</span>
+            <span className="stat-label">消息数量</span>
             <span className="stat-value">{messages.length}</span>
           </div>
           <div className="stat-row">
-            <span className="stat-label">生成字数</span>
-            <span className="stat-value">{messages.reduce((sum, m) => sum + m.content.length, 0)}</span>
+            <span className="stat-label">已记录字数</span>
+            <span className="stat-value">
+              {messages.reduce((sum, m) => sum + m.content.length, 0).toLocaleString()}
+            </span>
           </div>
-        </div>
-
-        <div className="sidebar-section">
-          <p className="sidebar-section-title">技能</p>
-          <SkillSwitcher />
+          <div className="stat-row">
+            <span className="stat-label">本次时长</span>
+            <span className="stat-value">15 分钟</span>
+          </div>
         </div>
       </aside>
 
-      {/* Main Content */}
-      <main className="main-content">
+      {/* ==================== 主内容区 ==================== */}
+      <div className="center-column">
+        {/* Top Header */}
         <header className="app-header">
           <div className="header-left">
             <div className="avatar brand-gradient text-white">
-              <Sparkles size={16} strokeWidth={2.5} />
+              <Sparkles size={16} strokeWidth={1.5} />
             </div>
             <div className="header-info">
-              <h2 className="header-title">章节对话</h2>
-              <p className="header-subtitle">第 1 章 · 进行中</p>
+              <div className="header-title-row">
+                <span className="header-title">Story 助手</span>
+                <span className="badge badge-success">在线</span>
+              </div>
+              <p className="header-subtitle">正在引导你完成第一章 · 童年记忆</p>
             </div>
           </div>
           <div className="header-actions">
-            <div className="flex gap-2 mr-4">
-              {activeSkills.map(skill => (
-                <span
-                  key={skill}
-                  className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded"
-                >
-                  {skill}
-                </span>
-              ))}
-            </div>
-            <button className="icon-button" title="通知">
-              <Bell size={18} />
+            <button className="icon-button" title="大纲">
+              <List size={18} strokeWidth={1.5} />
             </button>
-            <button className="icon-button" title="导出">
-              <Download size={18} />
+            <button className="icon-button" title="信息">
+              <Info size={18} strokeWidth={1.5} />
+            </button>
+            <button className="icon-button" title="更多">
+              <MoreHorizontal size={18} strokeWidth={1.5} />
             </button>
           </div>
         </header>
 
-        {/* Tool Call Status */}
-        {pendingToolCalls.length > 0 && (
-          <div className="px-4 py-2 bg-gray-50 border-b text-sm text-gray-500">
-            {pendingToolCalls.map(call => (
-              <span
-                key={call.name}
-                className={`mr-2 ${
-                  call.status === 'running' ? 'text-yellow-600' :
-                  call.status === 'completed' ? 'text-green-600' :
-                  call.status === 'failed' ? 'text-red-600' : ''
-                }`}
-              >
-                {call.name}: {call.status}
-              </span>
-            ))}
-          </div>
-        )}
-
-        {/* Messages Area */}
-        <div
-          className="message-list"
-          ref={listRef}
-          data-conversation-scroll="true"
-        >
+        {/* Message List */}
+        <div className="message-list" ref={listRef}>
           <div ref={columnRef}>
-            {/* Initial AI Message */}
+            {/* Welcome Hero - shown when no messages */}
             {messages.length === 0 && (
-              <div className="welcome-message">
-                <div className="message-avatar">
-                  <Sparkles size={16} strokeWidth={2.5} />
+              <div className="welcome-hero">
+                <div className="hero-icon">
+                  <BookOpen size={32} strokeWidth={1.5} className="text-brand" />
                 </div>
-                <div className="welcome-content">
-                  <p className="welcome-sender">AI 创作助手</p>
-                  <div className="chat-bubble chat-bubble-ai animate-fade-in">
-                    <p>你好！我是你的 AI 创作助手。今天我们来聊聊你的人生故事。</p>
-                    <p className="mt-2">你想从哪个话题开始呢？可以选择下方的话题，也可以直接告诉我你想聊的内容。</p>
-                  </div>
+                <h1 className="hero-title">开始你的故事创作之旅</h1>
+                <p className="hero-subtitle">
+                  Story 助手将引导你通过对话的方式，把珍贵的记忆一一记录下来
+                </p>
 
-                  <div className="topic-grid">
-                    {topicItems.map((topic, index) => (
-                      <button key={index} className="topic-card">
-                        <span className={`topic-icon-wrapper ${topic.color}`}>
-                          <topic.icon size={16} />
-                        </span>
-                        <span>{topic.label}</span>
-                        <ChevronRight size={14} className="topic-arrow" />
-                      </button>
-                    ))}
-                  </div>
-
-                  <div className="followup-section">
-                    <p className="followup-title">你可以这样问我：</p>
-                    {followupItems.map((item, index) => (
-                      <div key={index} className="followup-item">
-                        <span className="followup-mark">Q:</span>
-                        <span>{item}</span>
+                {/* Topic Suggestion Cards */}
+                <div className="topic-grid">
+                  {topicItems.map((topic, index) => (
+                    <button
+                      key={index}
+                      className={`topic-card topic-card-${topic.color}`}
+                      onClick={() => handleTopicClick(topic.label)}
+                    >
+                      <div className={`topic-icon-wrapper bg-${topic.color}-light`}>
+                        <topic.icon size={20} strokeWidth={1.5} className={`text-${topic.color}`} />
                       </div>
-                    ))}
-                  </div>
+                      <span className="topic-label">{topic.label}</span>
+                      <p className="topic-description">{topic.description}</p>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Primary CTA */}
+                <div className="hero-cta">
+                  <button className="btn btn-primary btn-lg">
+                    <PenLine size={18} strokeWidth={2} />
+                    开始第一章 · 童年记忆
+                  </button>
+                  <p className="cta-hint">选择一个话题开始，或直接点击按钮开启创作</p>
                 </div>
               </div>
             )}
 
             {/* Chat Messages */}
             {messages.map((msg) => (
-              <MessageBubble
+              <div
                 key={msg.id}
-                message={msg.content}
-                isUser={msg.role === 'user'}
-                timestamp={new Date(msg.timestamp)}
-              />
+                className={`message-row ${msg.role === 'user' ? 'message-row-user' : 'message-row-ai'}`}
+              >
+                {msg.role === 'assistant' && (
+                  <div className="avatar brand-gradient text-white">
+                    <Sparkles size={16} strokeWidth={1.5} />
+                  </div>
+                )}
+                <div className={`chat-bubble ${msg.role === 'user' ? 'chat-bubble-user' : 'chat-bubble-ai'}`}>
+                  <p>{msg.content}</p>
+                  <span className="message-time">
+                    {new Date(msg.timestamp).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </div>
+                {msg.role === 'user' && (
+                  <div className="avatar avatar-user">
+                    <Users size={16} strokeWidth={1.5} />
+                  </div>
+                )}
+              </div>
             ))}
 
             {/* Loading Indicator */}
             {isLoading && (
-              <div className="flex justify-start animate-fade-in">
-                <div className="flex gap-3">
-                  <div className="message-avatar">
-                    <Sparkles size={16} strokeWidth={2.5} />
-                  </div>
-                  <div className="chat-bubble chat-bubble-ai">
-                    <div className="typing-indicator">
-                      <div className="typing-dot" />
-                      <div className="typing-dot" />
-                      <div className="typing-dot" />
-                    </div>
+              <div className="message-row message-row-ai">
+                <div className="avatar brand-gradient text-white">
+                  <Sparkles size={16} strokeWidth={1.5} />
+                </div>
+                <div className="chat-bubble chat-bubble-ai">
+                  <div className="typing-indicator">
+                    <span className="typing-dot" />
+                    <span className="typing-dot" />
+                    <span className="typing-dot" />
                   </div>
                 </div>
-              </div>
-            )}
-
-            {/* Turn Status */}
-            {isLoading && elapsedMs >= 15000 && (
-              <div className="turn-status" role="status" aria-live="polite">
-                <span>思考中...</span>
-                <span className="turn-status-clock" aria-hidden>
-                  {formatDuration(elapsedMs)}
-                </span>
               </div>
             )}
           </div>
 
           {/* Scroll to Bottom Button */}
           {!atBottom && (
-            <button
-              className="scroll-to-bottom"
-              aria-label="滚动到底部"
-              onClick={scrollToBottom}
-            >
+            <button className="scroll-to-bottom" onClick={scrollToBottom}>
               <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 13.5L12 21m0 0l-7.5-7.5M12 21V3" />
               </svg>
@@ -386,49 +380,30 @@ const DialoguePage: React.FC = () => {
           )}
         </div>
 
-        {/* Error Display */}
-        {error && (
-          <div className="error-banner">
-            {error}
-          </div>
-        )}
-
-        {/* Command Panel */}
-        <div className="px-6 pb-2">
-          <CommandPanel />
+        {/* Suggestion Chips */}
+        <div className="suggestion-chips-row">
+          {suggestions.map((chip, index) => (
+            <button
+              key={index}
+              className="chip"
+              onClick={() => handleSuggestionClick(chip.text)}
+            >
+              <chip.icon size={14} strokeWidth={1.5} className={`text-${chip.color}`} style={{ marginRight: 6 }} />
+              {chip.text}
+            </button>
+          ))}
         </div>
 
-        {/* Suggestion Bar */}
-        <SuggestionBar
-          suggestions={[]}
-          onSuggestionClick={handleSuggestionClick}
-          isLoading={isLoading}
-        />
-
-        {/* Input Area */}
+        {/* Bottom Input Area */}
         <div className="composer-area">
-          <div className="suggestion-chips">
-            {suggestions.map((chip, index) => (
-              <button
-                key={index}
-                className="chip"
-                onClick={() => handleSuggestionClick(chip.text)}
-              >
-                <span className={`chip-dot ${chip.color}`} />
-                {chip.text}
-              </button>
-            ))}
-          </div>
           <div className="composer-input-wrap">
-            <div className="composer-prefix">
-              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.076-4.076a1.526 1.526 0 011.037-.443 48.282 48.282 0 005.68-.494c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" />
-              </svg>
-            </div>
+            <button className="composer-suggestion-btn" title="创作提示">
+              <Lightbulb size={20} strokeWidth={1.5} />
+            </button>
             <textarea
               ref={textareaRef}
               className="composer-textarea"
-              placeholder="聊聊你想记录的人生故事..."
+              placeholder="关于这个问题，你还想补充些什么呢？"
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={(e) => {
@@ -445,21 +420,127 @@ const DialoguePage: React.FC = () => {
               onClick={handleSend}
               disabled={isLoading || !inputValue.trim()}
             >
-              <Send size={20} />
+              <Send size={18} strokeWidth={2} />
             </button>
           </div>
           <div className="composer-footer">
             <p className="composer-hint">
-              输入 <kbd>Enter</kbd> 发送，<kbd>Shift+Enter</kbd> 换行
+              按 <kbd>Enter</kbd> 发送，<kbd>Shift + Enter</kbd> 换行
             </p>
-            {inputValue.length > 0 && (
-              <span className="char-count">
-                {inputValue.length} 字
-              </span>
-            )}
+            <span className="char-count">
+              已记录 {messages.reduce((sum, m) => sum + m.content.length, 0).toLocaleString()} 字 · 本章 780 字
+            </span>
           </div>
         </div>
-      </main>
+      </div>
+
+      {/* ==================== 右侧面板 ==================== */}
+      <aside className="right-panel">
+        {/* 章节大纲 */}
+        <section className="panel-section">
+          <h3 className="panel-section-title">章节大纲</h3>
+          <div className="card">
+            {outlineItems.map((item, index) => (
+              <div
+                key={index}
+                className={`outline-item ${item.status === '进行中' ? 'outline-item-active' : ''}`}
+              >
+                <div className={`timeline-dot bg-${item.color}`} />
+                <div className="outline-item-content">
+                  <p className={`outline-item-title ${item.status === '进行中' ? 'text-brand' : ''}`}>
+                    {index + 1}. {item.title}
+                  </p>
+                  <p className="outline-item-status">
+                    {item.status === '进行中' ? `进行中 · ${item.words} 字` : item.status}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* 写作统计 */}
+        <section className="panel-section">
+          <h3 className="panel-section-title">写作统计</h3>
+          <div className="card card-p-1">
+            <div className="stat-row">
+              <div className="stat-label-with-icon">
+                <PencilLine size={14} strokeWidth={1.5} className="text-brand" />
+                <span>已记录字数</span>
+              </div>
+              <span className="stat-value tabular-nums">2,156</span>
+            </div>
+            <div className="stat-row">
+              <div className="stat-label-with-icon">
+                <MessagesSquare size={14} strokeWidth={1.5} className="text-sage" />
+                <span>对话轮次</span>
+              </div>
+              <span className="stat-value tabular-nums">{messages.length}</span>
+            </div>
+            <div className="stat-row">
+              <div className="stat-label-with-icon">
+                <Clock size={14} strokeWidth={1.5} className="text-gold" />
+                <span>本次时长</span>
+              </div>
+              <span className="stat-value tabular-nums">15 分钟</span>
+            </div>
+            <div className="stat-row">
+              <div className="stat-label-with-icon">
+                <Target size={14} strokeWidth={1.5} className="text-brand" />
+                <span>完成话题</span>
+              </div>
+              <span className="stat-value tabular-nums">5 / 8</span>
+            </div>
+          </div>
+        </section>
+
+        {/* 话题建议 */}
+        <section className="panel-section">
+          <h3 className="panel-section-title">话题建议</h3>
+          <div className="topic-suggestions">
+            <button className="topic-suggestion-item">
+              <Users size={14} strokeWidth={1.5} className="text-gold" />
+              <div className="topic-suggestion-content">
+                <span className="topic-suggestion-title">童年的玩伴们</span>
+                <span className="topic-suggestion-desc">聊聊那些一起长大的朋友</span>
+              </div>
+            </button>
+            <button className="topic-suggestion-item">
+              <Cake size={14} strokeWidth={1.5} className="text-brand" />
+              <div className="topic-suggestion-content">
+                <span className="topic-suggestion-title">难忘的生日</span>
+                <span className="topic-suggestion-desc">那些特别的庆祝时刻</span>
+              </div>
+            </button>
+            <button className="topic-suggestion-item">
+              <School size={14} strokeWidth={1.5} className="text-sage" />
+              <div className="topic-suggestion-content">
+                <span className="topic-suggestion-title">小学的时光</span>
+                <span className="topic-suggestion-desc">校园里的记忆与故事</span>
+              </div>
+            </button>
+          </div>
+        </section>
+
+        {/* 快捷操作 */}
+        <section className="panel-section">
+          <h3 className="panel-section-title">快捷操作</h3>
+          <div className="quick-actions">
+            <button className="quick-action-item">
+              <Save size={16} strokeWidth={1.5} />
+              <span>保存草稿</span>
+            </button>
+            <button className="quick-action-item">
+              <Download size={16} strokeWidth={1.5} />
+              <span>导出章节</span>
+            </button>
+            <button className="quick-action-item">
+              <Settings size={16} strokeWidth={1.5} />
+              <span>对话设置</span>
+            </button>
+          </div>
+        </section>
+      </aside>
     </div>
   );
 };
