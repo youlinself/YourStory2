@@ -605,13 +605,7 @@ body {
   margin-top: 1px;
 }
 
-/* ==================== Input Area ==================== */
-.input-area {
-  padding: 16px 32px 24px;
-  background: var(--color-bg);
-  border-top: 1px solid var(--color-border-subtle);
-}
-
+/* ==================== Input Area (Legacy - 保留兼容) ==================== */
 .suggestion-chips {
   display: flex;
   flex-wrap: wrap;
@@ -644,88 +638,6 @@ body {
   height: 6px;
   border-radius: 50%;
   margin-right: 6px;
-}
-
-/* ==================== Chat Input Wrapper ==================== */
-.chat-input-wrapper {
-  display: flex;
-  align-items: flex-end;
-  gap: 12px;
-  background: var(--color-bg-elevated);
-  border: 2px solid var(--color-border);
-  border-radius: var(--radius-xl);
-  padding: 8px 8px 8px 16px;
-  transition: all 0.25s var(--ease-out);
-  position: relative;
-}
-
-.chat-input-wrapper::before {
-  content: '';
-  position: absolute;
-  inset: -2px;
-  border-radius: var(--radius-xl);
-  background: linear-gradient(135deg, var(--color-brand), var(--color-gold), var(--color-sage));
-  opacity: 0;
-  z-index: -1;
-  transition: opacity 0.3s var(--ease-out);
-}
-
-.chat-input-wrapper:focus-within {
-  border-color: transparent;
-  box-shadow: var(--shadow-glow);
-}
-
-.chat-input-wrapper:focus-within::before {
-  opacity: 1;
-}
-
-.chat-textarea {
-  flex: 1;
-  padding: 8px 0;
-  font-family: var(--font-sans);
-  font-size: 15px;
-  line-height: 1.6;
-  color: var(--color-ink);
-  background: transparent;
-  border: none;
-  outline: none;
-  resize: none;
-  min-height: 24px;
-  max-height: 160px;
-}
-
-.chat-textarea::placeholder {
-  color: var(--color-ink-faint);
-}
-
-.send-button {
-  width: 40px;
-  height: 40px;
-  border-radius: var(--radius-md);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--color-bg-subtle);
-  color: var(--color-ink-faint);
-  border: none;
-  cursor: pointer;
-  transition: all 0.2s var(--ease-out);
-  flex-shrink: 0;
-}
-
-.send-button.active {
-  background: linear-gradient(135deg, var(--color-brand), var(--color-brand-hover));
-  color: white;
-  box-shadow: 0 2px 8px rgba(218, 119, 86, 0.3);
-}
-
-.send-button.active:hover {
-  transform: scale(1.05);
-  box-shadow: 0 4px 12px rgba(218, 119, 86, 0.4);
-}
-
-.send-button.active:active {
-  transform: scale(0.95);
 }
 
 /* ==================== Loading dots ==================== */

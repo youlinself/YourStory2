@@ -21,8 +21,11 @@ import MessageBubble from '@/components/common/MessageBubble';
 import SuggestionBar from '@/components/dialogue/SuggestionBar';
 import { CommandPanel } from '@/components/dialogue/CommandPanel';
 import { SkillSwitcher } from '@/components/dialogue/SkillSwitcher';
+import { useChatScroll, useRunTimer } from '@/hooks/useChatScroll';
+import '../../styles/dialogue.css';
 
 interface ChatMessage {
+  id: string;
   role: 'user' | 'assistant';
   content: string;
   timestamp: number;
@@ -66,6 +69,10 @@ const DialoguePage: React.FC = () => {
     '童年时期对你影响最大的人是谁？',
   ];
 
+  // 智能滚动管理
+  const { listRef, columnRef, atBottom, scrollToBottom } = useChatScroll(messages);
+  const { elapsedMs, formatDuration } = useRunTimer(isLoading ? Date.now() : null);
+
   useEffect(() => {
     if (!agent) {
       initialize();
@@ -91,26 +98,32 @@ const DialoguePage: React.FC = () => {
     const userMessage = inputValue.trim();
     setInputValue('');
 
-    setMessages(prev => [...prev, {
+    const newUserMessage: ChatMessage = {
+      id: `user-${Date.now()}`,
       role: 'user',
       content: userMessage,
       timestamp: Date.now()
-    }]);
+    };
+    setMessages(prev => [...prev, newUserMessage]);
 
     try {
       const response = await sendMessage(userMessage);
 
-      setMessages(prev => [...prev, {
+      const newAiMessage: ChatMessage = {
+        id: `ai-${Date.now()}`,
         role: 'assistant',
         content: response,
         timestamp: Date.now()
-      }]);
+      };
+      setMessages(prev => [...prev, newAiMessage]);
     } catch (err) {
-      setMessages(prev => [...prev, {
+      const errorMessage: ChatMessage = {
+        id: `error-${Date.now()}`,
         role: 'assistant',
         content: `出错了: ${err instanceof Error ? err.message : '未知错误'}`,
         timestamp: Date.now()
-      }]);
+      };
+      setMessages(prev => [...prev, errorMessage]);
     }
   };
 
@@ -150,11 +163,9 @@ const DialoguePage: React.FC = () => {
           </nav>
         </aside>
         <main className="main-content">
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center">
-              <div className="w-12 h-12 rounded-full border-4 border-brand-primary border-t-transparent animate-spin mx-auto mb-4" />
-              <p className="text-ink-muted">正在初始化对话...</p>
-            </div>
+          <div className="loading-container">
+            <div className="loading-spinner" />
+            <p>正在初始化对话...</p>
           </div>
         </main>
       </div>
@@ -221,7 +232,6 @@ const DialoguePage: React.FC = () => {
           </div>
         </div>
 
-        {/* Skill Switcher in Sidebar */}
         <div className="sidebar-section">
           <p className="sidebar-section-title">技能</p>
           <SkillSwitcher />
@@ -241,7 +251,6 @@ const DialoguePage: React.FC = () => {
             </div>
           </div>
           <div className="header-actions">
-            {/* Skill Indicators */}
             <div className="flex gap-2 mr-4">
               {activeSkills.map(skill => (
                 <span
@@ -279,67 +288,107 @@ const DialoguePage: React.FC = () => {
           </div>
         )}
 
-        <div className="message-list">
-          {/* Initial AI Message */}
-          {messages.length === 0 && (
-            <div className="message-group">
-              <div className="avatar brand-gradient text-white">
-                <Sparkles size={16} strokeWidth={2.5} />
+        {/* Messages Area */}
+        <div
+          className="message-list"
+          ref={listRef}
+          data-conversation-scroll="true"
+        >
+          <div ref={columnRef}>
+            {/* Initial AI Message */}
+            {messages.length === 0 && (
+              <div className="welcome-message">
+                <div className="message-avatar">
+                  <Sparkles size={16} strokeWidth={2.5} />
+                </div>
+                <div className="welcome-content">
+                  <p className="welcome-sender">AI 创作助手</p>
+                  <div className="chat-bubble chat-bubble-ai animate-fade-in">
+                    <p>你好！我是你的 AI 创作助手。今天我们来聊聊你的人生故事。</p>
+                    <p className="mt-2">你想从哪个话题开始呢？可以选择下方的话题，也可以直接告诉我你想聊的内容。</p>
+                  </div>
+
+                  <div className="topic-grid">
+                    {topicItems.map((topic, index) => (
+                      <button key={index} className="topic-card">
+                        <span className={`topic-icon-wrapper ${topic.color}`}>
+                          <topic.icon size={16} />
+                        </span>
+                        <span>{topic.label}</span>
+                        <ChevronRight size={14} className="topic-arrow" />
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="followup-section">
+                    <p className="followup-title">你可以这样问我：</p>
+                    {followupItems.map((item, index) => (
+                      <div key={index} className="followup-item">
+                        <span className="followup-mark">Q:</span>
+                        <span>{item}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
-              <div className="message-content">
-                <p className="message-sender">AI 创作助手</p>
-                <div className="chat-bubble chat-bubble-ai animate-fade-in">
-                  <p>你好！我是你的 AI 创作助手。今天我们来聊聊你的人生故事。</p>
-                  <p className="mt-2">你想从哪个话题开始呢？可以选择下方的话题，也可以直接告诉我你想聊的内容。</p>
-                </div>
+            )}
 
-                <div className="topic-grid">
-                  {topicItems.map((topic, index) => (
-                    <button key={index} className="topic-card">
-                      <span className={`topic-icon-wrapper ${topic.color}`}>
-                        <topic.icon size={16} />
-                      </span>
-                      <span>{topic.label}</span>
-                      <ChevronRight size={14} className="topic-arrow" />
-                    </button>
-                  ))}
-                </div>
+            {/* Chat Messages */}
+            {messages.map((msg) => (
+              <MessageBubble
+                key={msg.id}
+                message={msg.content}
+                isUser={msg.role === 'user'}
+                timestamp={new Date(msg.timestamp)}
+              />
+            ))}
 
-                <div className="followup-section">
-                  <p className="followup-title">你可以这样问我：</p>
-                  {followupItems.map((item, index) => (
-                    <div key={index} className="followup-item">
-                      <span className="followup-mark">Q:</span>
-                      <span>{item}</span>
+            {/* Loading Indicator */}
+            {isLoading && (
+              <div className="flex justify-start animate-fade-in">
+                <div className="flex gap-3">
+                  <div className="message-avatar">
+                    <Sparkles size={16} strokeWidth={2.5} />
+                  </div>
+                  <div className="chat-bubble chat-bubble-ai">
+                    <div className="typing-indicator">
+                      <div className="typing-dot" />
+                      <div className="typing-dot" />
+                      <div className="typing-dot" />
                     </div>
-                  ))}
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Chat Messages */}
-          {messages.map((msg, index) => (
-            <MessageBubble
-              key={index}
-              message={msg.content}
-              isUser={msg.role === 'user'}
-              timestamp={new Date(msg.timestamp)}
-            />
-          ))}
+            {/* Turn Status */}
+            {isLoading && elapsedMs >= 15000 && (
+              <div className="turn-status" role="status" aria-live="polite">
+                <span>思考中...</span>
+                <span className="turn-status-clock" aria-hidden>
+                  {formatDuration(elapsedMs)}
+                </span>
+              </div>
+            )}
+          </div>
 
-          {isLoading && (
-            <MessageBubble
-              message=""
-              isUser={false}
-              isStreaming={true}
-            />
+          {/* Scroll to Bottom Button */}
+          {!atBottom && (
+            <button
+              className="scroll-to-bottom"
+              aria-label="滚动到底部"
+              onClick={scrollToBottom}
+            >
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 13.5L12 21m0 0l-7.5-7.5M12 21V3" />
+              </svg>
+            </button>
           )}
         </div>
 
         {/* Error Display */}
         {error && (
-          <div className="px-4 py-2 bg-red-50 text-red-600 text-sm border-t">
+          <div className="error-banner">
             {error}
           </div>
         )}
@@ -357,7 +406,7 @@ const DialoguePage: React.FC = () => {
         />
 
         {/* Input Area */}
-        <div className="input-area">
+        <div className="composer-area">
           <div className="suggestion-chips">
             {suggestions.map((chip, index) => (
               <button
@@ -370,10 +419,15 @@ const DialoguePage: React.FC = () => {
               </button>
             ))}
           </div>
-          <div className="chat-input-wrapper">
+          <div className="composer-input-wrap">
+            <div className="composer-prefix">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.076-4.076a1.526 1.526 0 011.037-.443 48.282 48.282 0 005.68-.494c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" />
+              </svg>
+            </div>
             <textarea
               ref={textareaRef}
-              className="chat-textarea"
+              className="composer-textarea"
               placeholder="聊聊你想记录的人生故事..."
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
@@ -386,12 +440,23 @@ const DialoguePage: React.FC = () => {
               rows={1}
             />
             <button
-              className={`send-button ${inputValue.trim() ? 'active' : ''}`}
+              className="send-button"
+              data-active={inputValue.trim() ? 'true' : undefined}
               onClick={handleSend}
               disabled={isLoading || !inputValue.trim()}
             >
-              <Send size={18} />
+              <Send size={20} />
             </button>
+          </div>
+          <div className="composer-footer">
+            <p className="composer-hint">
+              输入 <kbd>Enter</kbd> 发送，<kbd>Shift+Enter</kbd> 换行
+            </p>
+            {inputValue.length > 0 && (
+              <span className="char-count">
+                {inputValue.length} 字
+              </span>
+            )}
           </div>
         </div>
       </main>
