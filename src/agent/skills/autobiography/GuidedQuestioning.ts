@@ -1,4 +1,7 @@
 import type { Skill, SkillContext, SkillCommand } from '../SkillTypes'
+import { getLogger } from '../../logging'
+
+const logger = getLogger()
 
 const questionCommand: SkillCommand = {
   name: '/questions',
@@ -57,8 +60,8 @@ export const guidedQuestioningSkill: Skill = {
   commands: [questionCommand],
 
   on: {
-    'turn/complete': async (_payload, context) => {
-      console.log('[GuidedQuestioning] Turn complete, preparing suggestions')
+    'turn/complete': async (_payload, _context) => {
+      logger.debug('GuidedQuestioning', 'Turn complete, preparing suggestions')
     }
   }
 }

@@ -2,12 +2,30 @@ import { SessionManager, type StorageAdapter } from './session'
 import { ToolRegistry } from './tools'
 import { EventEmitter } from './events'
 import { SkillRegistry } from './skills'
+import { getLogger } from './logging'
+import { AgentError, ErrorCode, SessionError, ToolError, TokenBudgetError } from './errors'
+import { TokenBudgetManager } from './optimization/TokenBudget'
+import { ContextCompressor, type CompressionOptions } from './optimization/ContextCompressor'
+import type { LLMAdapter } from './llm/LLMAdapter'
 import type { SkillContext } from './skills/SkillTypes'
 import type { AutobiographySession, SessionContext, ConversationTurn } from './session/types'
 import type { ToolDefinition, ToolResult, ToolExecutionContext } from './tools/ToolTypes'
 
+const logger = getLogger()
+
 export interface AutobiographyAgentConfig {
   storage: StorageAdapter
+  tokenBudget?: {
+    limit: number
+    warningThreshold: number
+  }
+  contextCompression?: {
+    enabled: boolean
+    maxTurns?: number
+    maxTokens?: number
+    keepRecent?: number
+  }
+  llmAdapter?: LLMAdapter
 }
 
 export class AutobiographyAgent {
@@ -15,38 +33,138 @@ export class AutobiographyAgent {
   readonly toolRegistry: ToolRegistry
   readonly events: EventEmitter
   readonly skillRegistry: SkillRegistry
+  readonly tokenBudgetManager: TokenBudgetManager
+  readonly contextCompressor: ContextCompressor | null
+  private compressionConfig: CompressionOptions
 
   constructor(config: AutobiographyAgentConfig) {
     this.sessionManager = new SessionManager(config.storage)
     this.toolRegistry = new ToolRegistry()
     this.events = new EventEmitter()
     this.skillRegistry = new SkillRegistry(this.toolRegistry, this.events)
+    this.tokenBudgetManager = new TokenBudgetManager()
+    this.compressionConfig = {
+      keepRecent: config.contextCompression?.keepRecent ?? 5,
+      maxTurns: config.contextCompression?.maxTurns ?? 20,
+      maxTokens: config.contextCompression?.maxTokens ?? 50000
+    }
+
+    if (config.llmAdapter && config.contextCompression?.enabled) {
+      this.contextCompressor = new ContextCompressor(config.llmAdapter)
+    } else {
+      this.contextCompressor = null
+    }
+
     this.setupEventListeners()
+
+    if (config.tokenBudget) {
+      this.tokenBudgetManager.setDefaultConfig(
+        config.tokenBudget.limit,
+        config.tokenBudget.warningThreshold
+      )
+    }
   }
 
   /** 设置内部事件监听 */
   private setupEventListeners(): void {
     this.events.on('session/created', ({ sessionId, chapterId }) => {
-      console.log(`[Agent] Session created: ${sessionId} for chapter: ${chapterId}`)
+      logger.info('Agent', 'Session created', { sessionId, chapterId })
     })
 
     this.events.on('session/paused', ({ sessionId }) => {
-      console.log(`[Agent] Session paused: ${sessionId}`)
+      logger.info('Agent', 'Session paused', { sessionId })
     })
 
     this.events.on('session/closed', ({ sessionId }) => {
+      logger.info('Agent', 'Session closed', { sessionId })
       this.skillRegistry.cleanupSession(sessionId)
       this.toolRegistry.cleanupSession(sessionId)
     })
 
     this.events.on('tool/failed', ({ sessionId, tool, error }) => {
-      console.error(`[Agent] Tool failed in session ${sessionId}: ${tool}`, error)
+      logger.error('Agent', `Tool failed: ${tool}`, error, { sessionId })
     })
+
+    this.events.on('session/closed', ({ sessionId }) => {
+      this.tokenBudgetManager.cleanup(sessionId)
+    })
+  }
+
+  /** 检查并执行上下文压缩 */
+  async checkAndCompressContext(sessionId: string): Promise<boolean> {
+    if (!this.contextCompressor) {
+      return false
+    }
+
+    const session = this.sessionManager.get(sessionId)
+    if (!session) {
+      return false
+    }
+
+    const shouldCompress = this.contextCompressor.shouldCompress(
+      session.history,
+      this.compressionConfig.maxTurns,
+      this.compressionConfig.maxTokens
+    )
+
+    if (!shouldCompress) {
+      return false
+    }
+
+    logger.info('Agent', 'Compressing conversation context', {
+      sessionId,
+      historyLength: session.history.length
+    })
+
+    try {
+      const result = await this.contextCompressor.compress(session.history, this.compressionConfig)
+
+      session.history = result.compressedHistory
+      this.events.emit('context/compressed', {
+        sessionId,
+        removedCount: result.removedCount,
+        tokensSaved: result.tokensSaved
+      })
+
+      logger.info('Agent', 'Context compression completed', {
+        sessionId,
+        removedCount: result.removedCount,
+        tokensSaved: result.tokensSaved
+      })
+
+      return true
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error))
+      logger.error('Agent', 'Context compression failed', err, { sessionId })
+      this.events.emit('system/error', {
+        error: err,
+        context: 'context-compression'
+      })
+      return false
+    }
+  }
+
+  /** 检查 Token 预算 */
+  checkTokenBudget(sessionId: string): { canProceed: boolean; remaining: number } {
+    const remaining = this.tokenBudgetManager.getRemaining(sessionId)
+    const stats = this.tokenBudgetManager.getStats(sessionId)
+    const canProceed = stats ? remaining > 1000 : true
+    return { canProceed, remaining }
+  }
+
+  /** 记录 Token 使用 */
+  recordTokenUsage(sessionId: string, tokens: number): void {
+    this.tokenBudgetManager.recordUsage(sessionId, tokens)
+    const stats = this.tokenBudgetManager.getStats(sessionId)
+    if (stats) {
+      logger.debug('Agent', 'Token usage recorded', { sessionId, tokens, totalUsed: stats.used })
+    }
   }
 
   /** 创建会话 */
   async createSession(chapterId: string, context: SessionContext): Promise<AutobiographySession> {
     const session = await this.sessionManager.create(chapterId, context)
+    this.tokenBudgetManager.initSession(session.id)
     this.events.emit('session/created', { sessionId: session.id, chapterId })
     return session
   }
@@ -96,7 +214,10 @@ export class AutobiographyAgent {
   async activateSkill(sessionId: string, skillName: string): Promise<void> {
     const session = await this.sessionManager.resume(sessionId)
     if (!session) {
-      throw new Error(`Session not found: ${sessionId}`)
+      throw new SessionError(ErrorCode.SESSION_NOT_FOUND, `Session not found: ${sessionId}`, {
+        sessionId,
+        recoverable: false
+      })
     }
 
     const context: SkillContext = {
@@ -128,16 +249,26 @@ export class AutobiographyAgent {
   ): Promise<ToolResult> {
     const tool = this.toolRegistry.get(toolName)
     if (!tool) {
-      throw new Error(`Tool not found: ${toolName}`)
+      throw new ToolError(ErrorCode.TOOL_NOT_FOUND, `Tool not found: ${toolName}`, {
+        toolName,
+        recoverable: false
+      })
     }
 
     if (!this.toolRegistry.isAvailable(sessionId, toolName)) {
-      throw new Error(`Tool not available for session: ${toolName}`)
+      throw new ToolError(ErrorCode.TOOL_NOT_AVAILABLE, `Tool not available for session: ${toolName}`, {
+        sessionId,
+        toolName,
+        recoverable: true
+      })
     }
 
     const session = await this.sessionManager.resume(sessionId)
     if (!session) {
-      throw new Error(`Session not found: ${sessionId}`)
+      throw new SessionError(ErrorCode.SESSION_NOT_FOUND, `Session not found: ${sessionId}`, {
+        sessionId,
+        recoverable: false
+      })
     }
 
     const context: ToolExecutionContext = {
@@ -173,8 +304,15 @@ export class AutobiographyAgent {
       return result
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error))
-      this.events.emit('tool/failed', { sessionId, tool: toolName, error: err })
-      throw err
+      const toolError = new ToolError(ErrorCode.TOOL_EXECUTION_FAILED, `Tool execution failed: ${toolName}`, {
+        sessionId,
+        toolName,
+        recoverable: true,
+        cause: err
+      })
+      logger.error('Agent', `Tool execution failed: ${toolName}`, toolError, { sessionId })
+      this.events.emit('tool/failed', { sessionId, tool: toolName, error: toolError })
+      throw toolError
     }
   }
 
@@ -193,7 +331,19 @@ export class AutobiographyAgent {
   }> {
     const session = await this.sessionManager.resume(sessionId)
     if (!session) {
-      throw new Error(`Session not found: ${sessionId}`)
+      throw new SessionError(ErrorCode.SESSION_NOT_FOUND, `Session not found: ${sessionId}`, {
+        sessionId,
+        recoverable: false
+      })
+    }
+
+    const tokenCheck = this.checkTokenBudget(sessionId)
+    if (!tokenCheck.canProceed) {
+      throw new TokenBudgetError(`Token budget exceeded. Remaining: ${tokenCheck.remaining}`, {
+        sessionId,
+        recoverable: false,
+        context: { remaining: tokenCheck.remaining }
+      })
     }
 
     const userTurn: ConversationTurn = {
@@ -202,6 +352,11 @@ export class AutobiographyAgent {
       timestamp: Date.now()
     }
     await this.sessionManager.addTurn(sessionId, userTurn)
+
+    const inputTokens = this.tokenBudgetManager.estimateTokens(userMessage)
+    this.recordTokenUsage(sessionId, inputTokens)
+
+    await this.checkAndCompressContext(sessionId)
 
     this.events.emit('turn/start', { sessionId, userMessage })
 
@@ -233,7 +388,14 @@ export class AutobiographyAgent {
           extraction: extractedResult.data
         })
       } catch (error) {
-        console.error('[Agent] Content extraction failed:', error)
+        const err = error instanceof Error ? error : new Error(String(error))
+        const extractionError = new AgentError(ErrorCode.CONTENT_EXTRACTION_FAILED, 'Content extraction failed', {
+          sessionId,
+          recoverable: true,
+          cause: err
+        })
+        logger.error('Agent', 'Content extraction failed', extractionError, { sessionId })
+        this.events.emit('turn/error', { sessionId, error: extractionError })
       }
     }
 
@@ -247,7 +409,14 @@ export class AutobiographyAgent {
         result.followUpQuestions = questionsResult
         result.response = '已为你生成了一些引导性问题，可以帮助你更深入地回忆。'
       } catch (error) {
-        console.error('[Agent] Question generation failed:', error)
+        const err = error instanceof Error ? error : new Error(String(error))
+        const questionError = new AgentError(ErrorCode.QUESTION_GENERATION_FAILED, 'Question generation failed', {
+          sessionId,
+          recoverable: true,
+          cause: err
+        })
+        logger.error('Agent', 'Question generation failed', questionError, { sessionId })
+        this.events.emit('turn/error', { sessionId, error: questionError })
         result.response = '我已经记录了你的分享，想继续聊聊吗？'
       }
     } else {

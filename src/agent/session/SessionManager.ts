@@ -1,5 +1,8 @@
 import type { AutobiographySession, SessionContext, SessionState, ConversationTurn } from './types'
 import { generateId } from '../../utils'
+import { getLogger } from '../logging'
+
+const logger = getLogger()
 
 /** 存储接口 */
 export interface StorageAdapter {
@@ -25,12 +28,27 @@ export class MemoryStorageAdapter implements StorageAdapter {
   }
 }
 
+export interface SessionManagerConfig {
+  /** 防抖延迟（毫秒），0 表示立即持久化 */
+  debounceMs?: number
+  /** 是否启用批量持久化 */
+  enableBatching?: boolean
+}
+
 export class SessionManager {
   private sessions: Map<string, AutobiographySession> = new Map()
   private storage: StorageAdapter
+  private config: SessionManagerConfig
+  private pendingPersists: Map<string, number> = new Map()
+  private batchTimer: ReturnType<typeof setTimeout> | null = null
 
-  constructor(storage: StorageAdapter) {
+  constructor(storage: StorageAdapter, config: SessionManagerConfig = {}) {
     this.storage = storage
+    this.config = {
+      debounceMs: 100,
+      enableBatching: true,
+      ...config
+    }
   }
 
   /** 创建新会话 */
@@ -51,7 +69,8 @@ export class SessionManager {
     }
 
     this.sessions.set(session.id, session)
-    await this.persist(session)
+    await this.persistImmediate(session)
+    logger.info('SessionManager', 'Session created', { sessionId: session.id, chapterId })
     return session
   }
 
@@ -76,7 +95,8 @@ export class SessionManager {
 
     session.state.status = 'paused'
     session.updatedAt = Date.now()
-    await this.persist(session)
+    await this.persistImmediate(session)
+    logger.info('SessionManager', 'Session paused', { sessionId })
   }
 
   /** 关闭会话 */
@@ -86,7 +106,8 @@ export class SessionManager {
 
     session.state.status = 'closed'
     session.updatedAt = Date.now()
-    await this.persist(session)
+    await this.persistImmediate(session)
+    logger.info('SessionManager', 'Session closed', { sessionId })
   }
 
   /** 更新会话状态 */
@@ -99,7 +120,7 @@ export class SessionManager {
 
     session.state = { ...session.state, ...updates }
     session.updatedAt = Date.now()
-    await this.persist(session)
+    this.schedulePersist(sessionId)
   }
 
   /** 添加对话轮次 */
@@ -110,7 +131,7 @@ export class SessionManager {
     session.history.push(turn)
     session.state.lastActivity = Date.now()
     session.updatedAt = Date.now()
-    await this.persist(session)
+    this.schedulePersist(sessionId)
   }
 
   /** 更新 Token 使用量 */
@@ -122,7 +143,7 @@ export class SessionManager {
     session.updatedAt = Date.now()
 
     const isWarning = session.state.tokenBudget.used >= session.state.tokenBudget.warningThreshold
-    await this.persist(session)
+    this.schedulePersist(sessionId)
 
     return isWarning
   }
@@ -152,16 +173,68 @@ export class SessionManager {
       }
     }
 
+    if (cleanedCount > 0) {
+      logger.info('SessionManager', 'Cleaned up expired sessions', { count: cleanedCount })
+    }
     return cleanedCount
   }
 
   /** 删除会话 */
   async delete(sessionId: string): Promise<void> {
     this.sessions.delete(sessionId)
+    this.pendingPersists.delete(sessionId)
     await this.storage.remove(`session:${sessionId}`)
   }
 
-  /** 持久化会话 */
+  /** 立即持久化（用于关键操作） */
+  async persistImmediate(session: AutobiographySession): Promise<void> {
+    this.pendingPersists.delete(session.id)
+    await this.storage.set(`session:${session.id}`, session)
+  }
+
+  /** 刷新所有待处理的持久化 */
+  async flushPending(): Promise<void> {
+    if (this.batchTimer) {
+      clearTimeout(this.batchTimer)
+      this.batchTimer = null
+    }
+
+    const pendingIds = Array.from(this.pendingPersists.keys())
+    this.pendingPersists.clear()
+
+    for (const sessionId of pendingIds) {
+      const session = this.sessions.get(sessionId)
+      if (session) {
+        await this.storage.set(`session:${sessionId}`, session)
+      }
+    }
+
+    if (pendingIds.length > 0) {
+      logger.debug('SessionManager', 'Flushed pending persists', { count: pendingIds.length })
+    }
+  }
+
+  /** 调度持久化（防抖） */
+  private schedulePersist(sessionId: string): void {
+    if (this.config.debounceMs === 0) {
+      const session = this.sessions.get(sessionId)
+      if (session) {
+        this.persistImmediate(session)
+      }
+      return
+    }
+
+    this.pendingPersists.set(sessionId, Date.now())
+
+    if (this.config.enableBatching && !this.batchTimer) {
+      this.batchTimer = setTimeout(() => {
+        this.batchTimer = null
+        this.flushPending()
+      }, this.config.debounceMs ?? 100)
+    }
+  }
+
+  /** 持久化会话（内部使用） */
   private async persist(session: AutobiographySession): Promise<void> {
     await this.storage.set(`session:${session.id}`, session)
   }

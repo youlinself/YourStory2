@@ -43,6 +43,11 @@ export interface SystemEvents {
   'system/error': { error: Error; context?: string }
 }
 
+/** 上下文事件 */
+export interface ContextEvents {
+  'context/compressed': { sessionId: string; removedCount: number; tokensSaved: number }
+}
+
 /** 所有事件 */
 export type AutobiographyEventMap =
   & SessionEvents
@@ -51,6 +56,7 @@ export type AutobiographyEventMap =
   & ToolEvents
   & SkillEvents
   & SystemEvents
+  & ContextEvents
 
 /** 事件处理器 */
 export type EventHandler<T = any> = (payload: T) => void | Promise<void>

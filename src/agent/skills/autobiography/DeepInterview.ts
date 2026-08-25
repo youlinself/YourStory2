@@ -1,4 +1,7 @@
 import type { Skill, SkillContext, SkillCommand } from '../SkillTypes'
+import { getLogger } from '../../logging'
+
+const logger = getLogger()
 
 const deepInterviewTool = ['generate_questions', 'extract_content']
 
@@ -53,19 +56,19 @@ export const deepInterviewSkill: Skill = {
   commands: [deepInterviewCommand],
 
   on: {
-    'turn/start': async (payload, context) => {
-      console.log('[DeepInterview] Turn started:', payload.sessionId)
+    'turn/start': async (payload, _context) => {
+      logger.debug('DeepInterview', 'Turn started', { sessionId: payload.sessionId })
     },
-    'content/extracted': async (_extraction, context) => {
-      console.log('[DeepInterview] Content extracted, checking for follow-up')
+    'content/extracted': async (_payload, _context) => {
+      logger.debug('DeepInterview', 'Content extracted, checking for follow-up')
     }
   },
 
   onActivate: async (context) => {
-    console.log(`[DeepInterview] Activated for session ${context.sessionId}`)
+    logger.info('DeepInterview', 'Skill activated', { sessionId: context.sessionId })
   },
 
   onDeactivate: async (context) => {
-    console.log(`[DeepInterview] Deactivated for session ${context.sessionId}`)
+    logger.info('DeepInterview', 'Skill deactivated', { sessionId: context.sessionId })
   }
 }

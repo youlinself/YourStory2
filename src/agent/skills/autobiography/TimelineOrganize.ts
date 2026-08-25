@@ -1,4 +1,7 @@
 import type { Skill, SkillContext, SkillCommand } from '../SkillTypes'
+import { getLogger } from '../../logging'
+
+const logger = getLogger()
 
 const timelineCommand: SkillCommand = {
   name: '/timeline',
@@ -59,8 +62,8 @@ export const timelineOrganizeSkill: Skill = {
   commands: [timelineCommand],
 
   on: {
-    'content/merged': async (_payload, context) => {
-      console.log('[TimelineOrganize] Content merged, timeline may need update')
+    'content/merged': async (_payload, _context) => {
+      logger.debug('TimelineOrganize', 'Content merged, timeline may need update')
     }
   }
 }

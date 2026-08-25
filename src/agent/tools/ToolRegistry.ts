@@ -1,8 +1,17 @@
 import type { ToolDefinition, ToolResult, ToolExecutionOptions } from './ToolTypes'
+import { RetryPolicy } from '../optimization/RetryPolicy'
+import { getLogger } from '../logging'
+
+const logger = getLogger()
 
 export class ToolRegistry {
   private tools: Map<string, ToolDefinition> = new Map()
   private scopedTools: Map<string, Set<string>> = new Map()
+  private retryPolicy: RetryPolicy
+
+  constructor(retryPolicy?: RetryPolicy) {
+    this.retryPolicy = retryPolicy ?? new RetryPolicy()
+  }
 
   /** 注册全局工具 */
   register(tool: ToolDefinition): () => void {
@@ -104,32 +113,52 @@ export class ToolRegistry {
     const timeoutMs = options?.timeoutMs ?? tool.timeoutMs ?? 30000
     const signal = options?.signal
 
-    return new Promise<ToolResult>((resolve, reject) => {
-      const timeoutId = setTimeout(() => {
-        reject(new Error(`Tool execution timeout: ${toolName}`))
-      }, timeoutMs)
+    const executeWithTimeout = (): Promise<ToolResult> => {
+      return new Promise<ToolResult>((resolve, reject) => {
+        const timeoutId = setTimeout(() => {
+          reject(new Error(`Tool execution timeout: ${toolName}`))
+        }, timeoutMs)
 
-      if (signal) {
-        signal.addEventListener('abort', () => {
-          clearTimeout(timeoutId)
-          reject(new Error(`Tool execution aborted: ${toolName}`))
+        if (signal) {
+          signal.addEventListener('abort', () => {
+            clearTimeout(timeoutId)
+            reject(new Error(`Tool execution aborted: ${toolName}`))
+          })
+        }
+
+        tool.execute(args, {
+          sessionId,
+          chapterId: '',
+          sessionContext: {} as any,
+          signal: signal || new AbortController().signal
         })
-      }
-
-      tool.execute(args, {
-        sessionId,
-        chapterId: '',
-        sessionContext: {} as any,
-        signal: signal || new AbortController().signal
+          .then(result => {
+            clearTimeout(timeoutId)
+            resolve(result)
+          })
+          .catch(error => {
+            clearTimeout(timeoutId)
+            reject(error)
+          })
       })
-        .then(result => {
-          clearTimeout(timeoutId)
-          resolve(result)
-        })
-        .catch(error => {
-          clearTimeout(timeoutId)
-          reject(error)
-        })
-    })
+    }
+
+    try {
+      return await this.retryPolicy.execute(executeWithTimeout, `tool:${toolName}`)
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error))
+      logger.error('ToolRegistry', `Tool execution failed after retries: ${toolName}`, err, { sessionId })
+      throw err
+    }
+  }
+
+  /** 获取重试策略 */
+  getRetryPolicy(): RetryPolicy {
+    return this.retryPolicy
+  }
+
+  /** 设置重试策略 */
+  setRetryPolicy(policy: RetryPolicy): void {
+    this.retryPolicy = policy
   }
 }

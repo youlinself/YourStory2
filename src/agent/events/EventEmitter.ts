@@ -1,4 +1,7 @@
 import type { AutobiographyEventMap, EventHandler, EventFilter } from './types'
+import { getLogger } from '../logging'
+
+const logger = getLogger()
 
 type FilteredHandler<T = any> = {
   handler: EventHandler<T>
@@ -66,7 +69,8 @@ export class EventEmitter {
           try {
             entry.handler(payload)
           } catch (error) {
-            console.error(`Event handler error for ${String(event)}:`, error)
+            const err = error instanceof Error ? error : new Error(String(error))
+            logger.error('EventEmitter', `Handler error for ${String(event)}`, err)
           }
         }
       }
@@ -87,7 +91,8 @@ export class EventEmitter {
         try {
           await entry.handler(payload)
         } catch (error) {
-          console.error(`Async event handler error for ${String(event)}:`, error)
+          const err = error instanceof Error ? error : new Error(String(error))
+          logger.error('EventEmitter', `Async handler error for ${String(event)}`, err)
         }
       })
       await Promise.all(promises)

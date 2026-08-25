@@ -36,6 +36,10 @@ export const abortCheckHook: PreExecutionHook = async (context, next) => {
   return next()
 }
 
+import { getLogger } from '../logging'
+
+const logger = getLogger()
+
 /** 结果验证钩子 */
 export const resultValidationHook: PostExecutionHook = async (
   context,
@@ -43,7 +47,7 @@ export const resultValidationHook: PostExecutionHook = async (
   next
 ) => {
   if (!result.success && result.error) {
-    console.warn(`[Pipeline] Tool ${context.toolName} failed: ${result.error}`)
+    logger.warn('Pipeline', `Tool ${context.toolName} failed: ${result.error}`)
   }
   return next()
 }

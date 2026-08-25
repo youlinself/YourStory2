@@ -1,5 +1,6 @@
 import type { SessionContext } from '../session/types'
 import type { AutobiographyAgent } from '../AutobiographyAgent'
+import type { AutobiographyEventMap } from '../events/types'
 
 /** 技能提示片段 */
 export interface SkillPromptSection {
@@ -8,9 +9,12 @@ export interface SkillPromptSection {
   content: (context: SkillContext) => string
 }
 
-/** 技能事件处理器 */
-export interface SkillEventHandlers {
-  [event: string]: (payload: any, context: SkillContext) => Promise<void> | void
+/** 技能事件处理器 - 类型安全的事件处理映射 */
+export type SkillEventHandlers = {
+  [K in keyof AutobiographyEventMap]?: (
+    payload: AutobiographyEventMap[K],
+    context: SkillContext
+  ) => Promise<void> | void
 }
 
 /** 技能上下文 */

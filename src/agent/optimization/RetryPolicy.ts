@@ -1,3 +1,7 @@
+import { getLogger } from '../logging'
+
+const logger = getLogger()
+
 export interface RetryOptions {
   maxRetries: number
   baseDelay: number
@@ -38,7 +42,7 @@ export class RetryPolicy {
         }
 
         const delay = this.calculateDelay(attempt)
-        console.log(`[Retry] Attempt ${attempt + 1} failed, retrying in ${delay}ms...`)
+        logger.warn('RetryPolicy', `Attempt ${attempt + 1} failed, retrying in ${delay}ms...`)
         await this.sleep(delay)
       }
     }

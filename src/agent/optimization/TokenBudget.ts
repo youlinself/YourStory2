@@ -9,17 +9,25 @@ export class TokenBudgetManager {
   private sessions: Map<string, TokenStats> = new Map()
   private warningCallbacks: Map<string, () => void> = new Map()
   private limitCallbacks: Map<string, () => void> = new Map()
+  private defaultLimit: number = 100000
+  private defaultWarningThreshold: number = 80000
+
+  /** 设置默认预算配置 */
+  setDefaultConfig(limit: number, warningThreshold: number): void {
+    this.defaultLimit = limit
+    this.defaultWarningThreshold = warningThreshold
+  }
 
   /** 初始化会话预算 */
   initSession(
     sessionId: string,
-    limit: number = 100000,
-    warningThreshold: number = 80000
+    limit?: number,
+    warningThreshold?: number
   ): void {
     this.sessions.set(sessionId, {
       used: 0,
-      limit,
-      warningThreshold,
+      limit: limit ?? this.defaultLimit,
+      warningThreshold: warningThreshold ?? this.defaultWarningThreshold,
       history: []
     })
   }

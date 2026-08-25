@@ -1,4 +1,7 @@
 import type { Skill, SkillContext, SkillCommand } from '../SkillTypes'
+import { getLogger } from '../../logging'
+
+const logger = getLogger()
 
 const styleCheckCommand: SkillCommand = {
   name: '/style',
@@ -66,8 +69,8 @@ export const styleCheckSkill: Skill = {
   commands: [styleCheckCommand],
 
   on: {
-    'content/approved': async (_payload, context) => {
-      console.log('[StyleCheck] Content approved, checking style')
+    'content/approved': async (_payload, _context) => {
+      logger.debug('StyleCheck', 'Content approved, checking style')
     }
   }
 }
