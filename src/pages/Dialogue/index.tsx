@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
   Home,
@@ -14,43 +14,61 @@ import {
   School,
   Lightbulb,
   List,
-  Info,
   MoreHorizontal,
   Save,
   Download,
-  CheckCircle,
   Clock,
-  Target,
   PencilLine,
   MessagesSquare,
   Bookmark,
+  GitBranch,
+  EyeOff,
+  ChevronRight,
+  Layers,
+  RotateCcw,
 } from 'lucide-react';
 import { useAgentStore } from '@/stores/agentStore';
+import useDialogueStore from '@/stores/dialogueStore';
 import { useChatScroll, useRunTimer } from '@/hooks/useChatScroll';
+import { NarrativeNodeCard, FollowUpQuestions, SensitiveContentNotice, PositiveReinforcement, RebirthPanel } from '@/components/dialogue';
+import type { Message, NarrativeNode, DecisionPoint, LifeStage, EventType } from '@/types';
 import '../../styles/dialogue.css';
-
-interface ChatMessage {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  timestamp: number;
-}
 
 const DialoguePage: React.FC = () => {
   const { chapterId } = useParams<{ chapterId: string }>();
   const [inputValue, setInputValue] = useState('');
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [showRebirthPanel, setShowRebirthPanel] = useState(false);
+  const [positiveMessage, setPositiveMessage] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const {
     agent,
     currentSession,
     isLoading,
-    error,
     initialize,
     createSession,
     sendMessage,
   } = useAgentStore();
+
+  const {
+    narrativeNodes,
+    decisionPoints,
+    rebirthExperiences,
+    showSensitiveNotice,
+    isRebirthMode,
+    rebirthContext,
+    addNarrativeNode,
+    markAsDecisionPoint,
+    createDecisionPoint,
+    createRebirthExperience,
+    deleteRebirthExperience,
+    enterRebirthMode,
+    exitRebirthMode,
+    setShowSensitiveNotice,
+    detectSensitiveContent,
+    loadNodesData,
+  } = useDialogueStore();
 
   const topicItems = [
     { icon: TreePine, label: '老家的环境', color: 'sage', description: '那条小河，那棵老槐树，那个宁静的小镇' },
@@ -79,7 +97,7 @@ const DialoguePage: React.FC = () => {
   ];
 
   const { listRef, columnRef, atBottom, scrollToBottom } = useChatScroll(messages);
-  const { elapsedMs, formatDuration } = useRunTimer(isLoading ? Date.now() : null);
+  useRunTimer(isLoading ? Date.now() : null);
 
   useEffect(() => {
     if (!agent) {
@@ -94,11 +112,20 @@ const DialoguePage: React.FC = () => {
   }, [agent, chapterId, currentSession, createSession]);
 
   useEffect(() => {
+    loadNodesData();
+  }, [loadNodesData]);
+
+  useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
       textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 160)}px`;
     }
   }, [inputValue]);
+
+  const showPositiveFeedback = useCallback((msg: string) => {
+    setPositiveMessage(msg);
+    setTimeout(() => setPositiveMessage(null), 3000);
+  }, []);
 
   const handleSend = async () => {
     if (!inputValue.trim() || isLoading) return;
@@ -106,30 +133,41 @@ const DialoguePage: React.FC = () => {
     const userMessage = inputValue.trim();
     setInputValue('');
 
-    const newUserMessage: ChatMessage = {
+    const newUserMessage: Message = {
       id: `user-${Date.now()}`,
-      role: 'user',
+      isUser: true,
       content: userMessage,
-      timestamp: Date.now()
+      timestamp: new Date(),
     };
     setMessages(prev => [...prev, newUserMessage]);
+
+    // Detect sensitive content
+    if (detectSensitiveContent(userMessage)) {
+      // Notice will be shown via store state
+    }
 
     try {
       const response = await sendMessage(userMessage);
 
-      const newAiMessage: ChatMessage = {
+      const newAiMessage: Message = {
         id: `ai-${Date.now()}`,
-        role: 'assistant',
+        isUser: false,
         content: response,
-        timestamp: Date.now()
+        timestamp: new Date(),
+        followUpQuestions: followupItems,
       };
       setMessages(prev => [...prev, newAiMessage]);
+
+      // Show positive feedback
+      if (messages.length === 0) {
+        showPositiveFeedback('写得很好，继续~');
+      }
     } catch (err) {
-      const errorMessage: ChatMessage = {
+      const errorMessage: Message = {
         id: `error-${Date.now()}`,
-        role: 'assistant',
+        isUser: false,
         content: `出错了: ${err instanceof Error ? err.message : '未知错误'}`,
-        timestamp: Date.now()
+        timestamp: new Date(),
       };
       setMessages(prev => [...prev, errorMessage]);
     }
@@ -141,6 +179,52 @@ const DialoguePage: React.FC = () => {
 
   const handleTopicClick = (label: string) => {
     setInputValue(`我想先聊聊${label}`);
+  };
+
+  const handleFollowUpClick = (question: string) => {
+    setInputValue(question);
+  };
+
+  const handleCreateNode = () => {
+    if (!inputValue.trim()) return;
+
+    const node = addNarrativeNode({
+      stage: 'childhood' as LifeStage,
+      title: `新节点 ${narrativeNodes.length + 1}`,
+      content: inputValue.trim(),
+      type: 'passive_event' as EventType,
+      emotionTags: [],
+      relatedNodes: [],
+      isSensitive: false,
+      isDecisionPoint: false,
+    });
+
+    showPositiveFeedback('已创建叙事节点');
+    setInputValue('');
+    return node;
+  };
+
+  const handleMarkDecision = (nodeId: string) => {
+    markAsDecisionPoint(nodeId);
+    const node = narrativeNodes.find((n: NarrativeNode) => n.id === nodeId);
+    if (node) {
+      createDecisionPoint(nodeId, node.content);
+    }
+    showPositiveFeedback('已标记为抉择点，可用于重生体验');
+  };
+
+  const handleCreateRebirth = (decisionPointId: string) => {
+    const dp = decisionPoints.find((d: DecisionPoint) => d.id === decisionPointId);
+    if (dp) {
+      createRebirthExperience(dp.nodeId, `重生版本 ${rebirthExperiences.length + 1}`);
+      enterRebirthMode(dp.nodeId);
+      showPositiveFeedback('开始创作你的平行人生');
+    }
+  };
+
+  const handleExitRebirth = () => {
+    exitRebirthMode();
+    setShowRebirthPanel(false);
   };
 
   if (!currentSession) {
@@ -251,9 +335,28 @@ const DialoguePage: React.FC = () => {
             </span>
           </div>
           <div className="stat-row">
+            <span className="stat-label">叙事节点</span>
+            <span className="stat-value">{narrativeNodes.length}</span>
+          </div>
+          <div className="stat-row">
             <span className="stat-label">本次时长</span>
             <span className="stat-value">15 分钟</span>
           </div>
+        </div>
+
+        {/* Rebirth Quick Access */}
+        <div className="sidebar-rebirth-card" onClick={() => setShowRebirthPanel(!showRebirthPanel)}>
+          <div className="rebirth-card-header">
+            <RotateCcw size={14} className="text-brand" />
+            <span className="rebirth-card-title">重生体验</span>
+          </div>
+          <p className="rebirth-card-stats">
+            {decisionPoints.filter((dp: DecisionPoint) => dp.forkable).length} 个可分叉点 · {rebirthExperiences.length} 个重生版本
+          </p>
+          <button className="rebirth-card-btn">
+            <span>进入重生体验</span>
+            <ChevronRight size={14} />
+          </button>
         </div>
       </aside>
 
@@ -269,22 +372,55 @@ const DialoguePage: React.FC = () => {
               <div className="header-title-row">
                 <span className="header-title">Story 助手</span>
                 <span className="badge badge-success">在线</span>
+                {isRebirthMode && (
+                  <span className="badge badge-rebirth">
+                    <RotateCcw size={10} />
+                    重生模式
+                  </span>
+                )}
               </div>
-              <p className="header-subtitle">正在引导你完成第一章 · 童年记忆</p>
+              <p className="header-subtitle">
+                {isRebirthMode
+                  ? `正在创作平行人生 - ${rebirthContext?.forkNodeId ? narrativeNodes.find((n: NarrativeNode) => n.id === rebirthContext.forkNodeId)?.title : ''}`
+                  : '正在引导你完成第一章 · 童年记忆'}
+              </p>
             </div>
           </div>
           <div className="header-actions">
+            <button
+              className={`icon-button ${showRebirthPanel ? 'icon-button-active' : ''}`}
+              title="重生体验"
+              onClick={() => setShowRebirthPanel(!showRebirthPanel)}
+            >
+              <GitBranch size={18} strokeWidth={1.5} />
+            </button>
+            <button className="icon-button" title="节点列表">
+              <Layers size={18} strokeWidth={1.5} />
+            </button>
             <button className="icon-button" title="大纲">
               <List size={18} strokeWidth={1.5} />
-            </button>
-            <button className="icon-button" title="信息">
-              <Info size={18} strokeWidth={1.5} />
             </button>
             <button className="icon-button" title="更多">
               <MoreHorizontal size={18} strokeWidth={1.5} />
             </button>
           </div>
         </header>
+
+        {/* Rebirth Mode Banner */}
+        {isRebirthMode && (
+          <div className="rebirth-mode-banner">
+            <div className="rebirth-banner-content">
+              <RotateCcw size={16} className="text-brand" />
+              <span className="rebirth-banner-text">
+                你正在创作平行人生，从 "{narrativeNodes.find((n: NarrativeNode) => n.id === rebirthContext?.forkNodeId)?.title}" 开始分叉
+              </span>
+            </div>
+            <button className="rebirth-banner-exit" onClick={handleExitRebirth}>
+              <EyeOff size={14} />
+              <span>退出重生模式</span>
+            </button>
+          </div>
+        )}
 
         {/* Message List */}
         <div className="message-list" ref={listRef}>
@@ -332,20 +468,29 @@ const DialoguePage: React.FC = () => {
             {messages.map((msg) => (
               <div
                 key={msg.id}
-                className={`message-row ${msg.role === 'user' ? 'message-row-user' : 'message-row-ai'}`}
+                className={`message-row ${msg.isUser ? 'message-row-user' : 'message-row-ai'}`}
               >
-                {msg.role === 'assistant' && (
+                {!msg.isUser && (
                   <div className="avatar brand-gradient text-white">
                     <Sparkles size={16} strokeWidth={1.5} />
                   </div>
                 )}
-                <div className={`chat-bubble ${msg.role === 'user' ? 'chat-bubble-user' : 'chat-bubble-ai'}`}>
+                <div className={`chat-bubble ${msg.isUser ? 'chat-bubble-user' : 'chat-bubble-ai'}`}>
                   <p>{msg.content}</p>
                   <span className="message-time">
                     {new Date(msg.timestamp).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}
                   </span>
+
+                  {/* Follow-up Questions */}
+                  {!msg.isUser && msg.followUpQuestions && msg.followUpQuestions.length > 0 && (
+                    <FollowUpQuestions
+                      questions={msg.followUpQuestions}
+                      onQuestionClick={handleFollowUpClick}
+                      variant="inline"
+                    />
+                  )}
                 </div>
-                {msg.role === 'user' && (
+                {msg.isUser && (
                   <div className="avatar avatar-user">
                     <Users size={16} strokeWidth={1.5} />
                   </div>
@@ -368,6 +513,13 @@ const DialoguePage: React.FC = () => {
                 </div>
               </div>
             )}
+
+            {/* Positive Reinforcement */}
+            {positiveMessage && (
+              <div className="positive-reinforcement-container">
+                <PositiveReinforcement message={positiveMessage} type="encouragement" />
+              </div>
+            )}
           </div>
 
           {/* Scroll to Bottom Button */}
@@ -379,6 +531,29 @@ const DialoguePage: React.FC = () => {
             </button>
           )}
         </div>
+
+        {/* Sensitive Content Notice */}
+        {showSensitiveNotice && (
+          <div className="sensitive-notice-container">
+            <SensitiveContentNotice
+              onSkip={() => {
+                setShowSensitiveNotice(false);
+                setInputValue('');
+              }}
+              onMarkSensitive={() => {
+                setShowSensitiveNotice(false);
+                showPositiveFeedback('已标记为敏感内容，系统不会再深挖这个部分');
+              }}
+              onContinueAnyway={() => {
+                setShowSensitiveNotice(false);
+              }}
+              onWriteFactOnly={() => {
+                setShowSensitiveNotice(false);
+                showPositiveFeedback('只写事实是个好选择');
+              }}
+            />
+          </div>
+        )}
 
         {/* Suggestion Chips */}
         <div className="suggestion-chips-row">
@@ -403,7 +578,7 @@ const DialoguePage: React.FC = () => {
             <textarea
               ref={textareaRef}
               className="composer-textarea"
-              placeholder="关于这个问题，你还想补充些什么呢？"
+              placeholder={isRebirthMode ? "在这个平行宇宙中，发生了什么不同的事？" : "关于这个问题，你还想补充些什么呢？"}
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={(e) => {
@@ -427,120 +602,167 @@ const DialoguePage: React.FC = () => {
             <p className="composer-hint">
               按 <kbd>Enter</kbd> 发送，<kbd>Shift + Enter</kbd> 换行
             </p>
-            <span className="char-count">
-              已记录 {messages.reduce((sum, m) => sum + m.content.length, 0).toLocaleString()} 字 · 本章 780 字
-            </span>
+            <div className="composer-footer-actions">
+              <button className="composer-action-btn" onClick={handleCreateNode} title="创建叙事节点">
+                <Layers size={14} />
+                <span>创建节点</span>
+              </button>
+              <span className="char-count">
+                已记录 {messages.reduce((sum, m) => sum + m.content.length, 0).toLocaleString()} 字 · 本章 780 字
+              </span>
+            </div>
           </div>
         </div>
       </div>
 
       {/* ==================== 右侧面板 ==================== */}
-      <aside className="right-panel">
-        {/* 章节大纲 */}
-        <section className="panel-section">
-          <h3 className="panel-section-title">章节大纲</h3>
-          <div className="card">
-            {outlineItems.map((item, index) => (
-              <div
-                key={index}
-                className={`outline-item ${item.status === '进行中' ? 'outline-item-active' : ''}`}
-              >
-                <div className={`timeline-dot bg-${item.color}`} />
-                <div className="outline-item-content">
-                  <p className={`outline-item-title ${item.status === '进行中' ? 'text-brand' : ''}`}>
-                    {index + 1}. {item.title}
-                  </p>
-                  <p className="outline-item-status">
-                    {item.status === '进行中' ? `进行中 · ${item.words} 字` : item.status}
-                  </p>
+      {showRebirthPanel ? (
+        <aside className="right-panel rebirth-panel-wrapper">
+          <RebirthPanel
+            decisionPoints={decisionPoints}
+            rebirthExperiences={rebirthExperiences}
+            nodes={narrativeNodes}
+            onSelectForkPoint={(nodeId: string) => {
+              // Set selected fork node for highlighting
+              console.log('Selected fork node:', nodeId);
+            }}
+            onCreateRebirth={handleCreateRebirth}
+            onCompareRebirth={(rebirthId: string) => {
+              // TODO: Implement comparison view
+              console.log('Compare rebirth:', rebirthId);
+            }}
+            onDeleteRebirth={(rebirthId: string) => deleteRebirthExperience(rebirthId)}
+            isCreatingRebirth={isLoading}
+          />
+        </aside>
+      ) : (
+        <aside className="right-panel">
+          {/* 章节大纲 */}
+          <section className="panel-section">
+            <h3 className="panel-section-title">章节大纲</h3>
+            <div className="card">
+              {outlineItems.map((item, index) => (
+                <div
+                  key={index}
+                  className={`outline-item ${item.status === '进行中' ? 'outline-item-active' : ''}`}
+                >
+                  <div className={`timeline-dot bg-${item.color}`} />
+                  <div className="outline-item-content">
+                    <p className={`outline-item-title ${item.status === '进行中' ? 'text-brand' : ''}`}>
+                      {index + 1}. {item.title}
+                    </p>
+                    <p className="outline-item-status">
+                      {item.status === '进行中' ? `进行中 · ${item.words} 字` : item.status}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        </section>
+              ))}
+            </div>
+          </section>
 
-        {/* 写作统计 */}
-        <section className="panel-section">
-          <h3 className="panel-section-title">写作统计</h3>
-          <div className="card card-p-1">
-            <div className="stat-row">
-              <div className="stat-label-with-icon">
-                <PencilLine size={14} strokeWidth={1.5} className="text-brand" />
-                <span>已记录字数</span>
+          {/* 叙事节点 */}
+          {narrativeNodes.length > 0 && (
+            <section className="panel-section">
+              <h3 className="panel-section-title">叙事节点</h3>
+              <div className="nodes-list">
+                {narrativeNodes.slice(-3).map((node) => (
+                  <NarrativeNodeCard
+                    key={node.id}
+                    node={node}
+                    compact
+                    onMarkDecision={handleMarkDecision}
+                  />
+                ))}
               </div>
-              <span className="stat-value tabular-nums">2,156</span>
-            </div>
-            <div className="stat-row">
-              <div className="stat-label-with-icon">
-                <MessagesSquare size={14} strokeWidth={1.5} className="text-sage" />
-                <span>对话轮次</span>
-              </div>
-              <span className="stat-value tabular-nums">{messages.length}</span>
-            </div>
-            <div className="stat-row">
-              <div className="stat-label-with-icon">
-                <Clock size={14} strokeWidth={1.5} className="text-gold" />
-                <span>本次时长</span>
-              </div>
-              <span className="stat-value tabular-nums">15 分钟</span>
-            </div>
-            <div className="stat-row">
-              <div className="stat-label-with-icon">
-                <Target size={14} strokeWidth={1.5} className="text-brand" />
-                <span>完成话题</span>
-              </div>
-              <span className="stat-value tabular-nums">5 / 8</span>
-            </div>
-          </div>
-        </section>
+            </section>
+          )}
 
-        {/* 话题建议 */}
-        <section className="panel-section">
-          <h3 className="panel-section-title">话题建议</h3>
-          <div className="topic-suggestions">
-            <button className="topic-suggestion-item">
-              <Users size={14} strokeWidth={1.5} className="text-gold" />
-              <div className="topic-suggestion-content">
-                <span className="topic-suggestion-title">童年的玩伴们</span>
-                <span className="topic-suggestion-desc">聊聊那些一起长大的朋友</span>
+          {/* 写作统计 */}
+          <section className="panel-section">
+            <h3 className="panel-section-title">写作统计</h3>
+            <div className="card card-p-1">
+              <div className="stat-row">
+                <div className="stat-label-with-icon">
+                  <PencilLine size={14} strokeWidth={1.5} className="text-brand" />
+                  <span>已记录字数</span>
+                </div>
+                <span className="stat-value tabular-nums">2,156</span>
               </div>
-            </button>
-            <button className="topic-suggestion-item">
-              <Cake size={14} strokeWidth={1.5} className="text-brand" />
-              <div className="topic-suggestion-content">
-                <span className="topic-suggestion-title">难忘的生日</span>
-                <span className="topic-suggestion-desc">那些特别的庆祝时刻</span>
+              <div className="stat-row">
+                <div className="stat-label-with-icon">
+                  <MessagesSquare size={14} strokeWidth={1.5} className="text-sage" />
+                  <span>对话轮次</span>
+                </div>
+                <span className="stat-value tabular-nums">{messages.length}</span>
               </div>
-            </button>
-            <button className="topic-suggestion-item">
-              <School size={14} strokeWidth={1.5} className="text-sage" />
-              <div className="topic-suggestion-content">
-                <span className="topic-suggestion-title">小学的时光</span>
-                <span className="topic-suggestion-desc">校园里的记忆与故事</span>
+              <div className="stat-row">
+                <div className="stat-label-with-icon">
+                  <GitBranch size={14} strokeWidth={1.5} className="text-gold" />
+                  <span>抉择点</span>
+                </div>
+                <span className="stat-value tabular-nums">{decisionPoints.length}</span>
               </div>
-            </button>
-          </div>
-        </section>
+              <div className="stat-row">
+                <div className="stat-label-with-icon">
+                  <Clock size={14} strokeWidth={1.5} className="text-gold" />
+                  <span>本次时长</span>
+                </div>
+                <span className="stat-value tabular-nums">15 分钟</span>
+              </div>
+            </div>
+          </section>
 
-        {/* 快捷操作 */}
-        <section className="panel-section">
-          <h3 className="panel-section-title">快捷操作</h3>
-          <div className="quick-actions">
-            <button className="quick-action-item">
-              <Save size={16} strokeWidth={1.5} />
-              <span>保存草稿</span>
-            </button>
-            <button className="quick-action-item">
-              <Download size={16} strokeWidth={1.5} />
-              <span>导出章节</span>
-            </button>
-            <button className="quick-action-item">
-              <Settings size={16} strokeWidth={1.5} />
-              <span>对话设置</span>
-            </button>
-          </div>
-        </section>
-      </aside>
+          {/* 话题建议 */}
+          <section className="panel-section">
+            <h3 className="panel-section-title">话题建议</h3>
+            <div className="topic-suggestions">
+              <button className="topic-suggestion-item">
+                <Users size={14} strokeWidth={1.5} className="text-gold" />
+                <div className="topic-suggestion-content">
+                  <span className="topic-suggestion-title">童年的玩伴们</span>
+                  <span className="topic-suggestion-desc">聊聊那些一起长大的朋友</span>
+                </div>
+              </button>
+              <button className="topic-suggestion-item">
+                <Cake size={14} strokeWidth={1.5} className="text-brand" />
+                <div className="topic-suggestion-content">
+                  <span className="topic-suggestion-title">难忘的生日</span>
+                  <span className="topic-suggestion-desc">那些特别的庆祝时刻</span>
+                </div>
+              </button>
+              <button className="topic-suggestion-item">
+                <School size={14} strokeWidth={1.5} className="text-sage" />
+                <div className="topic-suggestion-content">
+                  <span className="topic-suggestion-title">小学的时光</span>
+                  <span className="topic-suggestion-desc">校园里的记忆与故事</span>
+                </div>
+              </button>
+            </div>
+          </section>
+
+          {/* 快捷操作 */}
+          <section className="panel-section">
+            <h3 className="panel-section-title">快捷操作</h3>
+            <div className="quick-actions">
+              <button className="quick-action-item">
+                <Save size={16} strokeWidth={1.5} />
+                <span>保存草稿</span>
+              </button>
+              <button className="quick-action-item">
+                <Download size={16} strokeWidth={1.5} />
+                <span>导出章节</span>
+              </button>
+              <button
+                className="quick-action-item"
+                onClick={() => setShowRebirthPanel(true)}
+              >
+                <GitBranch size={16} strokeWidth={1.5} />
+                <span>重生体验</span>
+              </button>
+            </div>
+          </section>
+        </aside>
+      )}
     </div>
   );
 };

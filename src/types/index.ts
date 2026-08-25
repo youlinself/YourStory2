@@ -4,9 +4,61 @@ export interface Message {
   isUser: boolean;
   timestamp: Date;
   /** 消息类型：普通对话 / 结构化内容提取 */
-  type?: 'text' | 'content_extract';
+  type?: 'text' | 'content_extract' | 'node_created' | 'decision_marked' | 'emotion_tagged';
   /** 当 type='content_extract' 时，AI 提取的结构化内容 */
   extractedContent?: ExtractedContent;
+  /** 关联的叙事节点ID */
+  nodeId?: string;
+  /** 智能追问问题 */
+  followUpQuestions?: string[];
+}
+
+/** 人生阶段枚举 */
+export type LifeStage = 'childhood' | 'school' | 'work' | 'marriage' | 'parenthood' | 'retirement' | 'other';
+
+/** 事件类型枚举 */
+export type EventType = 'active_choice' | 'passive_event' | 'emotional_turning' | 'regret_node';
+
+/** 叙事节点 - 结构化创作的基本单元 */
+export interface NarrativeNode {
+  id: string;
+  stage: LifeStage;
+  title: string;
+  content: string;
+  type: EventType;
+  emotionTags: string[];
+  emotionNote?: string;
+  reason?: string;
+  relatedNodes: string[];
+  isSensitive: boolean;
+  isDecisionPoint: boolean;
+  decisionDescription?: string;
+  wordCount: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/** 抉择点 - 可用于重生的分叉入口 */
+export interface DecisionPoint {
+  id: string;
+  nodeId: string;
+  originalChoice: string;
+  forkable: boolean;
+  rebirthCount: number;
+  regretLevel: 1 | 2 | 3 | 4 | 5;
+}
+
+/** 重生体验 - 平行宇宙版本 */
+export interface RebirthExperience {
+  id: string;
+  autobiographyId: string;
+  forkNodeId: string;
+  forkContext: string;
+  title: string;
+  nodes: NarrativeNode[];
+  diffSummary: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 /** AI 从对话中提取的结构化内容 */

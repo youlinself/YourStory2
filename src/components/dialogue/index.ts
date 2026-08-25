@@ -5,3 +5,7 @@ export { default as DraftView } from './DraftView';
 export { default as SidePanel } from './SidePanel';
 export { CommandPanel } from './CommandPanel';
 export { SkillSwitcher } from './SkillSwitcher';
+export { NarrativeNodeCard } from './NarrativeNodeCard';
+export { RebirthPanel } from './RebirthPanel';
+export { FollowUpQuestions } from './FollowUpQuestions';
+export { SensitiveContentNotice, PositiveReinforcement } from './SensitiveContentNotice';
