@@ -36,6 +36,7 @@ export class AutobiographyAgent {
   readonly tokenBudgetManager: TokenBudgetManager
   readonly contextCompressor: ContextCompressor | null
   private compressionConfig: CompressionOptions
+  private sessionQueues: Map<string, Promise<void>> = new Map()
 
   constructor(config: AutobiographyAgentConfig) {
     this.sessionManager = new SessionManager(config.storage)
@@ -316,7 +317,7 @@ export class AutobiographyAgent {
     }
   }
 
-  /** 处理用户消息（完整对话流程） */
+  /** 处理用户消息（完整对话流程）- 带并发控制 */
   async handleMessage(
     sessionId: string,
     userMessage: string,
@@ -324,6 +325,37 @@ export class AutobiographyAgent {
       generateFollowUpQuestions?: boolean
       autoExtract?: boolean
     } = {}
+  ): Promise<{
+    extractedContent?: ToolResult
+    followUpQuestions?: ToolResult
+    response: string
+  }> {
+    const existingQueue = this.sessionQueues.get(sessionId) || Promise.resolve()
+
+    const newQueue = existingQueue.then(() => this._handleMessageInternal(sessionId, userMessage, options))
+
+    this.sessionQueues.set(
+      sessionId,
+      newQueue.then(() => {}).catch(() => {})
+    )
+
+    try {
+      return await newQueue
+    } finally {
+      if (this.sessionQueues.get(sessionId) === newQueue.then(() => {}).catch(() => {})) {
+        this.sessionQueues.delete(sessionId)
+      }
+    }
+  }
+
+  /** 内部消息处理方法 */
+  private async _handleMessageInternal(
+    sessionId: string,
+    userMessage: string,
+    options: {
+      generateFollowUpQuestions?: boolean
+      autoExtract?: boolean
+    }
   ): Promise<{
     extractedContent?: ToolResult
     followUpQuestions?: ToolResult

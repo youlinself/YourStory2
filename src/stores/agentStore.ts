@@ -94,6 +94,7 @@ export const useAgentStore = create<AgentState & AgentActions>()(
           isLoading: false
         })
       } catch (error) {
+        console.error('[AgentStore] createSession error:', error)
         set({
           error: error instanceof Error ? error.message : '创建会话失败',
           isLoading: false
@@ -319,14 +320,19 @@ function setupEventListeners(agent: AutobiographyAgent): void {
 }
 
 async function loadChapterContext(chapterId: string): Promise<SessionContext> {
-  const useAutobiographyStore = (await import('./autobiographyStore')).default
-  const store = useAutobiographyStore.getState()
+  let existingContent: Chapter | null = null
 
-  const chapter = store.autobiography?.chapters.find((c: Chapter) => c.id === chapterId)
+  try {
+    const useAutobiographyStore = (await import('./autobiographyStore')).default
+    const store = useAutobiographyStore.getState()
+    existingContent = store.autobiography?.chapters.find((c: Chapter) => c.id === chapterId) ?? null
+  } catch {
+    existingContent = null
+  }
 
   return {
     chapterId,
-    existingContent: chapter || null,
+    existingContent,
     userPreferences: {
       style: 'casual',
       language: 'zh',

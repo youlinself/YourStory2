@@ -123,9 +123,10 @@ export class SkillRegistry {
       .filter(as => as.context.sessionId === sessionId)
   }
 
-  /** 获取会话可用的 prompt 片段 */
+  /** 获取会话可用的 prompt 片段（按 order 排序） */
   getPromptSections(sessionId: string): SkillPromptSection[] {
-    return this.promptSections.get(sessionId) || []
+    const sections = this.promptSections.get(sessionId) || []
+    return [...sections].sort((a, b) => a.order - b.order)
   }
 
   /** 获取所有已注册技能名称 */

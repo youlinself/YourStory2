@@ -13,6 +13,7 @@ export interface CompressionOptions {
   summaryPrompt?: string
   maxTurns?: number
   maxTokens?: number
+  signal?: AbortSignal
 }
 
 export class ContextCompressor {
@@ -43,7 +44,7 @@ export class ContextCompressor {
     history: ConversationTurn[],
     options: CompressionOptions = {}
   ): Promise<CompressionResult> {
-    const { keepRecent = 5 } = options
+    const { keepRecent = 5, signal } = options
 
     if (history.length <= keepRecent) {
       return {
@@ -54,10 +55,14 @@ export class ContextCompressor {
       }
     }
 
+    if (signal?.aborted) {
+      throw new Error('Operation cancelled')
+    }
+
     const toCompress = history.slice(0, -keepRecent)
     const toKeep = history.slice(-keepRecent)
 
-    const summary = await this.generateSummary(toCompress, options.summaryPrompt)
+    const summary = await this.generateSummary(toCompress, options.summaryPrompt, signal)
 
     const compressedHistory: ConversationTurn[] = [
       {
@@ -82,8 +87,13 @@ export class ContextCompressor {
   /** 生成对话摘要 */
   private async generateSummary(
     turns: ConversationTurn[],
-    customPrompt?: string
+    customPrompt?: string,
+    signal?: AbortSignal
   ): Promise<string> {
+    if (signal?.aborted) {
+      throw new Error('Operation cancelled')
+    }
+
     const conversationText = turns
       .map(t => `${t.role}: ${t.content}`)
       .join('\n')
