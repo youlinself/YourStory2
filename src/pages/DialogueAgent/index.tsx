@@ -37,9 +37,11 @@ import {
 } from 'lucide-react';
 import { useAIStore, useDialogueStore, useAutobiographyStore } from '../../stores';
 import { AIService } from '../../services';
+import ExportService from '../../services/export/ExportService';
 import { generateId, parseExtract } from '../../utils';
 import { useChatScroll, useRunTimer } from '../../hooks/useChatScroll';
-import type { Message, ChapterContext, ExtractedContent } from '../../types';
+import { useToast } from '../../components/common';
+import type { Message, ChapterContext } from '../../types';
 import '../../styles/dialogue.css';
 
 const DialogueAgent: React.FC = () => {
@@ -61,15 +63,12 @@ const DialogueAgent: React.FC = () => {
     initSession,
     addMessage,
     updateLastMessage,
-    deleteMessage,
-    insertMessage,
     setSuggestions,
     setIsGenerating,
-    updateExtractStatus,
-    addTagToSession,
-    removeTagFromSession,
     saveSession,
   } = useDialogueStore();
+
+  const { addToast } = useToast();
 
   const {
     autobiography,
@@ -221,6 +220,48 @@ const DialogueAgent: React.FC = () => {
 
   const handleSuggestionClick = (text: string) => {
     setInputValue(text);
+  };
+
+  const handleSaveDraft = async () => {
+    try {
+      await saveSession();
+      addToast({
+        type: 'success',
+        message: '草稿已保存',
+        action: {
+          label: '查看存储路径',
+          onClick: () => {
+            addToast({
+              type: 'info',
+              message: '数据存储在浏览器 localStorage 中，键名: dialogue-sessions',
+            });
+          },
+        },
+      });
+    } catch (err) {
+      console.error('保存草稿失败:', err);
+      addToast({ type: 'error', message: '保存失败，请重试' });
+    }
+  };
+
+  const handleExportChapter = () => {
+    const chapterContent = messages
+      .map((m) => (m.isUser ? `我: ${m.content}` : `AI: ${m.content}`))
+      .join('\n\n');
+
+    const filename = `对话记录_${new Date().toLocaleDateString('zh-CN').replace(/\//g, '-')}.md`;
+    const content = `# 对话记录\n\n> 导出时间: ${new Date().toLocaleString('zh-CN')}\n\n${chapterContent}`;
+
+    ExportService.download(content, filename, 'text/markdown;charset=utf-8');
+    addToast({ type: 'success', message: '章节已导出' });
+  };
+
+  const handleDialogueSettings = () => {
+    addToast({ type: 'info', message: '对话设置功能开发中，请在设置页面配置 AI API Key' });
+  };
+
+  const handleTopicSuggestionClick = (title: string) => {
+    setInputValue(`我想聊聊${title}`);
   };
 
   return (
@@ -463,21 +504,30 @@ const DialogueAgent: React.FC = () => {
           <section className="panel-section">
             <h3 className="panel-section-title">话题建议</h3>
             <div className="topic-suggestions">
-              <button className="topic-suggestion-item">
+              <button
+                className="topic-suggestion-item"
+                onClick={() => handleTopicSuggestionClick('童年的玩伴们')}
+              >
                 <Users size={14} strokeWidth={1.5} className="text-gold" />
                 <div className="topic-suggestion-content">
                   <span className="topic-suggestion-title">童年的玩伴们</span>
                   <span className="topic-suggestion-desc">聊聊那些一起长大的朋友</span>
                 </div>
               </button>
-              <button className="topic-suggestion-item">
+              <button
+                className="topic-suggestion-item"
+                onClick={() => handleTopicSuggestionClick('难忘的生日')}
+              >
                 <Cake size={14} strokeWidth={1.5} className="text-brand" />
                 <div className="topic-suggestion-content">
                   <span className="topic-suggestion-title">难忘的生日</span>
                   <span className="topic-suggestion-desc">那些特别的庆祝时刻</span>
                 </div>
               </button>
-              <button className="topic-suggestion-item">
+              <button
+                className="topic-suggestion-item"
+                onClick={() => handleTopicSuggestionClick('小学的时光')}
+              >
                 <School size={14} strokeWidth={1.5} className="text-sage" />
                 <div className="topic-suggestion-content">
                   <span className="topic-suggestion-title">小学的时光</span>
@@ -491,15 +541,15 @@ const DialogueAgent: React.FC = () => {
           <section className="panel-section">
             <h3 className="panel-section-title">快捷操作</h3>
             <div className="quick-actions">
-              <button className="quick-action-item">
+              <button className="quick-action-item" onClick={handleSaveDraft}>
                 <Save size={16} strokeWidth={1.5} />
                 <span>保存草稿</span>
               </button>
-              <button className="quick-action-item">
+              <button className="quick-action-item" onClick={handleExportChapter}>
                 <Download size={16} strokeWidth={1.5} />
                 <span>导出章节</span>
               </button>
-              <button className="quick-action-item">
+              <button className="quick-action-item" onClick={handleDialogueSettings}>
                 <Settings size={16} strokeWidth={1.5} />
                 <span>对话设置</span>
               </button>
