@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Send } from 'lucide-react'
 import { useAgentStore } from '@/stores/agentStore'
 import type { AutobiographySession } from '@/agent/session/types'
 
@@ -98,43 +99,55 @@ export function CommandPanel({ session }: CommandPanelProps) {
   }
 
   return (
-    <div className="border rounded-lg p-3">
+    <div className="command-panel">
       <div
-        className="flex items-center gap-2 p-2 border-b cursor-pointer hover:bg-gray-50"
+        className="command-input-row"
         onClick={() => setIsOpen(!isOpen)}
       >
-        <span className="text-gray-400">/</span>
+        <span className="command-slash">/</span>
         <input
           type="text"
           value={commandInput}
           onChange={(e) => setCommandInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleExecute()}
           placeholder="输入命令..."
-          className="flex-1 bg-transparent outline-none"
+          className="command-input"
         />
+        <button
+          className="command-execute-btn"
+          onClick={(e) => {
+            e.stopPropagation()
+            handleExecute()
+          }}
+          disabled={!commandInput.startsWith('/')}
+          title="执行命令"
+        >
+          <Send size={14} strokeWidth={1.5} />
+          <span>Enter</span>
+        </button>
       </div>
 
       {isOpen && (
-        <div className="p-2 space-y-1">
+        <div className="command-list">
           {commands.map(cmd => (
             <div
               key={cmd.name}
-              className="flex items-center gap-2 p-2 rounded hover:bg-gray-100 cursor-pointer min-w-0"
+              className="command-item"
               onClick={() => {
                 setCommandInput(cmd.name)
                 setIsOpen(false)
               }}
             >
-              <span className="font-mono text-sm font-semibold shrink-0">{cmd.name}</span>
-              <span className="text-sm text-gray-500 truncate">{cmd.description}</span>
+              <span className="command-name">{cmd.name}</span>
+              <span className="command-desc">{cmd.description}</span>
             </div>
           ))}
         </div>
       )}
 
       {output && (
-        <div className="p-2 border-t bg-gray-50">
-          <pre className="text-sm whitespace-pre-wrap">{output}</pre>
+        <div className="command-output">
+          <pre>{output}</pre>
         </div>
       )}
     </div>

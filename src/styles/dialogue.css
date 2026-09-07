@@ -1046,6 +1046,133 @@
   stroke-width: 1.5;
 }
 
+/* -------------------- Command Panel -------------------- */
+.command-panel {
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.command-input-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background 0.15s var(--ease-out);
+}
+
+.command-input-row:hover {
+  background: var(--color-bg-hover);
+}
+
+.command-slash {
+  color: var(--color-ink-faint);
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.command-input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 13px;
+  color: var(--color-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.command-input::placeholder {
+  color: var(--color-ink-faint);
+}
+
+.command-execute-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  font-size: 12px;
+  color: var(--color-ink-muted);
+  background: var(--color-bg-subtle);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.15s var(--ease-out);
+  flex-shrink: 0;
+}
+
+.command-execute-btn:hover:not(:disabled) {
+  border-color: var(--color-brand);
+  color: var(--color-brand);
+  background: var(--color-brand-surface);
+}
+
+.command-execute-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.command-execute-btn svg {
+  width: 12px;
+  height: 12px;
+  stroke-width: 1.5;
+}
+
+.command-list {
+  padding: 4px;
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.command-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background 0.15s var(--ease-out);
+  min-width: 0;
+}
+
+.command-item:hover {
+  background: var(--color-bg-hover);
+}
+
+.command-name {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-brand);
+  flex-shrink: 0;
+}
+
+.command-desc {
+  font-size: 12px;
+  color: var(--color-ink-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.command-output {
+  padding: 8px 12px;
+  border-top: 1px solid var(--color-border-subtle);
+  background: var(--color-bg-subtle);
+}
+
+.command-output pre {
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--color-ink-secondary);
+  margin: 0;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
 /* -------------------- Scroll to Bottom Button -------------------- */
 .scroll-to-bottom {
   position: absolute;
