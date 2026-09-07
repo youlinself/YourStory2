@@ -6,6 +6,15 @@ import type { AutobiographySession, SessionContext } from '@/agent/session/types
 import type { Chapter } from '@/types'
 import type { AutobiographyEventMap } from '@/agent/events/types'
 
+let sharedStorage: MemoryStorageAdapter | null = null
+
+function getSharedStorage(): MemoryStorageAdapter {
+  if (!sharedStorage) {
+    sharedStorage = new MemoryStorageAdapter()
+  }
+  return sharedStorage
+}
+
 interface PendingToolCall {
   name: string
   args: any
@@ -60,7 +69,7 @@ export const useAgentStore = create<AgentState & AgentActions>()(
     eventLog: [],
 
     initialize: async () => {
-      const storage = new MemoryStorageAdapter()
+      const storage = getSharedStorage()
       const agent = new AutobiographyAgent({ storage })
 
       const { registerAutobiographyTools } = await import('@/agent/tools/autobiography')

@@ -386,13 +386,20 @@ async function testCommandPanel(): Promise<void> {
     const session = await agent.createSession('ch-test', createTestContext())
     agent.activateTools(session.id, ['timeline_analyze', 'check_consistency', 'generate_questions'])
 
-    const timelineResult = await agent.executeTool(session.id, 'timeline_analyze', { chapters: [] })
+    const timelineResult = await agent.executeTool(session.id, 'timeline_analyze', {
+      chapters: [{ id: 'ch-1', title: '童年', content: '1990年的故事', timeRange: '1990-1995' }]
+    })
     assert(timelineResult.success, '/timeline 命令执行成功')
 
-    const styleResult = await agent.executeTool(session.id, 'check_consistency', { currentChapter: '' })
+    const styleResult = await agent.executeTool(session.id, 'check_consistency', {
+      currentChapter: '我小时候的故事',
+      otherChapters: ['我上学的故事']
+    })
     assert(styleResult.success, '/style 命令执行成功')
 
-    const questionsResult = await agent.executeTool(session.id, 'generate_questions', { chapterContent: '' })
+    const questionsResult = await agent.executeTool(session.id, 'generate_questions', {
+      chapterContent: '我在小学度过了快乐的时光'
+    })
     assert(questionsResult.success, '/questions 命令执行成功')
   })
 }

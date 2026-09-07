@@ -746,6 +746,7 @@ body {
 .badge-success { background: var(--color-success-bg); color: var(--color-success); }
 .badge-brand { background: var(--color-brand-light); color: var(--color-brand); }
 .badge-muted { background: var(--color-bg-subtle); color: var(--color-ink-muted); }
+.badge-ghost { background: transparent; color: var(--color-ink-muted); border: 1px solid var(--color-border-subtle); }
 
 /* ==================== Content panel ==================== */
 .content-panel {

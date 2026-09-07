@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Sparkles,
@@ -19,29 +19,27 @@ import {
   ChevronRight,
   BookOpen,
   PenLine,
-  Quote,
-  Award,
-  GraduationCap,
-  Layers,
-  Maximize2,
-  Minimize2,
   PlusCircle,
   CheckCircle,
   FileText,
-  FileOutput,
   Code,
   ArrowLeft,
   Eye,
   Share2,
   BookOpenText,
+  Layers,
+  Zap,
 } from 'lucide-react';
-import { useAIStore, useDialogueStore, useAutobiographyStore } from '../../stores';
-import { AIService } from '../../services';
+import { useAIStore, useAutobiographyStore } from '../../stores';
+import { useAgentStore } from '../../stores/agentStore';
 import ExportService from '../../services/export/ExportService';
-import { generateId, parseExtract } from '../../utils';
+import { generateId } from '../../utils';
 import { useChatScroll, useRunTimer } from '../../hooks/useChatScroll';
 import { useToast } from '../../components/common';
-import type { Message, ChapterContext } from '../../types';
+import { SkillSwitcher } from '../../components/dialogue/SkillSwitcher';
+import { CommandPanel } from '../../components/dialogue/CommandPanel';
+import { EventLogPanel } from '../../components/debug/EventLogPanel';
+import type { Message } from '../../types';
 import '../../styles/dialogue.css';
 
 const DialogueAgent: React.FC = () => {
@@ -50,23 +48,30 @@ const DialogueAgent: React.FC = () => {
 
   const [inputValue, setInputValue] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [isChapterSelectModalOpen, setIsChapterSelectModalOpen] = useState(false);
-  const [pendingExtract, setPendingExtract] = useState<{ messageId: string; content: string; isEdit: boolean } | null>(null);
   const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false);
+  const [showDebugPanel, setShowDebugPanel] = useState(false);
 
   const { apiKey, model, baseUrl, vendor, temperature, maxOutputTokens, customModelName, loadSettings } = useAIStore();
 
   const {
-    activeSession,
-    suggestions,
-    isGenerating,
-    initSession,
-    addMessage,
-    updateLastMessage,
-    setSuggestions,
-    setIsGenerating,
-    saveSession,
-  } = useDialogueStore();
+    agent,
+    currentSession,
+    isLoading,
+    error,
+    activeSkills,
+    pendingToolCalls,
+    initialize,
+    createSession,
+    resumeSession,
+    pauseSession,
+    sendMessage,
+    handleMessage,
+    activateSkill,
+    deactivateSkill,
+    executeTool,
+    approveContent,
+    logEvent,
+  } = useAgentStore();
 
   const { addToast } = useToast();
 
@@ -78,13 +83,19 @@ const DialogueAgent: React.FC = () => {
     confirmChapterDraft,
   } = useAutobiographyStore();
 
-  const messages = activeSession?.messages || [];
   const currentChapter = autobiography?.chapters.find((ch) => ch.id === chapterId) || null;
 
-  const { listRef, columnRef, atBottom, scrollToBottom } = useChatScroll(messages);
-  const { elapsedMs, formatDuration } = useRunTimer(isGenerating ? Date.now() : null);
+  const messages = currentSession?.history?.map(turn => ({
+    id: generateId(),
+    content: turn.content,
+    isUser: turn.role === 'user',
+    timestamp: new Date(turn.timestamp),
+    type: 'text' as const,
+  })) || [];
 
-  // Topic items for welcome state
+  const { listRef, columnRef, atBottom, scrollToBottom } = useChatScroll(messages);
+  const { elapsedMs, formatDuration } = useRunTimer(isLoading ? Date.now() : null);
+
   const topicItems = [
     { icon: TreePine, label: '老家的环境', color: 'sage', description: '那条小河，那棵老槐树，那个宁静的小镇' },
     { icon: Users, label: '童年的玩伴们', color: 'gold', description: '一起长大的朋友，那些无忧无虑的时光' },
@@ -92,15 +103,18 @@ const DialogueAgent: React.FC = () => {
     { icon: School, label: '小学的时光', color: 'sage', description: '校园里的记忆，第一份友谊' },
   ];
 
-  // Outline items
-  const outlineItems = [
+  const outlineItems = autobiography?.chapters?.map((ch, index) => ({
+    title: ch.title,
+    status: ch.status === 'completed' ? '已完成' : ch.status === 'in_progress' ? '进行中' : '待探索',
+    words: ch.content?.length || 0,
+    color: ch.status === 'completed' ? 'sage' : ch.status === 'in_progress' ? 'brand' : 'muted',
+  })) || [
     { title: '老家的环境', status: '进行中', words: 780, color: 'brand' },
     { title: '童年的玩伴', status: '待探索', words: 0, color: 'gold' },
     { title: '难忘的生日', status: '待探索', words: 0, color: 'muted' },
     { title: '小学的时光', status: '待探索', words: 0, color: 'muted' },
   ];
 
-  // Suggestions
   const suggestionChips = [
     { color: 'sage', text: '聊聊老家的环境', icon: TreePine },
     { color: 'gold', text: '童年的玩伴们', icon: Users },
@@ -110,11 +124,16 @@ const DialogueAgent: React.FC = () => {
   useEffect(() => {
     loadSettings();
     loadAutobiography();
-  }, [loadSettings, loadAutobiography]);
+    if (!agent) {
+      initialize();
+    }
+  }, [loadSettings, loadAutobiography, agent, initialize]);
 
   useEffect(() => {
-    initSession(chapterId || null);
-  }, [chapterId, initSession]);
+    if (agent && chapterId) {
+      createSession(chapterId);
+    }
+  }, [agent, chapterId, createSession]);
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -123,95 +142,22 @@ const DialogueAgent: React.FC = () => {
     }
   }, [inputValue]);
 
-  const generateAIResponse = async (userContent: string) => {
-    if (!apiKey) {
-      alert('请先在设置页面配置AI API Key');
-      return;
-    }
-
-    setIsGenerating(true);
-    setSuggestions([]);
-
-    const aiMessageId = generateId();
-    const aiMessage: Message = {
-      id: aiMessageId,
-      content: '',
-      isUser: false,
-      timestamp: new Date(),
-      type: 'text',
-    };
-    addMessage(aiMessage);
-
-    try {
-      const aiService = new AIService({ apiKey, model, baseUrl, vendor, temperature, maxOutputTokens, customModelName });
-
-      let chapterContext: ChapterContext | undefined;
-      if (chapterId && currentChapter) {
-        chapterContext = {
-          chapterId: currentChapter.id,
-          chapterTitle: currentChapter.title,
-          existingContent: currentChapter.content || '',
-          timeRange: currentChapter.timeRange,
-        };
-      }
-
-      const currentMessages = useDialogueStore.getState().activeSession?.messages || [];
-      let fullResponse = '';
-
-      await aiService.generateStreamingResponse(
-        userContent,
-        currentMessages.slice(0, -1),
-        (chunk) => {
-          if (!chunk.done) {
-            fullResponse += chunk.content;
-            updateLastMessage(fullResponse, 'text');
-          }
-        },
-        chapterContext
-      );
-
-      const { text: cleanText, extract } = parseExtract(fullResponse);
-      updateLastMessage(cleanText, extract ? 'content_extract' : 'text', extract || undefined);
-
-      const updatedMessages = useDialogueStore.getState().activeSession?.messages || [];
-      if (updatedMessages.length % 3 === 0 || extract) {
-        aiService.generateSuggestions(autobiography, chapterId || null, updatedMessages)
-          .then((newSuggestions) => {
-            if (newSuggestions.length > 0) setSuggestions(newSuggestions);
-          })
-          .catch(() => {});
-      }
-    } catch (error) {
-      console.error('AI响应错误:', error);
-      updateLastMessage('抱歉，处理您的消息时出现错误。请检查您的API配置或稍后再试。', 'text');
-    } finally {
-      setIsGenerating(false);
-      saveSession();
-    }
-  };
-
   const handleSendMessage = async (text?: string) => {
     const content = text || inputValue.trim();
-    if (!content || isGenerating) return;
+    if (!content || isLoading || !currentSession) return;
 
-    const userMessage: Message = {
-      id: generateId(),
-      content,
-      isUser: true,
-      timestamp: new Date(),
-      type: 'text',
-    };
-
-    addMessage(userMessage);
     setInputValue('');
-    setIsGenerating(true);
-    setSuggestions([]);
 
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
     }
 
-    await generateAIResponse(content);
+    try {
+      await handleMessage(content, { generateFollowUpQuestions: false });
+    } catch (error) {
+      console.error('发送消息错误:', error);
+      addToast({ type: 'error', message: '发送消息失败，请重试' });
+    }
   };
 
   const handleTopicClick = (label: string) => {
@@ -224,19 +170,16 @@ const DialogueAgent: React.FC = () => {
 
   const handleSaveDraft = async () => {
     try {
-      await saveSession();
+      if (chapterId && currentSession) {
+        const extractedContent = currentSession.context.extractedCache;
+        if (extractedContent && extractedContent.length > 0) {
+          const draftContent = extractedContent.map((e: any) => e.paragraphs?.join('\n')).join('\n\n');
+          await updateChapterDraft(chapterId, draftContent);
+        }
+      }
       addToast({
         type: 'success',
         message: '草稿已保存',
-        action: {
-          label: '查看存储路径',
-          onClick: () => {
-            addToast({
-              type: 'info',
-              message: '数据存储在浏览器 localStorage 中，键名: dialogue-sessions',
-            });
-          },
-        },
       });
     } catch (err) {
       console.error('保存草稿失败:', err);
@@ -245,9 +188,9 @@ const DialogueAgent: React.FC = () => {
   };
 
   const handleExportChapter = () => {
-    const chapterContent = messages
-      .map((m) => (m.isUser ? `我: ${m.content}` : `AI: ${m.content}`))
-      .join('\n\n');
+    const chapterContent = currentSession?.history
+      ?.map((turn) => `${turn.role === 'user' ? '我' : 'AI'}: ${turn.content}`)
+      .join('\n\n') || '';
 
     const filename = `对话记录_${new Date().toLocaleDateString('zh-CN').replace(/\//g, '-')}.md`;
     const content = `# 对话记录\n\n> 导出时间: ${new Date().toLocaleString('zh-CN')}\n\n${chapterContent}`;
@@ -257,18 +200,27 @@ const DialogueAgent: React.FC = () => {
   };
 
   const handleDialogueSettings = () => {
-    addToast({ type: 'info', message: '对话设置功能开发中，请在设置页面配置 AI API Key' });
+    navigate('/settings');
   };
 
   const handleTopicSuggestionClick = (title: string) => {
     setInputValue(`我想聊聊${title}`);
   };
 
+  const handleApproveContent = async () => {
+    if (chapterId) {
+      try {
+        await approveContent(chapterId);
+        addToast({ type: 'success', message: '内容已确认写入章节' });
+      } catch (error) {
+        addToast({ type: 'error', message: '确认失败，请重试' });
+      }
+    }
+  };
+
   return (
     <div className="dialogue-page">
-      {/* ==================== 主内容区 ==================== */}
       <div className="dialogue-main">
-        {/* Top Header */}
         <header className="app-header">
           <div className="header-left">
             <div className="avatar brand-gradient text-white">
@@ -278,22 +230,45 @@ const DialogueAgent: React.FC = () => {
               <div className="header-title-row">
                 <span className="header-title">Story 助手</span>
                 <span className="badge badge-success">在线</span>
+                {activeSkills.length > 0 && (
+                  <span className="badge badge-info">
+                    {activeSkills.length} 技能激活
+                  </span>
+                )}
               </div>
-              <p className="header-subtitle">正在引导你完成第一章 · 童年记忆</p>
+              <p className="header-subtitle">
+                {currentChapter ? `正在引导你完成 · ${currentChapter.title}` : '正在引导你完成创作'}
+              </p>
             </div>
           </div>
           <div className="header-actions">
-            <button className="icon-button" title="收起面板" onClick={() => setRightPanelCollapsed(!rightPanelCollapsed)}>
+            <button
+              className="icon-button"
+              title={showDebugPanel ? '隐藏调试面板' : '显示调试面板'}
+              onClick={() => setShowDebugPanel(!showDebugPanel)}
+            >
+              <Code size={18} strokeWidth={1.5} />
+            </button>
+            <button
+              className="icon-button"
+              title={rightPanelCollapsed ? '展开面板' : '收起面板'}
+              onClick={() => setRightPanelCollapsed(!rightPanelCollapsed)}
+            >
               {rightPanelCollapsed ? <ChevronRight size={18} strokeWidth={1.5} /> : <ChevronDown size={18} strokeWidth={1.5} />}
             </button>
           </div>
         </header>
 
-        {/* Message List */}
+        {error && (
+          <div className="error-banner">
+            <span>{error}</span>
+            <button onClick={() => window.location.reload()}>重试</button>
+          </div>
+        )}
+
         <div className="message-list" ref={listRef}>
           <div ref={columnRef}>
-            {/* Welcome Hero - shown when no messages */}
-            {messages.length === 0 && (
+            {!currentSession?.history?.length && (
               <div className="welcome-hero">
                 <div className="hero-icon">
                   <BookOpen size={32} strokeWidth={1.5} className="text-brand" />
@@ -303,7 +278,6 @@ const DialogueAgent: React.FC = () => {
                   Story 助手将引导你通过对话的方式，把珍贵的记忆一一记录下来
                 </p>
 
-                {/* Topic Suggestion Cards */}
                 <div className="topic-grid">
                   {topicItems.map((topic, index) => (
                     <button
@@ -320,7 +294,6 @@ const DialogueAgent: React.FC = () => {
                   ))}
                 </div>
 
-                {/* Primary CTA */}
                 <div className="hero-cta">
                   <button className="btn btn-primary btn-lg">
                     <PenLine size={18} strokeWidth={2} />
@@ -331,7 +304,6 @@ const DialogueAgent: React.FC = () => {
               </div>
             )}
 
-            {/* Chat Messages */}
             {messages.map((msg) => (
               <div
                 key={msg.id}
@@ -356,8 +328,7 @@ const DialogueAgent: React.FC = () => {
               </div>
             ))}
 
-            {/* Loading Indicator */}
-            {isGenerating && (
+            {isLoading && (
               <div className="message-row message-row-ai">
                 <div className="avatar brand-gradient text-white">
                   <Sparkles size={16} strokeWidth={1.5} />
@@ -373,7 +344,6 @@ const DialogueAgent: React.FC = () => {
             )}
           </div>
 
-          {/* Scroll to Bottom Button */}
           {!atBottom && (
             <button className="scroll-to-bottom" onClick={scrollToBottom}>
               <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
@@ -383,7 +353,6 @@ const DialogueAgent: React.FC = () => {
           )}
         </div>
 
-        {/* Suggestion Chips */}
         <div className="suggestion-chips-row">
           {suggestionChips.map((chip, index) => (
             <button
@@ -397,7 +366,6 @@ const DialogueAgent: React.FC = () => {
           ))}
         </div>
 
-        {/* Bottom Input Area */}
         <div className="composer-area">
           <div className="composer-input-wrap">
             <button className="composer-suggestion-btn" title="创作提示">
@@ -421,7 +389,7 @@ const DialogueAgent: React.FC = () => {
               className="send-button"
               data-active={inputValue.trim() ? 'true' : undefined}
               onClick={() => handleSendMessage()}
-              disabled={isGenerating || !inputValue.trim()}
+              disabled={isLoading || !inputValue.trim() || !currentSession}
             >
               <Send size={18} strokeWidth={2} />
             </button>
@@ -431,16 +399,20 @@ const DialogueAgent: React.FC = () => {
               按 <kbd>Enter</kbd> 发送，<kbd>Shift + Enter</kbd> 换行
             </p>
             <span className="char-count">
-              已记录 {messages.filter(m => !m.isUser).reduce((sum, m) => sum + m.content.length, 0).toLocaleString()} 字 · 本章 780 字
+              已记录 {messages.filter(m => !m.isUser).reduce((sum, m) => sum + m.content.length, 0).toLocaleString()} 字
+              {currentChapter ? ` · 本章 ${currentChapter.content?.length || 0} 字` : ''}
             </span>
           </div>
         </div>
       </div>
 
-      {/* ==================== 右侧面板 ==================== */}
       {!rightPanelCollapsed && (
         <aside className="right-panel">
-          {/* 章节大纲 */}
+          <section className="panel-section">
+            <h3 className="panel-section-title">技能选择</h3>
+            <SkillSwitcher />
+          </section>
+
           <section className="panel-section">
             <h3 className="panel-section-title">章节大纲</h3>
             <div className="card">
@@ -463,7 +435,6 @@ const DialogueAgent: React.FC = () => {
             </div>
           </section>
 
-          {/* 写作统计 */}
           <section className="panel-section">
             <h3 className="panel-section-title">写作统计</h3>
             <div className="card card-p-1">
@@ -488,56 +459,30 @@ const DialogueAgent: React.FC = () => {
                   <Clock size={14} strokeWidth={1.5} className="text-gold" />
                   <span>本次时长</span>
                 </div>
-                <span className="stat-value tabular-nums">15 分钟</span>
+                <span className="stat-value tabular-nums">{formatDuration()}</span>
               </div>
               <div className="stat-row">
                 <div className="stat-label-with-icon">
-                  <Target size={14} strokeWidth={1.5} className="text-brand" />
-                  <span>完成话题</span>
+                  <Zap size={14} strokeWidth={1.5} className="text-brand" />
+                  <span>工具调用</span>
                 </div>
-                <span className="stat-value tabular-nums">5 / 8</span>
+                <span className="stat-value tabular-nums">{pendingToolCalls.length}</span>
               </div>
             </div>
           </section>
 
-          {/* 话题建议 */}
           <section className="panel-section">
-            <h3 className="panel-section-title">话题建议</h3>
-            <div className="topic-suggestions">
-              <button
-                className="topic-suggestion-item"
-                onClick={() => handleTopicSuggestionClick('童年的玩伴们')}
-              >
-                <Users size={14} strokeWidth={1.5} className="text-gold" />
-                <div className="topic-suggestion-content">
-                  <span className="topic-suggestion-title">童年的玩伴们</span>
-                  <span className="topic-suggestion-desc">聊聊那些一起长大的朋友</span>
-                </div>
-              </button>
-              <button
-                className="topic-suggestion-item"
-                onClick={() => handleTopicSuggestionClick('难忘的生日')}
-              >
-                <Cake size={14} strokeWidth={1.5} className="text-brand" />
-                <div className="topic-suggestion-content">
-                  <span className="topic-suggestion-title">难忘的生日</span>
-                  <span className="topic-suggestion-desc">那些特别的庆祝时刻</span>
-                </div>
-              </button>
-              <button
-                className="topic-suggestion-item"
-                onClick={() => handleTopicSuggestionClick('小学的时光')}
-              >
-                <School size={14} strokeWidth={1.5} className="text-sage" />
-                <div className="topic-suggestion-content">
-                  <span className="topic-suggestion-title">小学的时光</span>
-                  <span className="topic-suggestion-desc">校园里的记忆与故事</span>
-                </div>
-              </button>
-            </div>
+            <h3 className="panel-section-title">命令面板</h3>
+            <CommandPanel />
           </section>
 
-          {/* 快捷操作 */}
+          {showDebugPanel && (
+            <section className="panel-section">
+              <h3 className="panel-section-title">调试面板</h3>
+              <EventLogPanel />
+            </section>
+          )}
+
           <section className="panel-section">
             <h3 className="panel-section-title">快捷操作</h3>
             <div className="quick-actions">
@@ -545,13 +490,17 @@ const DialogueAgent: React.FC = () => {
                 <Save size={16} strokeWidth={1.5} />
                 <span>保存草稿</span>
               </button>
+              <button className="quick-action-item" onClick={handleApproveContent}>
+                <CheckCircle size={16} strokeWidth={1.5} />
+                <span>确认内容</span>
+              </button>
               <button className="quick-action-item" onClick={handleExportChapter}>
                 <Download size={16} strokeWidth={1.5} />
                 <span>导出章节</span>
               </button>
               <button className="quick-action-item" onClick={handleDialogueSettings}>
                 <Settings size={16} strokeWidth={1.5} />
-                <span>对话设置</span>
+                <span>设置</span>
               </button>
             </div>
           </section>
