@@ -55,6 +55,17 @@ export interface WorldBuilding {
   updatedAt: Date;
 }
 
+export interface Scene {
+  id: string;
+  chapterId: string;
+  title: string;
+  order: number;
+  content: string;
+  characters: string[];
+  location: string;
+  goal: string;
+}
+
 export interface NovelChapter {
   id: string;
   novelId: string;
@@ -65,8 +76,19 @@ export interface NovelChapter {
   status: ChapterStatus;
   wordCount: number;
   notes: string;
+  volumeId?: string;
+  scenes: Scene[];
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface Volume {
+  id: string;
+  novelId: string;
+  title: string;
+  order: number;
+  description: string;
+  chapters: NovelChapter[];
 }
 
 export interface Novel {
@@ -79,6 +101,7 @@ export interface Novel {
   currentWordCount: number;
   status: NovelStatus;
   chapters: NovelChapter[];
+  volumes: Volume[];
   characters: Character[];
   worldBuilding: WorldBuilding | null;
   tags: string[];

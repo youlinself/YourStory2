@@ -1,0 +1,275 @@
+import React, { useState, useCallback, useMemo } from 'react';
+import MDEditor from '@uiw/react-md-editor';
+import type { EditorMode, SaveStatus } from '../../types';
+
+interface MarkdownEditorProps {
+  value: string;
+  onChange: (value: string) => void;
+  mode: EditorMode;
+  placeholder?: string;
+  saveStatus?: SaveStatus;
+  onUndo?: () => void;
+  onRedo?: () => void;
+  onFind?: () => void;
+  onReplace?: () => void;
+  canUndo?: boolean;
+  canRedo?: boolean;
+}
+
+const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
+  value,
+  onChange,
+  mode,
+  placeholder = '开始写作...',
+  saveStatus = 'saved',
+  onUndo,
+  onRedo,
+  onFind,
+  onReplace,
+  canUndo = false,
+  canRedo = false,
+}) => {
+  const [showFindReplace, setShowFindReplace] = useState(false);
+  const [findText, setFindText] = useState('');
+  const [replaceText, setReplaceText] = useState('');
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+        e.preventDefault();
+        if (e.shiftKey) {
+          onRedo?.();
+        } else {
+          onUndo?.();
+        }
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
+        e.preventDefault();
+        onRedo?.();
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+        e.preventDefault();
+        setShowFindReplace(true);
+        onFind?.();
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'h') {
+        e.preventDefault();
+        setShowFindReplace(true);
+        onReplace?.();
+      }
+    },
+    [onUndo, onRedo, onFind, onReplace]
+  );
+
+  const handleReplaceAll = useCallback(() => {
+    if (!findText) return;
+    const newValue = value.split(findText).join(replaceText);
+    onChange(newValue);
+  }, [findText, replaceText, value, onChange]);
+
+  const saveStatusIndicator = useMemo(() => {
+    switch (saveStatus) {
+      case 'saving':
+        return (
+          <span className="text-xs text-ink-faint flex items-center gap-1">
+            <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            </svg>
+            保存中...
+          </span>
+        );
+      case 'unsaved':
+        return <span className="text-xs text-warning">未保存</span>;
+      case 'error':
+        return <span className="text-xs text-danger">保存失败</span>;
+      default:
+        return (
+          <span className="text-xs text-success flex items-center gap-1">
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+            </svg>
+            已保存
+          </span>
+        );
+    }
+  }, [saveStatus]);
+
+  const renderToolbar = () => (
+    <div className="flex items-center gap-1 px-3 py-2 border-b border-border-subtle bg-bg-subtle/50">
+      <div className="flex items-center gap-1">
+        <button
+          className={`p-1.5 rounded hover:bg-bg-base transition-colors ${!canUndo ? 'opacity-40 cursor-not-allowed' : ''}`}
+          onClick={onUndo}
+          disabled={!canUndo}
+          title="撤销 (Ctrl+Z)"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" />
+          </svg>
+        </button>
+        <button
+          className={`p-1.5 rounded hover:bg-bg-base transition-colors ${!canRedo ? 'opacity-40 cursor-not-allowed' : ''}`}
+          onClick={onRedo}
+          disabled={!canRedo}
+          title="重做 (Ctrl+Y)"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 15l6-6m0 0l-6-6m6 6H9a6 6 0 000 12h3" />
+          </svg>
+        </button>
+      </div>
+
+      <div className="w-px h-5 bg-border-subtle mx-1" />
+
+      <div className="flex items-center gap-1">
+        <button
+          className="p-1.5 rounded hover:bg-bg-base transition-colors"
+          onClick={() => {
+            const textarea = document.querySelector('textarea');
+            if (textarea) {
+              const start = textarea.selectionStart;
+              const end = textarea.selectionEnd;
+              const selected = value.substring(start, end);
+              const newContent = value.substring(0, start) + `**${selected}**` + value.substring(end);
+              onChange(newContent);
+            }
+          }}
+          title="加粗 (Ctrl+B)"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 4.5h3.5a3.5 3.5 0 010 7h-3.5v-7zM6.75 12h4a4 4 0 010 8h-4v-8z" />
+          </svg>
+        </button>
+        <button
+          className="p-1.5 rounded hover:bg-bg-base transition-colors italic"
+          onClick={() => {
+            const textarea = document.querySelector('textarea');
+            if (textarea) {
+              const start = textarea.selectionStart;
+              const end = textarea.selectionEnd;
+              const selected = value.substring(start, end);
+              const newContent = value.substring(0, start) + `*${selected}*` + value.substring(end);
+              onChange(newContent);
+            }
+          }}
+          title="斜体 (Ctrl+I)"
+        >
+          <span className="text-sm font-serif">I</span>
+        </button>
+      </div>
+
+      <div className="w-px h-5 bg-border-subtle mx-1" />
+
+      <div className="flex items-center gap-1">
+        <button
+          className="p-1.5 rounded hover:bg-bg-base transition-colors"
+          onClick={() => setShowFindReplace(!showFindReplace)}
+          title="查找/替换 (Ctrl+F)"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+          </svg>
+        </button>
+      </div>
+
+      <div className="flex-1" />
+
+      {saveStatusIndicator}
+    </div>
+  );
+
+  const renderFindReplace = () => (
+    <div className="flex items-center gap-2 px-3 py-2 border-b border-border-subtle bg-bg-subtle/30">
+      <input
+        type="text"
+        className="input text-xs flex-1"
+        placeholder="查找..."
+        value={findText}
+        onChange={(e) => setFindText(e.target.value)}
+      />
+      <input
+        type="text"
+        className="input text-xs flex-1"
+        placeholder="替换为..."
+        value={replaceText}
+        onChange={(e) => setReplaceText(e.target.value)}
+      />
+      <button className="btn btn-ghost btn-sm text-xs" onClick={handleReplaceAll}>
+        全部替换
+      </button>
+      <button
+        className="p-1 rounded hover:bg-bg-base transition-colors"
+        onClick={() => setShowFindReplace(false)}
+      >
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+  );
+
+  if (mode === 'markdown' || mode === 'split') {
+    return (
+      <div className="flex-1 flex flex-col overflow-hidden" onKeyDown={handleKeyDown}>
+        {renderToolbar()}
+        {showFindReplace && renderFindReplace()}
+        {mode === 'split' ? (
+          <div className="flex-1 flex overflow-hidden">
+            <div className="flex-1 border-r border-border-subtle">
+              <MDEditor
+                value={value}
+                onChange={(val) => onChange(val || '')}
+                height="100%"
+                preview="edit"
+                textareaProps={{
+                  placeholder,
+                  style: {
+                    fontFamily: '"Noto Serif SC", "Source Han Serif SC", serif',
+                  },
+                }}
+              />
+            </div>
+            <div className="flex-1 overflow-y-auto">
+              <MDEditor.Markdown
+                source={value || '*暂无内容*'}
+                style={{ padding: '1rem' }}
+              />
+            </div>
+          </div>
+        ) : (
+          <div className="flex-1 overflow-hidden">
+            <MDEditor
+              value={value}
+              onChange={(val) => onChange(val || '')}
+              height="100%"
+              preview="live"
+              textareaProps={{
+                placeholder,
+                style: {
+                  fontFamily: '"Noto Serif SC", "Source Han Serif SC", serif',
+                },
+              }}
+            />
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex-1 flex flex-col overflow-hidden" onKeyDown={handleKeyDown}>
+      {renderToolbar()}
+      {showFindReplace && renderFindReplace()}
+      <textarea
+        className="flex-1 w-full resize-none bg-transparent text-base text-ink leading-relaxed focus:outline-none p-6"
+        placeholder={placeholder}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        style={{ fontFamily: '"Noto Serif SC", "Source Han Serif SC", serif' }}
+      />
+    </div>
+  );
+};
+
+export default MarkdownEditor;

@@ -22,5 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-
+.yarn/*
+.yarn/install-state.gz
 doc
+docs/*

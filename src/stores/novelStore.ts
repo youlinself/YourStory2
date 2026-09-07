@@ -99,6 +99,7 @@ const useNovelStore = create<NovelState>((set, get) => ({
       currentWordCount: 0,
       status: 'planning',
       chapters: [],
+      volumes: [],
       characters: [],
       worldBuilding: null,
       tags: [],
@@ -147,6 +148,7 @@ const useNovelStore = create<NovelState>((set, get) => ({
       status: 'outline',
       wordCount: 0,
       notes: '',
+      scenes: [],
       createdAt: new Date(),
       updatedAt: new Date(),
     };

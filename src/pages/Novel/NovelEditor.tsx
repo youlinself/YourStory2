@@ -10,12 +10,23 @@ import {
   CHAPTER_STATUS_LABELS,
   ChapterStatus,
 } from '../../types/novel';
+import {
+  EditorMode,
+  SaveStatus,
+  WritingStats,
+  AIHistoryItem,
+  AIParams,
+} from '../../types';
 import ChapterList from '../../components/novel/ChapterList';
 import AIAssistantPanel from '../../components/novel/AIAssistantPanel';
 import CharacterPanel from '../../components/novel/CharacterPanel';
 import WorldBuildingPanel from '../../components/novel/WorldBuildingPanel';
+import MarkdownEditor from '../../components/novel/MarkdownEditor';
+import WritingStatsPanel from '../../components/novel/WritingStatsPanel';
 
-type ViewMode = 'write' | 'outline' | 'characters' | 'world';
+type ViewMode = 'write' | 'outline' | 'characters' | 'world' | 'stats';
+
+const MAX_HISTORY = 50;
 
 const NovelEditor: React.FC = () => {
   const { novelId } = useParams<{ novelId: string }>();
@@ -35,9 +46,36 @@ const NovelEditor: React.FC = () => {
   const { apiKey, model, baseUrl, vendor, temperature, customModelName } = useAIStore();
 
   const [viewMode, setViewMode] = useState<ViewMode>('write');
+  const [editorMode, setEditorMode] = useState<EditorMode>('plaintext');
   const [isFocusMode, setIsFocusMode] = useState(false);
-  const [showSaveIndicator, setShowSaveIndicator] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved');
+  const [showStats, setShowStats] = useState(false);
+
+  const [contentHistory, setContentHistory] = useState<string[]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+
+  const [writingStats, setWritingStats] = useState<WritingStats>({
+    daily: [],
+    goals: {
+      dailyWordCount: 2000,
+      novelWordCount: 0,
+      reminderEnabled: false,
+      reminderTime: '20:00',
+      notifyOnComplete: true,
+      notifyOnStreakBreak: true,
+    },
+    streak: {
+      current: 0,
+      longest: 0,
+      lastWriteDate: '',
+    },
+  });
+
+  const [aiHistory, setAiHistory] = useState<AIHistoryItem[]>([]);
+
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const wordCountStartRef = useRef<number>(0);
+  const sessionStartRef = useRef<Date>(new Date());
 
   const novel = useMemo(
     () => novels.find((n) => n.id === novelId),
@@ -61,24 +99,95 @@ const NovelEditor: React.FC = () => {
     }
   }, [novel, currentChapterId, setCurrentChapter]);
 
+  useEffect(() => {
+    if (currentChapter) {
+      setContentHistory([currentChapter.content]);
+      setHistoryIndex(0);
+      wordCountStartRef.current = calculateWordCount(currentChapter.content);
+      sessionStartRef.current = new Date();
+    }
+  }, [currentChapter?.id]);
+
+  const calculateWordCount = (content: string): number => {
+    const chineseChars = (content.match(/[\u4e00-\u9fa5]/g) || []).length;
+    const englishWords = (content.match(/[a-zA-Z]+/g) || []).length;
+    return chineseChars + englishWords;
+  };
+
+  const updateWritingStats = useCallback(
+    (_novelId: string, chapterId: string, newContent: string) => {
+      const today = new Date().toISOString().split('T')[0];
+      const wordsAdded = calculateWordCount(newContent) - wordCountStartRef.current;
+
+      setWritingStats((prev) => {
+        const newDaily = [...prev.daily];
+        const todayIndex = newDaily.findIndex((d) => d.date === today);
+
+        if (todayIndex >= 0) {
+          newDaily[todayIndex] = {
+            ...newDaily[todayIndex],
+            wordCount: newDaily[todayIndex].wordCount + Math.max(0, wordsAdded),
+            chapters: [...new Set([...newDaily[todayIndex].chapters, chapterId])],
+          };
+        } else {
+          newDaily.push({
+            date: today,
+            wordCount: Math.max(0, wordsAdded),
+            duration: 0,
+            chapters: [chapterId],
+          });
+        }
+
+        const streak = { ...prev.streak };
+        if (streak.lastWriteDate !== today) {
+          const yesterday = new Date();
+          yesterday.setDate(yesterday.getDate() - 1);
+          const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+          if (streak.lastWriteDate === yesterdayStr) {
+            streak.current += 1;
+            streak.longest = Math.max(streak.longest, streak.current);
+          } else if (streak.lastWriteDate === '') {
+            streak.current = 1;
+          } else {
+            streak.current = 1;
+          }
+          streak.lastWriteDate = today;
+        }
+
+        return {
+          ...prev,
+          daily: newDaily,
+          streak,
+        };
+      });
+    },
+    []
+  );
+
   const autoSave = useCallback(
     async (chapterId: string, content: string) => {
       if (!novelId || !chapterId) return;
 
+      setSaveStatus('saving');
+
       try {
         await updateChapter(novelId, chapterId, { content });
-        setShowSaveIndicator(true);
-        setTimeout(() => setShowSaveIndicator(false), 2000);
+        setSaveStatus('saved');
+        updateWritingStats(novelId, chapterId, content);
       } catch {
+        setSaveStatus('error');
         toast.addToast({ type: 'error', message: '保存失败' });
       }
     },
-    [novelId, updateChapter, toast]
+    [novelId, updateChapter, toast, updateWritingStats]
   );
 
   const handleContentChange = useCallback(
     (content: string) => {
       if (!currentChapterId) return;
+
+      setSaveStatus('unsaved');
 
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
@@ -87,9 +196,42 @@ const NovelEditor: React.FC = () => {
       saveTimeoutRef.current = setTimeout(() => {
         autoSave(currentChapterId, content);
       }, 1000);
+
+      setContentHistory((prev) => {
+        const newHistory = prev.slice(0, historyIndex + 1);
+        newHistory.push(content);
+        if (newHistory.length > MAX_HISTORY) {
+          newHistory.shift();
+          return newHistory;
+        }
+        return newHistory;
+      });
+      setHistoryIndex((prev) => Math.min(prev + 1, MAX_HISTORY - 1));
     },
-    [currentChapterId, autoSave]
+    [currentChapterId, autoSave, historyIndex]
   );
+
+  const handleUndo = useCallback(() => {
+    if (historyIndex > 0) {
+      const newIndex = historyIndex - 1;
+      setHistoryIndex(newIndex);
+      const content = contentHistory[newIndex];
+      if (currentChapterId && content !== undefined) {
+        autoSave(currentChapterId, content);
+      }
+    }
+  }, [historyIndex, contentHistory, currentChapterId, autoSave]);
+
+  const handleRedo = useCallback(() => {
+    if (historyIndex < contentHistory.length - 1) {
+      const newIndex = historyIndex + 1;
+      setHistoryIndex(newIndex);
+      const content = contentHistory[newIndex];
+      if (currentChapterId && content !== undefined) {
+        autoSave(currentChapterId, content);
+      }
+    }
+  }, [historyIndex, contentHistory, currentChapterId, autoSave]);
 
   const handleAddChapter = async () => {
     if (!novelId) return;
@@ -140,7 +282,8 @@ const NovelEditor: React.FC = () => {
 
   const handleAIAssist = async (
     type: 'continue' | 'polish' | 'expand' | 'suggest',
-    selectedText?: string
+    selectedText?: string,
+    params?: AIParams
   ) => {
     if (!apiKey) {
       toast.addToast({ type: 'error', message: '请先在设置页面配置AI API Key' });
@@ -157,35 +300,60 @@ const NovelEditor: React.FC = () => {
       model,
       baseUrl,
       vendor,
-      temperature,
+      temperature: params?.continue?.temperature ?? temperature,
       customModelName,
     });
 
     try {
+      let result: string | string[] | null = null;
+
       switch (type) {
         case 'continue':
-          return await aiService.continueWriting(
+          result = await aiService.continueWriting(
             currentChapter,
             novel.characters,
             novel.worldBuilding
           );
+          break;
         case 'polish':
           if (!selectedText) {
             toast.addToast({ type: 'warning', message: '请先选择要润色的文本' });
             return null;
           }
-          return await aiService.polishText(selectedText);
+          result = await aiService.polishText(selectedText, params?.continue.style);
+          break;
         case 'expand':
           if (!selectedText) {
             toast.addToast({ type: 'warning', message: '请先选择要扩写的文本' });
             return null;
           }
-          return await aiService.expandText(selectedText);
+          result = await aiService.expandText(selectedText, params?.continue.direction);
+          break;
         case 'suggest':
-          return await aiService.generatePlotSuggestions(novel.chapters, novel.synopsis);
-        default:
-          return null;
+          result = await aiService.generatePlotSuggestions(novel.chapters, novel.synopsis);
+          break;
       }
+
+      if (result) {
+        const historyItem: AIHistoryItem = {
+          id: `ai_${Date.now()}`,
+          type,
+          input: selectedText || currentChapter.content.slice(-500),
+          output: Array.isArray(result) ? result.join('\n') : result,
+          params: params || {
+            continue: { length: 'medium', style: 'original', direction: '', temperature: 0.7 },
+            polish: { intensity: 'medium', focus: ['fluency'], preserveStyle: true },
+            expand: { ratio: 2, focus: ['action'] },
+          },
+          timestamp: new Date().toISOString(),
+          novelId: novel.id,
+          chapterId: currentChapter.id,
+          isFavorited: false,
+        };
+        setAiHistory((prev) => [historyItem, ...prev].slice(0, 50));
+      }
+
+      return result;
     } catch (error) {
       toast.addToast({
         type: 'error',
@@ -195,11 +363,28 @@ const NovelEditor: React.FC = () => {
     }
   };
 
-  const calculateWordCount = (content: string): number => {
-    const chineseChars = (content.match(/[\u4e00-\u9fa5]/g) || []).length;
-    const englishWords = (content.match(/[a-zA-Z]+/g) || []).length;
-    return chineseChars + englishWords;
-  };
+  const handleClearHistory = useCallback(() => {
+    setAiHistory([]);
+    toast.addToast({ type: 'success', message: '历史记录已清空' });
+  }, [toast]);
+
+  const handleToggleFavorite = useCallback((id: string) => {
+    setAiHistory((prev) =>
+      prev.map((item) =>
+        item.id === id ? { ...item, isFavorited: !item.isFavorited } : item
+      )
+    );
+  }, []);
+
+  const handleOpenGoals = useCallback(() => {
+    const dailyGoal = prompt('设置每日写作目标（字）：', String(writingStats.goals.dailyWordCount));
+    if (dailyGoal && !isNaN(Number(dailyGoal))) {
+      setWritingStats((prev) => ({
+        ...prev,
+        goals: { ...prev.goals, dailyWordCount: Number(dailyGoal) },
+      }));
+    }
+  }, [writingStats.goals.dailyWordCount]);
 
   if (!novel) {
     return (
@@ -250,14 +435,15 @@ const NovelEditor: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2">
-          {showSaveIndicator && (
-            <span className="text-xs text-success flex items-center gap-1">
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-              </svg>
-              已保存
-            </span>
-          )}
+          <button
+            className={`btn btn-ghost text-xs ${showStats ? 'bg-brand-surface text-brand' : ''}`}
+            onClick={() => setShowStats(!showStats)}
+            title="写作统计"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+            </svg>
+          </button>
           <button
             className={`btn btn-ghost text-xs ${isFocusMode ? 'bg-brand-surface text-brand' : ''}`}
             onClick={() => setIsFocusMode(!isFocusMode)}
@@ -322,6 +508,30 @@ const NovelEditor: React.FC = () => {
 
           <div className="flex-1" />
 
+          {viewMode === 'write' && (
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 bg-bg-base rounded-lg p-1">
+                {[
+                  { mode: 'plaintext', label: '纯文本' },
+                  { mode: 'markdown', label: 'Markdown' },
+                  { mode: 'split', label: '分屏' },
+                ].map(({ mode, label }) => (
+                  <button
+                    key={mode}
+                    className={`px-2 py-1 rounded text-xs transition-all ${
+                      editorMode === mode
+                        ? 'bg-brand text-white'
+                        : 'text-ink-muted hover:text-ink'
+                    }`}
+                    onClick={() => setEditorMode(mode as EditorMode)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {viewMode === 'write' && currentChapter && (
             <div className="flex items-center gap-3 text-xs text-ink-faint">
               <span>本章 {wordCount} 字</span>
@@ -333,7 +543,7 @@ const NovelEditor: React.FC = () => {
                 }
               >
                 {Object.entries(CHAPTER_STATUS_LABELS).map(([key, label]) => (
-                  <option key={key} value={key}>{label}</option>
+                  <option key={key} value={key}>{label as string}</option>
                 ))}
               </select>
             </div>
@@ -359,29 +569,17 @@ const NovelEditor: React.FC = () => {
           {viewMode === 'write' && (
             <>
               {currentChapter ? (
-                <div className="flex-1 flex flex-col p-6 overflow-hidden">
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <h2 className="text-lg font-semibold text-ink">{currentChapter.title}</h2>
-                      {currentChapter.summary && (
-                        <p className="text-xs text-ink-faint mt-1 line-clamp-1">
-                          概要：{currentChapter.summary}
-                        </p>
-                      )}
-                    </div>
-                    <div className="text-xs text-ink-faint">
-                      最后更新：{new Date(currentChapter.updatedAt).toLocaleString('zh-CN')}
-                    </div>
-                  </div>
-
-                  <textarea
-                    className="flex-1 w-full resize-none bg-transparent text-base text-ink leading-relaxed focus:outline-none"
-                    placeholder="开始写作..."
-                    value={currentChapter.content}
-                    onChange={(e) => handleContentChange(e.target.value)}
-                    style={{ fontFamily: '"Noto Serif SC", "Source Han Serif SC", serif' }}
-                  />
-                </div>
+                <MarkdownEditor
+                  value={currentChapter.content}
+                  onChange={handleContentChange}
+                  mode={editorMode}
+                  placeholder="开始写作..."
+                  saveStatus={saveStatus}
+                  onUndo={handleUndo}
+                  onRedo={handleRedo}
+                  canUndo={historyIndex > 0}
+                  canRedo={historyIndex < contentHistory.length - 1}
+                />
               ) : (
                 <div className="flex-1 flex items-center justify-center">
                   <div className="text-center">
@@ -480,6 +678,18 @@ const NovelEditor: React.FC = () => {
               const newContent = currentChapter.content + text;
               handleContentChange(newContent);
             }}
+            history={aiHistory}
+            onClearHistory={handleClearHistory}
+            onToggleFavorite={handleToggleFavorite}
+          />
+        )}
+
+        {showStats && viewMode === 'write' && (
+          <WritingStatsPanel
+            stats={writingStats}
+            goals={writingStats.goals}
+            totalWords={novel.currentWordCount}
+            onOpenGoals={handleOpenGoals}
           />
         )}
       </div>

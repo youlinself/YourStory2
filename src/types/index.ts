@@ -140,3 +140,30 @@ export type {
   BondSystemState,
   CollectionStats,
 } from './bond';
+
+// 写作系统类型导出
+export type {
+  WritingStats,
+  DailyWritingStat,
+  WritingGoals,
+  StreakInfo,
+  WritingSession,
+  Achievement,
+  AchievementCondition,
+  ChapterVersion,
+  VersionDiff,
+  AIParams,
+  AIHistoryItem,
+  SmartSuggestion,
+  SavedInspiration,
+  InspirationLibrary,
+  ExportConfig,
+  CharacterArc,
+  CharacterAppearance,
+  EditorMode,
+  AutoSaveConfig,
+  SaveStatus,
+  EditorState,
+} from './writing';
+
+export { ACHIEVEMENTS, DEFAULT_AI_PARAMS } from './writing';
