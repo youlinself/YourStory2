@@ -27,6 +27,8 @@ import WritingStatsPanel from '../../components/novel/WritingStatsPanel';
 type ViewMode = 'write' | 'outline' | 'characters' | 'world' | 'stats';
 
 const MAX_HISTORY = 50;
+const HISTORY_DEBOUNCE_MS = 500;
+const AUTO_SAVE_DEBOUNCE_MS = 1000;
 
 const NovelEditor: React.FC = () => {
   const { novelId } = useParams<{ novelId: string }>();
@@ -74,8 +76,13 @@ const NovelEditor: React.FC = () => {
   const [aiHistory, setAiHistory] = useState<AIHistoryItem[]>([]);
 
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const historyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const wordCountStartRef = useRef<number>(0);
   const sessionStartRef = useRef<Date>(new Date());
+
+  const localContentRef = useRef<string>('');
+  const pendingContentRef = useRef<string>('');
+  const lastSavedContentRef = useRef<string>('');
 
   const novel = useMemo(
     () => novels.find((n) => n.id === novelId),
@@ -101,9 +108,13 @@ const NovelEditor: React.FC = () => {
 
   useEffect(() => {
     if (currentChapter) {
-      setContentHistory([currentChapter.content]);
+      const content = currentChapter.content;
+      localContentRef.current = content;
+      pendingContentRef.current = content;
+      lastSavedContentRef.current = content;
+      setContentHistory([content]);
       setHistoryIndex(0);
-      wordCountStartRef.current = calculateWordCount(currentChapter.content);
+      wordCountStartRef.current = calculateWordCount(content);
       sessionStartRef.current = new Date();
     }
   }, [currentChapter?.id]);
@@ -165,50 +176,78 @@ const NovelEditor: React.FC = () => {
     []
   );
 
-  const autoSave = useCallback(
-    async (chapterId: string, content: string) => {
-      if (!novelId || !chapterId) return;
+  const syncToStore = useCallback(
+    async (content: string) => {
+      if (!novelId || !currentChapterId) return;
+      if (content === lastSavedContentRef.current) return;
 
       setSaveStatus('saving');
 
       try {
-        await updateChapter(novelId, chapterId, { content });
+        await updateChapter(novelId, currentChapterId, { content });
+        lastSavedContentRef.current = content;
         setSaveStatus('saved');
-        updateWritingStats(novelId, chapterId, content);
+        updateWritingStats(novelId, currentChapterId, content);
       } catch {
         setSaveStatus('error');
         toast.addToast({ type: 'error', message: '保存失败' });
       }
     },
-    [novelId, updateChapter, toast, updateWritingStats]
+    [novelId, currentChapterId, updateChapter, toast, updateWritingStats]
+  );
+
+  const scheduleAutoSave = useCallback(
+    (content: string) => {
+      pendingContentRef.current = content;
+
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+
+      setSaveStatus('unsaved');
+
+      saveTimeoutRef.current = setTimeout(() => {
+        syncToStore(pendingContentRef.current);
+      }, AUTO_SAVE_DEBOUNCE_MS);
+    },
+    [syncToStore]
+  );
+
+  const scheduleHistoryUpdate = useCallback(
+    (content: string) => {
+      if (historyTimeoutRef.current) {
+        clearTimeout(historyTimeoutRef.current);
+      }
+
+      historyTimeoutRef.current = setTimeout(() => {
+        setContentHistory((prev) => {
+          const lastEntry = prev[prev.length - 1];
+          if (lastEntry === content) return prev;
+
+          const newHistory = prev.slice(0, historyIndex + 1);
+          newHistory.push(content);
+          if (newHistory.length > MAX_HISTORY) {
+            newHistory.shift();
+            return newHistory;
+          }
+          return newHistory;
+        });
+        setHistoryIndex((prev) => Math.min(prev + 1, MAX_HISTORY - 1));
+      }, HISTORY_DEBOUNCE_MS);
+    },
+    [historyIndex]
   );
 
   const handleContentChange = useCallback(
     (content: string) => {
       if (!currentChapterId) return;
 
-      setSaveStatus('unsaved');
+      localContentRef.current = content;
 
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
-      }
-
-      saveTimeoutRef.current = setTimeout(() => {
-        autoSave(currentChapterId, content);
-      }, 1000);
-
-      setContentHistory((prev) => {
-        const newHistory = prev.slice(0, historyIndex + 1);
-        newHistory.push(content);
-        if (newHistory.length > MAX_HISTORY) {
-          newHistory.shift();
-          return newHistory;
-        }
-        return newHistory;
-      });
-      setHistoryIndex((prev) => Math.min(prev + 1, MAX_HISTORY - 1));
+      scheduleAutoSave(content);
+      scheduleHistoryUpdate(content);
     },
-    [currentChapterId, autoSave, historyIndex]
+    [currentChapterId, scheduleAutoSave, scheduleHistoryUpdate]
   );
 
   const handleUndo = useCallback(() => {
@@ -217,10 +256,11 @@ const NovelEditor: React.FC = () => {
       setHistoryIndex(newIndex);
       const content = contentHistory[newIndex];
       if (currentChapterId && content !== undefined) {
-        autoSave(currentChapterId, content);
+        localContentRef.current = content;
+        scheduleAutoSave(content);
       }
     }
-  }, [historyIndex, contentHistory, currentChapterId, autoSave]);
+  }, [historyIndex, contentHistory, currentChapterId, scheduleAutoSave]);
 
   const handleRedo = useCallback(() => {
     if (historyIndex < contentHistory.length - 1) {
@@ -228,10 +268,11 @@ const NovelEditor: React.FC = () => {
       setHistoryIndex(newIndex);
       const content = contentHistory[newIndex];
       if (currentChapterId && content !== undefined) {
-        autoSave(currentChapterId, content);
+        localContentRef.current = content;
+        scheduleAutoSave(content);
       }
     }
-  }, [historyIndex, contentHistory, currentChapterId, autoSave]);
+  }, [historyIndex, contentHistory, currentChapterId, scheduleAutoSave]);
 
   const handleAddChapter = async () => {
     if (!novelId) return;
@@ -402,7 +443,7 @@ const NovelEditor: React.FC = () => {
     );
   }
 
-  const wordCount = calculateWordCount(currentChapter?.content || '');
+  const wordCount = calculateWordCount(localContentRef.current || currentChapter?.content || '');
 
   return (
     <div className="h-full flex flex-col">
@@ -570,7 +611,8 @@ const NovelEditor: React.FC = () => {
             <>
               {currentChapter ? (
                 <MarkdownEditor
-                  value={currentChapter.content}
+                  key={currentChapter.id}
+                  initialContent={currentChapter.content}
                   onChange={handleContentChange}
                   mode={editorMode}
                   placeholder="开始写作..."
@@ -675,7 +717,7 @@ const NovelEditor: React.FC = () => {
           <AIAssistantPanel
             onAssist={handleAIAssist}
             onInsertText={(text) => {
-              const newContent = currentChapter.content + text;
+              const newContent = localContentRef.current + text;
               handleContentChange(newContent);
             }}
             history={aiHistory}

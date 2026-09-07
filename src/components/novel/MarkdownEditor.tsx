@@ -1,9 +1,9 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import MDEditor from '@uiw/react-md-editor';
 import type { EditorMode, SaveStatus } from '../../types';
 
 interface MarkdownEditorProps {
-  value: string;
+  initialContent: string;
   onChange: (value: string) => void;
   mode: EditorMode;
   placeholder?: string;
@@ -17,7 +17,7 @@ interface MarkdownEditorProps {
 }
 
 const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
-  value,
+  initialContent,
   onChange,
   mode,
   placeholder = '开始写作...',
@@ -29,9 +29,33 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
   canUndo = false,
   canRedo = false,
 }) => {
+  const [localContent, setLocalContent] = useState(initialContent);
   const [showFindReplace, setShowFindReplace] = useState(false);
   const [findText, setFindText] = useState('');
   const [replaceText, setReplaceText] = useState('');
+
+  const contentRef = useRef(initialContent);
+  const isExternalUpdate = useRef(false);
+
+  useEffect(() => {
+    if (initialContent !== contentRef.current) {
+      isExternalUpdate.current = true;
+      setLocalContent(initialContent);
+      contentRef.current = initialContent;
+      setTimeout(() => {
+        isExternalUpdate.current = false;
+      }, 0);
+    }
+  }, [initialContent]);
+
+  const handleLocalChange = useCallback(
+    (value: string) => {
+      setLocalContent(value);
+      contentRef.current = value;
+      onChange(value);
+    },
+    [onChange]
+  );
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -63,9 +87,9 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
 
   const handleReplaceAll = useCallback(() => {
     if (!findText) return;
-    const newValue = value.split(findText).join(replaceText);
-    onChange(newValue);
-  }, [findText, replaceText, value, onChange]);
+    const newValue = localContent.split(findText).join(replaceText);
+    handleLocalChange(newValue);
+  }, [findText, replaceText, localContent, handleLocalChange]);
 
   const saveStatusIndicator = useMemo(() => {
     switch (saveStatus) {
@@ -94,6 +118,21 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
         );
     }
   }, [saveStatus]);
+
+  const insertFormatting = useCallback(
+    (prefix: string, suffix: string) => {
+      const textarea = document.querySelector('textarea');
+      if (textarea) {
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const selected = localContent.substring(start, end);
+        const newContent =
+          localContent.substring(0, start) + prefix + selected + suffix + localContent.substring(end);
+        handleLocalChange(newContent);
+      }
+    },
+    [localContent, handleLocalChange]
+  );
 
   const renderToolbar = () => (
     <div className="flex items-center gap-1 px-3 py-2 border-b border-border-subtle bg-bg-subtle/50">
@@ -125,16 +164,7 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
       <div className="flex items-center gap-1">
         <button
           className="p-1.5 rounded hover:bg-bg-base transition-colors"
-          onClick={() => {
-            const textarea = document.querySelector('textarea');
-            if (textarea) {
-              const start = textarea.selectionStart;
-              const end = textarea.selectionEnd;
-              const selected = value.substring(start, end);
-              const newContent = value.substring(0, start) + `**${selected}**` + value.substring(end);
-              onChange(newContent);
-            }
-          }}
+          onClick={() => insertFormatting('**', '**')}
           title="加粗 (Ctrl+B)"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
@@ -143,16 +173,7 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
         </button>
         <button
           className="p-1.5 rounded hover:bg-bg-base transition-colors italic"
-          onClick={() => {
-            const textarea = document.querySelector('textarea');
-            if (textarea) {
-              const start = textarea.selectionStart;
-              const end = textarea.selectionEnd;
-              const selected = value.substring(start, end);
-              const newContent = value.substring(0, start) + `*${selected}*` + value.substring(end);
-              onChange(newContent);
-            }
-          }}
+          onClick={() => insertFormatting('*', '*')}
           title="斜体 (Ctrl+I)"
         >
           <span className="text-sm font-serif">I</span>
@@ -218,8 +239,8 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
           <div className="flex-1 flex overflow-hidden">
             <div className="flex-1 border-r border-border-subtle">
               <MDEditor
-                value={value}
-                onChange={(val) => onChange(val || '')}
+                value={localContent}
+                onChange={(val) => handleLocalChange(val || '')}
                 height="100%"
                 preview="edit"
                 textareaProps={{
@@ -232,7 +253,7 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
             </div>
             <div className="flex-1 overflow-y-auto">
               <MDEditor.Markdown
-                source={value || '*暂无内容*'}
+                source={localContent || '*暂无内容*'}
                 style={{ padding: '1rem' }}
               />
             </div>
@@ -240,8 +261,8 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
         ) : (
           <div className="flex-1 overflow-hidden">
             <MDEditor
-              value={value}
-              onChange={(val) => onChange(val || '')}
+              value={localContent}
+              onChange={(val) => handleLocalChange(val || '')}
               height="100%"
               preview="live"
               textareaProps={{
@@ -264,12 +285,12 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
       <textarea
         className="flex-1 w-full resize-none bg-transparent text-base text-ink leading-relaxed focus:outline-none p-6"
         placeholder={placeholder}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
+        value={localContent}
+        onChange={(e) => handleLocalChange(e.target.value)}
         style={{ fontFamily: '"Noto Serif SC", "Source Han Serif SC", serif' }}
       />
     </div>
   );
 };
 
-export default MarkdownEditor;
+export default React.memo(MarkdownEditor);
