@@ -6,6 +6,7 @@ interface ModalProps {
   title?: string;
   children: React.ReactNode;
   className?: string;
+  size?: 'sm' | 'md' | 'lg' | 'xl';
 }
 
 const Modal: React.FC<ModalProps> = ({
@@ -14,6 +15,7 @@ const Modal: React.FC<ModalProps> = ({
   title,
   children,
   className = '',
+  size = 'md',
 }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
@@ -64,7 +66,7 @@ const Modal: React.FC<ModalProps> = ({
         onClick={handleClose}
       />
       <div
-        className={`relative bg-bg-elevated rounded-2xl max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto shadow-xl transition-all duration-200 ${
+        className={`relative bg-bg-elevated rounded-2xl ${size === 'sm' ? 'max-w-sm' : size === 'lg' ? 'max-w-2xl' : size === 'xl' ? 'max-w-4xl' : 'max-w-lg'} w-full mx-4 max-h-[90vh] overflow-y-auto shadow-xl transition-all duration-200 ${
           isVisible && !isLeaving
             ? 'opacity-100 translate-y-0 scale-100'
             : 'opacity-0 translate-y-2 scale-95'
