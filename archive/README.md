@@ -1,7 +1,7 @@
 # 项目文档归档
 
-> 归档日期：2026-08-25
-> 本文档记录了已开发完毕的设计和开发文档的归档索引
+> 归档日期：2026-09-07
+> 本文档记录了项目设计和开发文档的归档索引，按完成状态分类管理
 
 ---
 
@@ -9,74 +9,106 @@
 
 ```
 archive/
-├── README.md                    # 本文件 - 归档索引
-├── ai-system/                   # AI系统相关文档（已完成开发）
-│   ├── AI版本开发文档.md
-│   ├── AI增强执行方案.md
-│   ├── AI生成内容结构化分析与容错设计.md
-│   └── AI生成时机与调度设计方案.md
-├── event-system/                # 事件系统相关文档（已完成开发）
-│   ├── 年龄事件池报告.md
-│   └── 模拟人生事件系统文档.md
-├── design-system/               # 设计系统规范（已完成）
-│   └── design-system-specification.md
-└── agent-design/                # Agent架构设计文档（待开发）
-    ├── autobiography-agent/      # 自传功能Agent化改造设计
-    │   ├── README.md
-    │   ├── DEVELOPMENT-GUIDE.md
-    │   ├── phase1-agent-framework.md
-    │   ├── phase2-tool-system.md
-    │   ├── phase3-skill-system.md
-    │   ├── phase4-pipeline-optimization.md
-    │   └── phase5-ui-integration.md
-    ├── autobiography-agent-design.md
-    └── 模拟人生AI增强设计方案.md
+├── README.md                        # 本文件 - 归档索引
+├── completed/                       # 已完成开发/实施的文档
+│   ├── ai-system/                   # AI系统相关文档
+│   │   ├── AI版本开发文档.md
+│   │   ├── AI增强执行方案.md
+│   │   ├── AI生成内容结构化分析与容错设计.md
+│   │   └── AI生成时机与调度设计方案.md
+│   ├── event-system/                # 事件系统相关文档
+│   │   ├── 年龄事件池报告.md
+│   │   └── 模拟人生事件系统文档.md
+│   ├── design-system/               # 设计系统规范
+│   │   └── design-system-specification.md
+│   ├── agent-design/                # Agent架构设计文档（已实施）
+│   │   ├── README.md
+│   │   ├── DEVELOPMENT-GUIDE.md
+│   │   ├── phase1-agent-framework.md
+│   │   ├── phase2-tool-system.md
+│   │   ├── phase3-skill-system.md
+│   │   ├── phase4-pipeline-optimization.md
+│   │   └── phase5-ui-integration.md
+│   └── project-docs/                 # 项目综合文档
+│       ├── CodeWiki.md
+│       └── 开发进度.md
+└── pending/                         # 待开发/待实施的文档
+    ├── agent-design/                # Agent架构设计（待实施）
+    │   ├── autobiography-agent-design.md
+    │   └── 模拟人生AI增强设计方案.md
+    ├── feature-design/              # 功能设计（待实施）
+    │   └── 对话创作改进文档_重生体验版.md
+    └── ui-optimization/             # UI优化（待实施）
+        └── UI调整文档.md
 ```
 
 ---
 
-## 归档文档详情
+## 已完成文档 (completed/)
 
 ### AI系统文档 (ai-system/)
 
 | 文档 | 描述 | 状态 |
 |------|------|------|
-| [AI版本开发文档.md](ai-system/AI版本开发文档.md) | AI生成基础框架、内容验证器、核心生成服务的完整开发记录 | ✅ 已完成开发 |
-| [AI增强执行方案.md](ai-system/AI增强执行方案.md) | AI增强功能的执行方案，包含生成时机、年龄计算、难度调整 | ✅ 已完成开发 |
-| [AI生成内容结构化分析与容错设计.md](ai-system/AI生成内容结构化分析与容错设计.md) | AI输出内容的验证、修复和容错机制设计 | ✅ 已完成开发 |
-| [AI生成时机与调度设计方案.md](ai-system/AI生成时机与调度设计方案.md) | AI生成的触发时机、状态管理和流程控制设计 | ✅ 已完成开发 |
+| [AI版本开发文档.md](completed/ai-system/AI版本开发文档.md) | AI生成基础框架、内容验证器、核心生成服务的完整开发记录 | ✅ 已完成开发 |
+| [AI增强执行方案.md](completed/ai-system/AI增强执行方案.md) | AI增强功能的执行方案，包含生成时机、年龄计算、难度调整 | ✅ 已完成开发 |
+| [AI生成内容结构化分析与容错设计.md](completed/ai-system/AI生成内容结构化分析与容错设计.md) | AI输出内容的验证、修复和容错机制设计 | ✅ 已完成开发 |
+| [AI生成时机与调度设计方案.md](completed/ai-system/AI生成时机与调度设计方案.md) | AI生成的触发时机、状态管理和流程控制设计 | ✅ 已完成开发 |
 
 ### 事件系统文档 (event-system/)
 
 | 文档 | 描述 | 状态 |
 |------|------|------|
-| [年龄事件池报告.md](event-system/年龄事件池报告.md) | 1950-2070年代事件池的完整分析报告 | ✅ 已完成开发 |
-| [模拟人生事件系统文档](event-system/模拟人生事件系统文档.md) | 事件系统的完整技术文档，包含数据结构、触发机制、事件链 | ✅ 已完成开发 |
+| [年龄事件池报告.md](completed/event-system/年龄事件池报告.md) | 1950-2070年代事件池的完整分析报告 | ✅ 已完成开发 |
+| [模拟人生事件系统文档.md](completed/event-system/模拟人生事件系统文档.md) | 事件系统的完整技术文档，包含数据结构、触发机制、事件链 | ✅ 已完成开发 |
 
 ### 设计系统文档 (design-system/)
 
 | 文档 | 描述 | 状态 |
 |------|------|------|
-| [design-system-specification.md](design-system/design-system-specification.md) | YourStory人性化交互设计规范，包含设计价值观、交互反馈、动效规范 | ✅ 已完成 |
+| [design-system-specification.md](completed/design-system/design-system-specification.md) | YourStory人性化交互设计规范，包含设计价值观、交互反馈、动效规范 | ✅ 已完成 |
 
 ### Agent架构设计文档 (agent-design/)
 
 | 文档 | 描述 | 状态 |
 |------|------|------|
-| [autobiography-agent/](agent-design/autobiography-agent/) | 自传功能Agent化改造的完整设计（5个阶段） | ⏳ 待开发 |
-| [autobiography-agent-design.md](agent-design/autobiography-agent-design.md) | 页面级自传创作智能体架构设计 | ⏳ 待开发 |
-| [模拟人生AI增强设计方案.md](agent-design/模拟人生AI增强设计方案.md) | 模拟人生AI大模型增强的完整设计方案 | ⏳ 待开发 |
+| [README.md](completed/agent-design/README.md) | Agent化改造总体概述和开发指南 | ✅ 已实施 |
+| [DEVELOPMENT-GUIDE.md](completed/agent-design/DEVELOPMENT-GUIDE.md) | Agent化改造完整开发指南 | ✅ 已实施 |
+| [phase1-agent-framework.md](completed/agent-design/phase1-agent-framework.md) | Phase 1: 基础Agent框架设计与实现 | ✅ 已实施 |
+| [phase2-tool-system.md](completed/agent-design/phase2-tool-system.md) | Phase 2: 工具系统设计与实现 | ✅ 已实施 |
+| [phase3-skill-system.md](completed/agent-design/phase3-skill-system.md) | Phase 3: 技能系统设计与实现 | ✅ 已实施 |
+| [phase4-pipeline-optimization.md](completed/agent-design/phase4-pipeline-optimization.md) | Phase 4: 管道与优化设计与实现 | ✅ 已实施 |
+| [phase5-ui-integration.md](completed/agent-design/phase5-ui-integration.md) | Phase 5: UI集成设计与实现 | ✅ 已实施 |
+
+### 项目综合文档 (project-docs/)
+
+| 文档 | 描述 | 状态 |
+|------|------|------|
+| [CodeWiki.md](completed/project-docs/CodeWiki.md) | 项目代码百科，包含完整的技术架构和模块说明 | ✅ 已完成 |
+| [开发进度.md](completed/project-docs/开发进度.md) | 开发进度跟踪，Phase 1-5 全部完成（337测试通过） | ✅ 已完成 |
 
 ---
 
-## 保留文档（docs/目录）
+## 待开发文档 (pending/)
 
-以下文档仍保留在 `docs/` 目录中，用于指导后续开发：
+### Agent架构设计 (agent-design/)
 
-| 文档 | 描述 | 用途 |
+| 文档 | 描述 | 状态 |
 |------|------|------|
-| [待开发功能清单.md](../docs/待开发功能清单.md) | 当前待开发功能清单和进度跟踪 | 开发指导 |
-| [丰富玩法建议.md](../docs/丰富玩法建议.md) | 游戏扩展玩法的规划和建议 | 功能规划 |
+| [autobiography-agent-design.md](pending/agent-design/autobiography-agent-design.md) | 页面级自传创作智能体架构设计 | ⏳ 待开发 |
+| [模拟人生AI增强设计方案.md](pending/agent-design/模拟人生AI增强设计方案.md) | 模拟人生AI大模型增强的完整设计方案 | ⏳ 待开发 |
+
+### 功能设计 (feature-design/)
+
+| 文档 | 描述 | 状态 |
+|------|------|------|
+| [对话创作改进文档_重生体验版.md](pending/feature-design/对话创作改进文档_重生体验版.md) | 重生体验功能设计，包含平行宇宙、分叉点、双栏对比等功能 | ⏳ 待实施 |
+
+### UI优化 (ui-optimization/)
+
+| 文档 | 描述 | 状态 |
+|------|------|------|
+| [UI调整文档.md](pending/ui-optimization/UI调整文档.md) | UI间距、对比度、溢出问题的调整建议 | ⏳ 待实施 |
 
 ---
 
@@ -94,10 +126,18 @@ archive/
 - ✅ 人生总结页面
 - ✅ AI大模型模式
 - ✅ 设计系统规范
+- ✅ Agent化改造（Phase 1-5，337个测试全部通过）
+- ✅ 会话管理系统
+- ✅ 工具系统（5个核心工具）
+- ✅ 技能系统（4个核心技能）
+- ✅ 管道与优化系统
+- ✅ UI集成与数据连通
 
 ### 待开发模块
-- ⏳ 自传功能Agent化改造（Phase 1-5）
+- ⏳ 页面级自传创作智能体架构
 - ⏳ 模拟人生AI增强（战斗叙事、NPC对话、人生传记）
+- ⏳ 重生体验功能（平行宇宙、分叉点、双栏对比）
+- ⏳ UI间距与对比度优化
 - ⏳ NPC/人际关系系统
 - ⏳ 世界状态系统
 - ⏳ 成就系统UI
