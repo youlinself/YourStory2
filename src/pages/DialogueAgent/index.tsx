@@ -77,6 +77,7 @@ const DialogueAgent: React.FC = () => {
 
   const {
     autobiography,
+    isLoading: isAutobiographyLoading,
     load: loadAutobiography,
     createChapter,
     updateChapterDraft,
@@ -103,17 +104,13 @@ const DialogueAgent: React.FC = () => {
     { icon: School, label: '小学的时光', color: 'sage', description: '校园里的记忆，第一份友谊' },
   ];
 
-  const outlineItems = autobiography?.chapters?.map((ch, index) => ({
+  const outlineItems = autobiography?.chapters?.map((ch) => ({
+    id: ch.id,
     title: ch.title,
-    status: ch.status === 'completed' ? '已完成' : ch.status === 'in_progress' ? '进行中' : '待探索',
+    status: ch.status === 'completed' ? '已完成' : ch.status === 'in_progress' ? '进行中' : ch.status === 'draft' ? '草稿' : '待探索',
     words: ch.content?.length || 0,
     color: ch.status === 'completed' ? 'sage' : ch.status === 'in_progress' ? 'brand' : 'muted',
-  })) || [
-    { title: '老家的环境', status: '进行中', words: 780, color: 'brand' },
-    { title: '童年的玩伴', status: '待探索', words: 0, color: 'gold' },
-    { title: '难忘的生日', status: '待探索', words: 0, color: 'muted' },
-    { title: '小学的时光', status: '待探索', words: 0, color: 'muted' },
-  ];
+  })) || [];
 
   const suggestionChips = [
     { color: 'sage', text: '聊聊老家的环境', icon: TreePine },
@@ -416,22 +413,35 @@ const DialogueAgent: React.FC = () => {
           <section className="panel-section">
             <h3 className="panel-section-title">章节大纲</h3>
             <div className="card">
-              {outlineItems.map((item, index) => (
-                <div
-                  key={index}
-                  className={`outline-item ${item.status === '进行中' ? 'outline-item-active' : ''}`}
-                >
-                  <div className={`timeline-dot bg-${item.color}`} />
-                  <div className="outline-item-content">
-                    <p className={`outline-item-title ${item.status === '进行中' ? 'text-brand' : ''}`}>
-                      {index + 1}. {item.title}
-                    </p>
-                    <p className="outline-item-status">
-                      {item.status === '进行中' ? `进行中 · ${item.words} 字` : item.status}
-                    </p>
-                  </div>
+              {isAutobiographyLoading ? (
+                <div className="outline-loading">
+                  <div className="loading-spinner" />
+                  <span>加载中...</span>
                 </div>
-              ))}
+              ) : outlineItems.length === 0 ? (
+                <div className="outline-empty">
+                  <BookOpenText size={24} strokeWidth={1.5} className="text-muted" />
+                  <p>暂无章节</p>
+                  <p className="text-muted text-sm">开始对话后，系统会自动为你创建章节</p>
+                </div>
+              ) : (
+                outlineItems.map((item, index) => (
+                  <div
+                    key={item.id || index}
+                    className={`outline-item ${item.status === '进行中' ? 'outline-item-active' : ''}`}
+                  >
+                    <div className={`timeline-dot bg-${item.color}`} />
+                    <div className="outline-item-content">
+                      <p className={`outline-item-title ${item.status === '进行中' ? 'text-brand' : ''}`}>
+                        {index + 1}. {item.title}
+                      </p>
+                      <p className="outline-item-status">
+                        {item.status === '进行中' ? `进行中 · ${item.words} 字` : item.status}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </section>
 
@@ -459,7 +469,7 @@ const DialogueAgent: React.FC = () => {
                   <Clock size={14} strokeWidth={1.5} className="text-gold" />
                   <span>本次时长</span>
                 </div>
-                <span className="stat-value tabular-nums">{formatDuration()}</span>
+                <span className="stat-value tabular-nums">{formatDuration(elapsedMs)}</span>
               </div>
               <div className="stat-row">
                 <div className="stat-label-with-icon">
@@ -473,7 +483,7 @@ const DialogueAgent: React.FC = () => {
 
           <section className="panel-section">
             <h3 className="panel-section-title">命令面板</h3>
-            <CommandPanel />
+            <CommandPanel session={currentSession} />
           </section>
 
           {showDebugPanel && (

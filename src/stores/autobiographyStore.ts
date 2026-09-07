@@ -5,6 +5,7 @@ import type { Autobiography, Chapter } from '../types';
 
 interface AutobiographyState {
   autobiography: Autobiography | null;
+  isLoading: boolean;
 
   // Actions
   load: () => Promise<void>;
@@ -23,8 +24,10 @@ const STORAGE_KEY = 'autobiography';
 
 const useAutobiographyStore = create<AutobiographyState>((set, get) => ({
   autobiography: null,
+  isLoading: false,
 
   load: async () => {
+    set({ isLoading: true });
     try {
       const data = await storageService.loadData<Autobiography>(STORAGE_KEY);
       if (data) {
@@ -35,10 +38,13 @@ const useAutobiographyStore = create<AutobiographyState>((set, get) => ({
           status: ch.status ?? (ch.content ? 'completed' : 'empty'),
           timeRange: ch.timeRange ?? '',
         }));
-        set({ autobiography: { ...data, chapters } });
+        set({ autobiography: { ...data, chapters }, isLoading: false });
+      } else {
+        set({ isLoading: false });
       }
     } catch (error) {
       console.error('加载自传失败:', error);
+      set({ isLoading: false });
     }
   },
 

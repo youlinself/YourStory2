@@ -106,17 +106,23 @@ export function useChatScroll<T extends { id: string }>(items: T[]) {
  * 参考 deepseek-harness 的 TurnStatus 组件
  */
 export function useRunTimer(startTime: number | null) {
-  const anchor = startTime ?? Date.now();
-  const [elapsedMs, setElapsedMs] = useState(() => Math.max(0, Date.now() - anchor));
+  const [elapsedMs, setElapsedMs] = useState(0);
 
   useEffect(() => {
+    if (startTime === null) {
+      setElapsedMs(0);
+      return;
+    }
+
+    const anchor = startTime;
     const tick = () => setElapsedMs(Math.max(0, Date.now() - anchor));
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
-  }, [anchor]);
+  }, [startTime]);
 
   const formatDuration = (ms: number): string => {
+    if (!ms || ms <= 0) return '0s';
     const seconds = Math.floor(ms / 1000);
     if (seconds < 60) return `${seconds}s`;
     const minutes = Math.floor(seconds / 60);

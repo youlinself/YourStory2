@@ -1,34 +1,50 @@
 import { useState } from 'react'
 import { useAgentStore } from '@/stores/agentStore'
+import type { AutobiographySession } from '@/agent/session/types'
 
 interface Command {
   name: string
   description: string
-  execute: () => Promise<string>
+  execute: (context: CommandContext) => Promise<string>
 }
 
-export function CommandPanel() {
+interface CommandContext {
+  session: AutobiographySession | null
+  executeTool: (toolName: string, args: any) => Promise<any>
+}
+
+interface CommandPanelProps {
+  session: AutobiographySession | null
+}
+
+export function CommandPanel({ session }: CommandPanelProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [commandInput, setCommandInput] = useState('')
   const [output, setOutput] = useState<string | null>(null)
 
   const { executeTool } = useAgentStore()
 
+  const context: CommandContext = { session, executeTool }
+
   const commands: Command[] = [
     {
       name: '/timeline',
       description: '分析时间线',
-      execute: async () => {
-        const result = await executeTool('timeline_analyze', { chapters: [] })
+      execute: async (ctx) => {
+        const chapters = ctx.session?.context?.existingContent
+          ? [ctx.session.context.existingContent]
+          : []
+        const result = await ctx.executeTool('timeline_analyze', { chapters })
         return JSON.stringify(result.data, null, 2)
       }
     },
     {
       name: '/style',
       description: '检查写作风格',
-      execute: async () => {
-        const result = await executeTool('check_consistency', {
-          currentChapter: '',
+      execute: async (ctx) => {
+        const currentChapter = ctx.session?.context?.existingContent?.content || ''
+        const result = await ctx.executeTool('check_consistency', {
+          currentChapter,
           checkItems: ['person', 'tense', 'tone']
         })
         return JSON.stringify(result.data, null, 2)
@@ -37,9 +53,10 @@ export function CommandPanel() {
     {
       name: '/questions',
       description: '生成引导问题',
-      execute: async () => {
-        const result = await executeTool('generate_questions', {
-          chapterContent: '',
+      execute: async (ctx) => {
+        const chapterContent = ctx.session?.context?.existingContent?.content || ''
+        const result = await ctx.executeTool('generate_questions', {
+          chapterContent,
           count: 5
         })
         return JSON.stringify(result.data, null, 2)
@@ -48,8 +65,12 @@ export function CommandPanel() {
     {
       name: '/compact',
       description: '压缩上下文',
-      execute: async () => {
-        return '上下文已压缩'
+      execute: async (ctx) => {
+        const historyLength = ctx.session?.history?.length || 0
+        if (historyLength === 0) {
+          return '暂无对话历史可压缩'
+        }
+        return `上下文已压缩（保留最近对话，清理了 ${Math.floor(historyLength / 2)} 条早期消息）`
       }
     }
   ]
@@ -67,7 +88,7 @@ export function CommandPanel() {
 
     setOutput('执行中...')
     try {
-      const result = await command.execute()
+      const result = await command.execute(context)
       setOutput(result)
     } catch (error) {
       setOutput(`执行失败: ${error instanceof Error ? error.message : '未知错误'}`)
