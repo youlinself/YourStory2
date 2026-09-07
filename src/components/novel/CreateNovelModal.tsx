@@ -10,7 +10,7 @@ import {
   NOVEL_TEMPLATES,
   NovelGenre,
 } from '../../types/novel';
-import type { NovelTemplate } from '../../types/novel';
+import type { NovelTemplate, CharacterRole, CharacterGender } from '../../types/novel';
 
 interface CreateNovelModalProps {
   isOpen: boolean;
@@ -24,7 +24,7 @@ const CreateNovelModal: React.FC<CreateNovelModalProps> = ({
   onClose,
 }) => {
   const navigate = useNavigate();
-  const { createNovel } = useNovelStore();
+  const { createNovel, addChapter, addCharacter, updateWorldBuilding } = useNovelStore();
   const { apiKey, model, baseUrl, vendor, temperature, customModelName } = useAIStore();
   const toast = useToast();
 
@@ -37,6 +37,11 @@ const CreateNovelModal: React.FC<CreateNovelModalProps> = ({
   const [selectedTemplate, setSelectedTemplate] = useState<NovelTemplate | null>(null);
   const [aiInput, setAiInput] = useState('');
   const [isCreating, setIsCreating] = useState(false);
+  const [createProgress, setCreateProgress] = useState<{
+    current: number;
+    total: number;
+    message: string;
+  } | null>(null);
 
   const resetForm = () => {
     setStep(1);
@@ -47,6 +52,7 @@ const CreateNovelModal: React.FC<CreateNovelModalProps> = ({
     setTargetWordCount(0);
     setSelectedTemplate(null);
     setAiInput('');
+    setCreateProgress(null);
   };
 
   const handleClose = () => {
@@ -60,21 +66,50 @@ const CreateNovelModal: React.FC<CreateNovelModalProps> = ({
   };
 
   const handleCreate = async () => {
-    if (!title.trim()) {
-      toast.addToast({ type: 'warning', message: '请输入小说标题' });
-      return;
+    if (createMethod === 'ai') {
+      if (!aiInput.trim()) {
+        toast.addToast({ type: 'warning', message: '请描述你的想法' });
+        return;
+      }
+    } else {
+      if (!title.trim()) {
+        toast.addToast({ type: 'warning', message: '请输入小说标题' });
+        return;
+      }
     }
 
     setIsCreating(true);
+    setCreateProgress({ current: 0, total: 4, message: '准备创建...' });
+
     try {
       let finalTitle = title;
       let finalSynopsis = synopsis;
       let finalGenre = genre;
+      let generatedOutline: Array<{ title: string; summary: string }> = [];
+      let generatedCharacters: Array<{
+        name: string;
+        role: CharacterRole;
+        gender: CharacterGender;
+        age: number;
+        appearance: string;
+        personality: string;
+        background: string;
+        goals: string;
+      }> = [];
+      let generatedWorldBuilding: {
+        setting: string;
+        era: string;
+        location: string;
+        magicSystem: string;
+        factions: string[];
+        rules: string[];
+      } | null = null;
 
       if (createMethod === 'ai' && aiInput.trim()) {
         if (!apiKey) {
           toast.addToast({ type: 'error', message: '请先在设置页面配置AI API Key' });
           setIsCreating(false);
+          setCreateProgress(null);
           return;
         }
 
@@ -87,33 +122,34 @@ const CreateNovelModal: React.FC<CreateNovelModalProps> = ({
           customModelName,
         });
 
-        const prompt = `根据以下想法，生成小说标题、题材和简介。
-想法：${aiInput}
+        setCreateProgress({ current: 1, total: 4, message: '正在生成小说蓝图（大纲、角色、世界观）...' });
+        const blueprint = await aiService.generateNovelBlueprint(aiInput);
 
-请输出JSON格式：
-{
-  "title": "小说标题",
-  "genre": "fantasy/romance/sci-fi/mystery/historical/modern/wuxia/urban/horror/other",
-  "synopsis": "小说简介（50-100字）"
-}`;
-
-        const response = await aiService['sendRequest']([
-          { role: 'system', content: '你是一位富有创意的小说策划。' },
-          { role: 'user', content: prompt },
-        ]);
-
-        try {
-          const jsonMatch = response.match(/\{[\s\S]*\}/);
-          if (jsonMatch) {
-            const parsed = JSON.parse(jsonMatch[0]);
-            finalTitle = parsed.title || title;
-            finalGenre = (parsed.genre as NovelGenre) || genre;
-            finalSynopsis = parsed.synopsis || synopsis;
-          }
-        } catch {
+        if (blueprint) {
+          finalTitle = blueprint.title || title;
+          finalGenre = (blueprint.genre as NovelGenre) || genre;
+          finalSynopsis = blueprint.synopsis || synopsis;
+          generatedOutline = blueprint.outline || [];
+          generatedCharacters = (blueprint.characters || []).map((c) => ({
+            name: c.name || '未命名',
+            role: (c.role as CharacterRole) || 'supporting',
+            gender: (c.gender as CharacterGender) || 'unknown',
+            age: c.age || 20,
+            appearance: c.appearance || '',
+            personality: c.personality || '',
+            background: c.background || '',
+            goals: c.goals || '',
+          }));
+          generatedWorldBuilding = blueprint.worldBuilding;
+        } else {
+          toast.addToast({ type: 'error', message: 'AI生成失败，请重试' });
+          setIsCreating(false);
+          setCreateProgress(null);
+          return;
         }
       }
 
+      setCreateProgress({ current: 2, total: 4, message: '正在创建小说...' });
       const novelId = await createNovel({
         title: finalTitle,
         genre: finalGenre,
@@ -121,11 +157,59 @@ const CreateNovelModal: React.FC<CreateNovelModalProps> = ({
         targetWordCount: targetWordCount || undefined,
       });
 
+      if (createMethod === 'ai') {
+        if (generatedWorldBuilding) {
+          setCreateProgress({ current: 3, total: 4, message: '正在保存世界观设定...' });
+          await updateWorldBuilding(novelId, {
+            setting: generatedWorldBuilding.setting,
+            era: generatedWorldBuilding.era,
+            location: generatedWorldBuilding.location,
+            magicSystem: generatedWorldBuilding.magicSystem,
+            factions: generatedWorldBuilding.factions,
+            rules: generatedWorldBuilding.rules,
+            notes: '',
+          });
+        }
+
+        setCreateProgress({
+          current: 3,
+          total: 4,
+          message: `正在创建角色（${generatedCharacters.length}个）...`,
+        });
+        for (const char of generatedCharacters) {
+          await addCharacter(novelId, {
+            name: char.name,
+            alias: [],
+            role: char.role,
+            gender: char.gender,
+            age: char.age,
+            appearance: char.appearance,
+            personality: char.personality,
+            background: char.background,
+            goals: char.goals,
+            relationships: [],
+            avatar: '',
+            notes: '',
+          });
+        }
+
+        setCreateProgress({
+          current: 4,
+          total: 4,
+          message: `正在创建章节（${generatedOutline.length}章）...`,
+        });
+        for (const chapter of generatedOutline) {
+          await addChapter(novelId, chapter.title);
+        }
+      }
+
+      setCreateProgress({ current: 4, total: 4, message: '创建完成！' });
       toast.addToast({ type: 'success', message: '小说创建成功' });
       handleClose();
       navigate(`/novel/${novelId}`);
     } catch {
       toast.addToast({ type: 'error', message: '创建失败，请重试' });
+      setCreateProgress(null);
     } finally {
       setIsCreating(false);
     }
@@ -178,7 +262,7 @@ const CreateNovelModal: React.FC<CreateNovelModalProps> = ({
                 </svg>
               </div>
               <h3 className="text-sm font-semibold text-ink mb-1">AI辅助创建</h3>
-              <p className="text-xs text-ink-faint">描述想法，AI帮你生成</p>
+              <p className="text-xs text-ink-faint">描述想法，AI生成大纲、角色、世界观</p>
             </button>
           </div>
 
@@ -221,7 +305,7 @@ const CreateNovelModal: React.FC<CreateNovelModalProps> = ({
                 onChange={(e) => setAiInput(e.target.value)}
               />
               <p className="text-xs text-ink-faint mt-2">
-                AI会根据你的描述生成小说标题、题材和简介
+                AI会根据你的描述生成完整的小说蓝图，包括大纲、角色设定和世界观
               </p>
             </div>
           ) : (
@@ -318,10 +402,30 @@ const CreateNovelModal: React.FC<CreateNovelModalProps> = ({
             </>
           )}
 
+          {isCreating && createProgress && (
+            <div className="pt-3 border-t border-border-subtle">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs text-ink-muted">{createProgress.message}</span>
+                <span className="text-xs text-ink-faint">
+                  {createProgress.current}/{createProgress.total}
+                </span>
+              </div>
+              <div className="w-full h-2 bg-bg-subtle rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-brand rounded-full transition-all duration-300 ease-out"
+                  style={{
+                    width: `${(createProgress.current / createProgress.total) * 100}%`,
+                  }}
+                />
+              </div>
+            </div>
+          )}
+
           <div className="flex justify-end gap-2 pt-3 border-t border-border-subtle">
             <button
               className="btn btn-ghost"
               onClick={() => setStep(1)}
+              disabled={isCreating}
             >
               返回
             </button>
