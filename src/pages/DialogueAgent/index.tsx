@@ -12,22 +12,15 @@ import {
   Download,
   Settings,
   Clock,
-  Target,
   PencilLine,
   MessagesSquare,
   ChevronDown,
   ChevronRight,
   BookOpen,
   PenLine,
-  PlusCircle,
   CheckCircle,
-  FileText,
   Code,
-  ArrowLeft,
-  Eye,
-  Share2,
   BookOpenText,
-  Layers,
   Zap,
 } from 'lucide-react';
 import { useAIStore, useAutobiographyStore } from '../../stores';
@@ -39,7 +32,6 @@ import { useToast } from '../../components/common';
 import { SkillSwitcher } from '../../components/dialogue/SkillSwitcher';
 import { CommandPanel } from '../../components/dialogue/CommandPanel';
 import { EventLogPanel } from '../../components/debug/EventLogPanel';
-import type { Message } from '../../types';
 import '../../styles/dialogue.css';
 
 const DialogueAgent: React.FC = () => {
@@ -51,7 +43,7 @@ const DialogueAgent: React.FC = () => {
   const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false);
   const [showDebugPanel, setShowDebugPanel] = useState(false);
 
-  const { apiKey, model, baseUrl, vendor, temperature, maxOutputTokens, customModelName, loadSettings } = useAIStore();
+  const { loadSettings } = useAIStore();
 
   const {
     agent,
@@ -62,15 +54,8 @@ const DialogueAgent: React.FC = () => {
     pendingToolCalls,
     initialize,
     createSession,
-    resumeSession,
-    pauseSession,
-    sendMessage,
     handleMessage,
-    activateSkill,
-    deactivateSkill,
-    executeTool,
     approveContent,
-    logEvent,
   } = useAgentStore();
 
   const { addToast } = useToast();
@@ -79,9 +64,7 @@ const DialogueAgent: React.FC = () => {
     autobiography,
     isLoading: isAutobiographyLoading,
     load: loadAutobiography,
-    createChapter,
     updateChapterDraft,
-    confirmChapterDraft,
   } = useAutobiographyStore();
 
   const currentChapter = autobiography?.chapters.find((ch) => ch.id === chapterId) || null;
@@ -198,10 +181,6 @@ const DialogueAgent: React.FC = () => {
 
   const handleDialogueSettings = () => {
     navigate('/settings');
-  };
-
-  const handleTopicSuggestionClick = (title: string) => {
-    setInputValue(`我想聊聊${title}`);
   };
 
   const handleApproveContent = async () => {

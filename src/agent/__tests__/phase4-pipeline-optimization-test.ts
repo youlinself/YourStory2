@@ -3,6 +3,8 @@
  * 运行方式: npx tsx src/agent/__tests__/phase4-pipeline-optimization-test.ts
  */
 
+declare const process: { exit(code?: number): never }
+
 import { ExtractionPipeline } from '../pipeline/ExtractionPipeline'
 import {
   validationHook,
@@ -110,7 +112,7 @@ async function testExtractionPipeline(): Promise<void> {
     const result = await pipeline.execute(tool, context.args, context)
 
     assertEqual(result.success, true, '执行成功')
-    assertEqual(result.data.output, 'result', '返回数据正确')
+    assertEqual((result.data as { output: string }).output, 'result', '返回数据正确')
     assertEqual(result.messages.length, 0, '无额外消息')
   })
 
@@ -594,8 +596,11 @@ async function main(): Promise<void> {
   console.log('='.repeat(60))
 
   if (failed > 0) {
-    process.exit(1)
+    throw new Error(`${failed} tests failed`)
   }
 }
 
-main().catch(console.error)
+main().catch((error) => {
+  console.error(error)
+  process.exit(1)
+})

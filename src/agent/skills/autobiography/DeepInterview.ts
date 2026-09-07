@@ -1,4 +1,4 @@
-import type { Skill, SkillContext, SkillCommand } from '../SkillTypes'
+import type { Skill, SkillCommand } from '../SkillTypes'
 import { getLogger } from '../../logging'
 
 const logger = getLogger()
@@ -8,7 +8,7 @@ const deepInterviewTool = ['generate_questions', 'extract_content']
 const deepInterviewCommand: SkillCommand = {
   name: '/interview',
   description: '开始深度访谈模式',
-  execute: async (args, context) => {
+  execute: async (args, _context) => {
     const topic = args?.trim() || 'general'
 
     return {

@@ -1,4 +1,4 @@
-import type { Skill, SkillContext, SkillCommand } from '../SkillTypes'
+import type { Skill, SkillCommand } from '../SkillTypes'
 import { getLogger } from '../../logging'
 
 const logger = getLogger()

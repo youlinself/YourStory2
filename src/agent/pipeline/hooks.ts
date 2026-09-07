@@ -1,5 +1,4 @@
 import type { PreExecutionHook, PostExecutionHook } from './ExtractionPipeline'
-import type { PipelineContext } from './types'
 
 /** 参数验证钩子 */
 export const validationHook: PreExecutionHook = async (context, next) => {
@@ -13,7 +12,7 @@ export const validationHook: PreExecutionHook = async (context, next) => {
 export const tokenBudgetHook = (
   getBudget: () => { used: number; limit: number }
 ): PreExecutionHook => {
-  return async (context, next) => {
+  return async (_context, next) => {
     const budget = getBudget()
     const remaining = budget.limit - budget.used
 
@@ -100,7 +99,7 @@ export const rateLimitHook = (
 ): PreExecutionHook => {
   const requestTimestamps: number[] = []
 
-  return async (_context, next) => {
+  return async (_ctx, next) => {
     const now = Date.now()
     const windowStart = now - windowMs
 

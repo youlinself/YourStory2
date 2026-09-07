@@ -25,14 +25,15 @@ const parameters: ToolParameters = {
     currentChapter: { type: 'string', description: '当前章节内容' },
     otherChapters: {
       type: 'array',
-      items: { type: 'string' },
+      items: { type: 'string', description: '章节内容' },
       description: '其他章节内容'
     },
     checkItems: {
       type: 'array',
       items: {
         type: 'string',
-        enum: ['person', 'tense', 'tone', 'vocabulary', 'sentence_structure']
+        enum: ['person', 'tense', 'tone', 'vocabulary', 'sentence_structure'],
+        description: '检查项'
       },
       description: '检查项目'
     }

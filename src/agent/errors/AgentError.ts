@@ -22,6 +22,7 @@ export class AgentError extends Error {
   public readonly timestamp: number
   public readonly recoverable: boolean
   public readonly context?: Record<string, unknown>
+  public readonly cause?: Error
 
   constructor(
     code: ErrorCode,

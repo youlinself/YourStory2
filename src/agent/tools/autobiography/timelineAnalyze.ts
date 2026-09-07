@@ -51,11 +51,12 @@ const parameters: ToolParameters = {
       items: {
         type: 'object',
         properties: {
-          id: { type: 'string' },
-          title: { type: 'string' },
-          content: { type: 'string' },
-          timeRange: { type: 'string' }
-        }
+          id: { type: 'string', description: '章节ID' },
+          title: { type: 'string', description: '章节标题' },
+          content: { type: 'string', description: '章节内容' },
+          timeRange: { type: 'string', description: '时间范围' }
+        },
+        description: '章节信息'
       },
       description: '所有章节'
     },

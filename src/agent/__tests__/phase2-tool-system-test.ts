@@ -3,6 +3,8 @@
  * 运行方式: npx tsx src/agent/__tests__/phase2-tool-system-test.ts
  */
 
+declare const process: { exit(code?: number): never }
+
 import { ToolRegistry } from '../tools'
 import { AutobiographyAgent } from '../AutobiographyAgent'
 import { MemoryStorageAdapter } from '../session'
@@ -87,7 +89,7 @@ async function testExtractContent(): Promise<void> {
     }, createMockContext())
 
     assert(!result.success, '空输入应失败')
-    assert(result.error?.includes('empty'), '错误信息包含empty')
+    assert(result.error?.includes('empty') === true, '错误信息包含empty')
   })
 
   await runAsync('extract_content - 第一人称转换', async () => {
@@ -233,7 +235,7 @@ async function testGenerateQuestions(): Promise<void> {
     }, createMockContext())
 
     assert(result.success, '生成成功')
-    const types = result.data.questions.map(q => q.type)
+    const types = (result.data.questions as Array<{ type: string }>).map((q: { type: string }) => q.type)
     assert(
       types.includes('memory') || types.includes('emotion'),
       '问题类型正确'
@@ -461,8 +463,11 @@ async function main(): Promise<void> {
   console.log('='.repeat(60))
 
   if (failed > 0) {
-    process.exit(1)
+    throw new Error(`${failed} tests failed`)
   }
 }
 
-main().catch(console.error)
+main().catch((error) => {
+  console.error(error)
+  process.exit(1)
+})

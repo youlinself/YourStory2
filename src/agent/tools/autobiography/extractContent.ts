@@ -16,11 +16,12 @@ const parameters: ToolParameters = {
   properties: {
     conversationSegments: {
       type: 'array',
-      items: { type: 'string' },
+      items: { type: 'string', description: '对话片段' },
       description: '要提取的对话片段'
     },
     extractOptions: {
       type: 'object',
+      description: '提取选项',
       properties: {
         includeTimeTag: { type: 'boolean', description: '是否提取时间标签' },
         includeEmotions: { type: 'boolean', description: '是否提取情感标签' },

@@ -21,10 +21,9 @@ export type PostExecutionHook = (
 export class ExtractionPipeline {
   private preHooks: PreExecutionHook[] = []
   private postHooks: PostExecutionHook[] = []
-  private events: EventEmitter
 
-  constructor(events: EventEmitter) {
-    this.events = events
+  constructor(_events: EventEmitter) {
+    // events reserved for future use
   }
 
   /** 注册执行前钩子 */

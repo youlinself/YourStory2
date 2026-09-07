@@ -29,11 +29,12 @@ const parameters: ToolParameters = {
     existingDraft: { type: 'string', description: '现有草稿内容' },
     newContent: {
       type: 'array',
-      items: { type: 'string' },
+      items: { type: 'string', description: '内容段落' },
       description: '新内容段落'
     },
     mergeOptions: {
       type: 'object',
+      description: '合并选项',
       properties: {
         insertPosition: {
           type: 'string',
@@ -216,7 +217,7 @@ function smartMerge(
 
   if (options.insertPosition === 'chronological') {
     const sections = splitIntoSections(existing)
-    const mergedSections = insertChronologically(sections, newContent, options.analysis)
+    const mergedSections = insertChronologically(sections, newContent, options.analysis!)
     changes.push({ type: 'chronological_insert', count: newContent.length })
     return {
       content: mergedSections.join('\n\n'),
@@ -241,7 +242,7 @@ function splitIntoSections(content: string): string[] {
 function insertChronologically(
   sections: string[],
   newContent: string[],
-  analysis: DraftAnalysis
+  _analysis: DraftAnalysis
 ): string[] {
   const allSections = [...sections, ...newContent]
   return allSections.sort((a, b) => {

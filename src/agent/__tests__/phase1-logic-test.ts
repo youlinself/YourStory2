@@ -3,6 +3,8 @@
  * 运行方式: npx tsx src/agent/__tests__/phase1-logic-test.ts
  */
 
+declare const process: { exit(code?: number): never }
+
 import { SessionManager, MemoryStorageAdapter } from '../session'
 import { ToolRegistry } from '../tools'
 import { EventEmitter } from '../events'
@@ -187,7 +189,7 @@ async function testSessionManager(): Promise<void> {
     const manager = new SessionManager(storage)
     const session = await manager.create('ch-001', mockContext)
 
-    const persisted = await storage.get(`session:${session.id}`)
+    const persisted = await storage.get<{ id: string }>(`session:${session.id}`)
     assert(persisted !== null, '会话已持久化到存储')
     assertEqual(persisted?.id, session.id, '持久化数据 ID 一致')
   })
@@ -556,8 +558,11 @@ async function main(): Promise<void> {
   console.log('='.repeat(60))
 
   if (failed > 0) {
-    process.exit(1)
+    throw new Error(`${failed} tests failed`)
   }
 }
 
-main().catch(console.error)
+main().catch((error) => {
+  console.error(error)
+  process.exit(1)
+})

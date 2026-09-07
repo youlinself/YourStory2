@@ -3,25 +3,15 @@
  * 运行方式: npx tsx src/agent/__tests__/phase5-ui-integration-test.ts
  */
 
+declare const process: { exit(code?: number): never }
+
 import { useAgentStore } from '../../stores/agentStore'
 import { AutobiographyAgent } from '../AutobiographyAgent'
 import { MemoryStorageAdapter } from '../session/SessionManager'
-import { SkillRegistry } from '../skills/SkillRegistry'
-import { ToolRegistry } from '../tools'
-import { EventEmitter } from '../events'
 import {
-  deepInterviewSkill,
-  timelineOrganizeSkill,
-  styleCheckSkill,
-  guidedQuestioningSkill,
   autobiographySkills
 } from '../skills/autobiography'
 import {
-  extractContentTool,
-  mergeDraftTool,
-  generateQuestionsTool,
-  checkConsistencyTool,
-  timelineAnalyzeTool,
   autobiographyTools
 } from '../tools/autobiography'
 
@@ -589,8 +579,11 @@ async function main(): Promise<void> {
   console.log('='.repeat(60))
 
   if (failed > 0) {
-    process.exit(1)
+    throw new Error(`${failed} tests failed`)
   }
 }
 
-main().catch(console.error)
+main().catch((error) => {
+  console.error(error)
+  process.exit(1)
+})

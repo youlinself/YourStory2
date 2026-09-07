@@ -27,7 +27,7 @@ export class RetryPolicy {
   /** 执行带重试的操作 */
   async execute<T>(
     operation: () => Promise<T>,
-    context: string = ''
+    _context: string = ''
   ): Promise<T> {
     let lastError: Error | null = null
 

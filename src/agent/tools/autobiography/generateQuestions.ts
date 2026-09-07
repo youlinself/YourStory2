@@ -33,7 +33,8 @@ const parameters: ToolParameters = {
       type: 'array',
       items: {
         type: 'string',
-        enum: ['memory', 'emotion', 'detail', 'relationship', 'reflection']
+        enum: ['memory', 'emotion', 'detail', 'relationship', 'reflection'],
+        description: '问题类型'
       },
       description: '问题类型'
     },
@@ -135,13 +136,7 @@ const questionTemplates: Record<QuestionType, Record<Difficulty, string[]>> = {
   }
 }
 
-const typeDescriptions: Record<QuestionType, string> = {
-  memory: '记忆唤醒：帮助回忆具体事件',
-  emotion: '情感探索：引导表达情感体验',
-  detail: '细节挖掘：丰富感官细节',
-  relationship: '人际关系：探讨与他人的互动',
-  reflection: '反思总结：引导思考和感悟'
-}
+
 
 export const generateQuestionsTool: ToolDefinition = {
   name: 'generate_questions',

@@ -4,7 +4,7 @@ export interface LLMMessage {
 }
 
 export interface LLMOptions {
-  model: string
+  model?: string
   temperature?: number
   maxTokens?: number
 }

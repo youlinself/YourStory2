@@ -3,6 +3,8 @@
  * 运行方式: npx tsx src/agent/__tests__/phase3-skill-system-test.ts
  */
 
+declare const process: { exit(code?: number): never }
+
 import { SkillRegistry } from '../skills/SkillRegistry'
 import { ToolRegistry } from '../tools/ToolRegistry'
 import { EventEmitter } from '../events/EventEmitter'
@@ -16,7 +18,7 @@ import {
   registerAutobiographySkills,
   autobiographySkills
 } from '../skills/autobiography'
-import type { Skill, SkillContext } from '../skills/SkillTypes'
+import type { SkillContext } from '../skills/SkillTypes'
 import type { SessionContext } from '../session/types'
 import { extractContentTool, generateQuestionsTool, checkConsistencyTool, timelineAnalyzeTool } from '../tools/autobiography'
 
@@ -482,8 +484,11 @@ async function main(): Promise<void> {
   console.log('='.repeat(60))
 
   if (failed > 0) {
-    process.exit(1)
+    throw new Error(`${failed} tests failed`)
   }
 }
 
-main().catch(console.error)
+main().catch((error) => {
+  console.error(error)
+  process.exit(1)
+})
