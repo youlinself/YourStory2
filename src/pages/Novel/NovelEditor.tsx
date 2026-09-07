@@ -21,10 +21,11 @@ import ChapterList from '../../components/novel/ChapterList';
 import AIAssistantPanel from '../../components/novel/AIAssistantPanel';
 import CharacterPanel from '../../components/novel/CharacterPanel';
 import WorldBuildingPanel from '../../components/novel/WorldBuildingPanel';
+import NovelInfoPanel from '../../components/novel/NovelInfoPanel';
 import MarkdownEditor from '../../components/novel/MarkdownEditor';
 import WritingStatsPanel from '../../components/novel/WritingStatsPanel';
 
-type ViewMode = 'write' | 'outline' | 'characters' | 'world' | 'stats';
+type ViewMode = 'write' | 'outline' | 'characters' | 'world' | 'novelInfo' | 'stats';
 
 const MAX_HISTORY = 50;
 const HISTORY_DEBOUNCE_MS = 500;
@@ -546,6 +547,16 @@ const NovelEditor: React.FC = () => {
           >
             世界观
           </button>
+          <button
+            className={`text-sm pb-1 border-b-2 transition-all ${
+              viewMode === 'novelInfo'
+                ? 'border-brand text-brand font-medium'
+                : 'border-transparent text-ink-muted hover:text-ink'
+            }`}
+            onClick={() => setViewMode('novelInfo')}
+          >
+            小说信息
+          </button>
 
           <div className="flex-1" />
 
@@ -710,6 +721,10 @@ const NovelEditor: React.FC = () => {
               novelId={novel.id}
               worldBuilding={novel.worldBuilding}
             />
+          )}
+
+          {viewMode === 'novelInfo' && (
+            <NovelInfoPanel novel={novel} />
           )}
         </div>
 

@@ -585,6 +585,51 @@ ${idea}
     }
   }
 
+  async generateCoverImage(
+    prompt: string,
+    style: 'realistic' | 'anime' | 'watercolor' | 'oil_painting' | 'sketch' = 'anime',
+  ): Promise<string | null> {
+    const stylePrompts: Record<string, string> = {
+      realistic: 'realistic, detailed, cinematic lighting, high quality',
+      anime: 'anime style, vibrant colors, clean lines, manga illustration',
+      watercolor: 'watercolor painting, soft colors, artistic, flowing',
+      oil_painting: 'oil painting, classical art style, rich textures, masterpiece',
+      sketch: 'pencil sketch, hand-drawn, artistic, detailed linework',
+    };
+
+    const enhancedPrompt = `Book cover illustration: ${prompt}. Style: ${stylePrompts[style]}. Professional novel cover design, vertical composition, no text.`;
+
+    try {
+      const response = await fetch(`${this.baseUrl}/images/generations`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${this.apiKey}`,
+        },
+        body: JSON.stringify({
+          model: 'dall-e-3',
+          prompt: enhancedPrompt,
+          n: 1,
+          size: '1024x1792',
+          quality: 'hd',
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => '');
+        throw new Error(
+          `图片生成失败: ${response.status}${errorText ? ` - ${errorText.slice(0, 200)}` : ''}`,
+        );
+      }
+
+      const data = await response.json();
+      return data.data?.[0]?.url || null;
+    } catch (error) {
+      console.error('生成封面图片失败:', error);
+      throw error;
+    }
+  }
+
   async generateInspiration(
     type: 'plot' | 'character' | 'scene' | 'dialogue' | 'theme',
   ): Promise<string> {
