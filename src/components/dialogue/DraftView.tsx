@@ -47,7 +47,7 @@ const DraftView: React.FC<DraftViewProps> = ({
             {pendingExtracts.length} 段内容待确认
           </p>
           {pendingExtracts.map((extract, i) => (
-            <div key={i} className="p-2.5 bg-brand-primary-subtle rounded-lg mb-2">
+            <div key={i} className="p-2.5 bg-brand-surface rounded-lg mb-2">
               <p className="text-xs text-ink-secondary leading-relaxed line-clamp-3">
                 {extract.paragraphs[0]}
               </p>
@@ -99,7 +99,7 @@ const DraftView: React.FC<DraftViewProps> = ({
         {hasDraft && (
           <button
             onClick={onConfirmDraft}
-            className="w-full px-3 py-2 rounded-lg bg-brand-primary text-white text-xs font-medium hover:bg-brand-primary-hover transition-colors"
+            className="w-full px-3 py-2 rounded-lg bg-brand text-white text-xs font-medium hover:bg-brand-hover transition-colors"
           >
             确认写入章节
           </button>

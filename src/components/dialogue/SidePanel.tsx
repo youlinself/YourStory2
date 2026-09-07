@@ -46,7 +46,7 @@ const SidePanel: React.FC<SidePanelProps> = ({
           onClick={() => onModeChange('outline')}
           className={`flex-1 px-3 py-2.5 text-xs font-medium transition-colors ${
             mode === 'outline'
-              ? 'text-brand-primary border-b-2 border-brand-primary bg-brand-primary-subtle'
+              ? 'text-brand border-b-2 border-brand bg-brand-surface'
               : 'text-ink-muted hover:text-ink-secondary'
           }`}
         >
@@ -56,7 +56,7 @@ const SidePanel: React.FC<SidePanelProps> = ({
           onClick={() => onModeChange('draft')}
           className={`flex-1 px-3 py-2.5 text-xs font-medium transition-colors ${
             mode === 'draft'
-              ? 'text-brand-primary border-b-2 border-brand-primary bg-brand-primary-subtle'
+              ? 'text-brand border-b-2 border-brand bg-brand-surface'
               : 'text-ink-muted hover:text-ink-secondary'
           }`}
         >

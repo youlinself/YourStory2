@@ -12,7 +12,7 @@ interface OutlineViewProps {
 const statusConfig = {
   empty: { icon: '○', color: 'text-ink-faint', bg: 'bg-ink-faint/10' },
   draft: { icon: '◐', color: 'text-warning', bg: 'bg-warning/10' },
-  in_progress: { icon: '◉', color: 'text-brand-primary', bg: 'bg-brand-primary/10' },
+  in_progress: { icon: '◉', color: 'text-brand', bg: 'bg-brand/10' },
   completed: { icon: '●', color: 'text-success', bg: 'bg-success/10' },
 };
 
@@ -41,7 +41,7 @@ const OutlineView: React.FC<OutlineViewProps> = ({
           </div>
           <div className="w-full h-1.5 bg-bg-secondary rounded-full overflow-hidden">
             <div
-              className="h-full bg-brand-primary rounded-full transition-all duration-500"
+              className="h-full bg-brand rounded-full transition-all duration-500"
               style={{ width: `${progress}%` }}
             />
           </div>
@@ -53,7 +53,7 @@ const OutlineView: React.FC<OutlineViewProps> = ({
         onClick={() => onSwitchChapter(null)}
         className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors mb-1.5 ${
           currentChapterId === null
-            ? 'bg-brand-primary-subtle text-brand-primary font-medium'
+            ? 'bg-brand-surface text-brand font-medium'
             : 'text-ink-secondary hover:bg-bg-secondary'
         }`}
       >
@@ -76,7 +76,7 @@ const OutlineView: React.FC<OutlineViewProps> = ({
               onClick={() => onSwitchChapter(chapter.id)}
               className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
                 isCurrent
-                  ? 'bg-brand-primary-subtle text-brand-primary font-medium'
+                  ? 'bg-brand-surface text-brand font-medium'
                   : 'text-ink-secondary hover:bg-bg-secondary'
               }`}
             >
@@ -94,7 +94,7 @@ const OutlineView: React.FC<OutlineViewProps> = ({
       {/* 添加章节 */}
       <button
         onClick={onCreateChapter}
-        className="w-full mt-3 px-3 py-2 rounded-lg text-sm text-brand-primary border border-dashed border-brand-primary/30 hover:bg-brand-primary-subtle transition-colors flex items-center justify-center gap-1.5"
+        className="w-full mt-3 px-3 py-2 rounded-lg text-sm text-brand border border-dashed border-brand/30 hover:bg-brand-surface transition-colors flex items-center justify-center gap-1.5"
       >
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />

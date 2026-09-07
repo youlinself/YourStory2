@@ -437,7 +437,7 @@ const DialogueAgent: React.FC = () => {
 
           <section className="panel-section">
             <h3 className="panel-section-title">写作统计</h3>
-            <div className="card card-p-1">
+            <div className="card p-3">
               <div className="stat-row">
                 <div className="stat-label-with-icon">
                   <PencilLine size={14} strokeWidth={1.5} className="text-brand" />

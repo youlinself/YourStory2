@@ -21,17 +21,17 @@ export function SkillSwitcher() {
   }
 
   return (
-    <div className="flex gap-2 p-2">
+    <div className="flex flex-wrap gap-2 p-3">
       {AVAILABLE_SKILLS.map(skill => {
         const isActive = activeSkills.includes(skill.name)
         return (
           <button
             key={skill.name}
             onClick={() => toggleSkill(skill.name)}
-            className={`flex items-center gap-1 px-3 py-1 rounded-full text-sm transition-colors ${
+            className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm transition-colors ${
               isActive
                 ? 'bg-blue-100 text-blue-700 border border-blue-300'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                : 'bg-bg-subtle text-ink-muted hover:bg-border-subtle'
             }`}
           >
             <span>{skill.icon}</span>

@@ -77,7 +77,7 @@ export function CommandPanel() {
   }
 
   return (
-    <div className="border rounded-lg">
+    <div className="border rounded-lg p-3">
       <div
         className="flex items-center gap-2 p-2 border-b cursor-pointer hover:bg-gray-50"
         onClick={() => setIsOpen(!isOpen)}
@@ -98,14 +98,14 @@ export function CommandPanel() {
           {commands.map(cmd => (
             <div
               key={cmd.name}
-              className="flex items-center gap-2 p-2 rounded hover:bg-gray-100 cursor-pointer"
+              className="flex items-center gap-2 p-2 rounded hover:bg-gray-100 cursor-pointer min-w-0"
               onClick={() => {
                 setCommandInput(cmd.name)
                 setIsOpen(false)
               }}
             >
-              <span className="font-mono text-sm font-semibold">{cmd.name}</span>
-              <span className="text-sm text-gray-500">{cmd.description}</span>
+              <span className="font-mono text-sm font-semibold shrink-0">{cmd.name}</span>
+              <span className="text-sm text-gray-500 truncate">{cmd.description}</span>
             </div>
           ))}
         </div>

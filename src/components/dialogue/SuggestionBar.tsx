@@ -25,7 +25,7 @@ const SuggestionBar: React.FC<SuggestionBarProps> = ({
     <div className="suggestion-bar">
       {isLoading && suggestions.length === 0 ? (
         <div className="flex items-center gap-2 text-xs text-ink-faint">
-          <div className="w-3 h-3 rounded-full border-2 border-brand-primary border-t-transparent animate-spin" />
+          <div className="w-3 h-3 rounded-full border-2 border-brand border-t-transparent animate-spin" />
           <span>正在生成建议...</span>
         </div>
       ) : (
@@ -36,7 +36,7 @@ const SuggestionBar: React.FC<SuggestionBarProps> = ({
             className="suggestion-chip"
             data-loading={isLoading || undefined}
           >
-            <span className="w-4 h-4 rounded-full bg-brand-primary/10 text-brand-primary text-[10px] font-bold flex items-center justify-center shrink-0">
+            <span className="w-4 h-4 rounded-full bg-brand/10 text-brand text-[10px] font-bold flex items-center justify-center shrink-0">
               {typeIcons[suggestion.type]}
             </span>
             <span>{suggestion.text}</span>
