@@ -184,7 +184,7 @@ const NovelListPage: React.FC = () => {
           </div>
           <div className="relative w-48">
             <svg
-              className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-faint"
+              className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-faint pointer-events-none"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -197,7 +197,7 @@ const NovelListPage: React.FC = () => {
               />
             </svg>
             <input
-              className="input pl-9 text-xs py-1.5"
+              className="input pl-10 text-xs py-1.5"
               placeholder="搜索小说..."
               value={searchValue}
               onChange={(e) => setSearchValue(e.target.value)}
