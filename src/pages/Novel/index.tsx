@@ -198,6 +198,7 @@ const NovelListPage: React.FC = () => {
             </svg>
             <input
               className="input pl-10 text-xs py-1.5"
+              style={{paddingLeft: '30px'}}
               placeholder="搜索小说..."
               value={searchValue}
               onChange={(e) => setSearchValue(e.target.value)}
