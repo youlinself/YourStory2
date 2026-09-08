@@ -123,7 +123,8 @@ const ToastMessage: React.FC<ToastMessageProps> = ({ toast, onRemove }) => {
   };
 
   const config = typeConfig[toast.type];
-  const duration = toast.duration ?? (toast.type === 'error' ? 0 : toast.type === 'warning' ? 5000 : 3000);
+  const DEFAULT_AUTO_CLOSE_DURATION = 3000;
+  const duration = toast.duration ?? (toast.type === 'error' ? 5000 : DEFAULT_AUTO_CLOSE_DURATION);
 
   useEffect(() => {
     requestAnimationFrame(() => setIsVisible(true));

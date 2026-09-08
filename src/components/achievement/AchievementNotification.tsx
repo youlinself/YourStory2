@@ -28,9 +28,10 @@ const AchievementNotification: React.FC = () => {
         clearNewAchievements();
       }, 100);
 
+      const AUTO_CLOSE_DURATION = 3000;
       setTimeout(() => {
         setNotifications((prev) => prev.filter((n) => !newItems.find((ni) => ni.id === n.id)));
-      }, 4000);
+      }, AUTO_CLOSE_DURATION);
     }
   }, [newAchievements, clearNewAchievements]);
 
