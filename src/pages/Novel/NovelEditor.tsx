@@ -636,19 +636,19 @@ const NovelEditor: React.FC = () => {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="flex items-center justify-between px-6 py-3 border-b border-border-subtle bg-bg-base">
-        <div className="flex items-center gap-4">
+      <div className="flex items-center justify-between px-6 py-3 border-b border-border-subtle bg-bg-base min-w-0">
+        <div className="flex items-center gap-4 min-w-0 overflow-hidden">
           <button
-            className="text-ink-muted hover:text-ink transition-colors"
+            className="text-ink-muted hover:text-ink transition-colors flex-shrink-0"
             onClick={() => navigate('/novel')}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
             </svg>
           </button>
-          <div>
+          <div className="min-w-0">
             <h1 className="text-base font-semibold text-ink">{novel.title}</h1>
-            <div className="flex items-center gap-2 text-xs text-ink-faint">
+            <div className="flex items-center gap-2 text-xs text-ink-faint whitespace-nowrap">
               <span>{GENRE_LABELS[novel.genre]}</span>
               <span>·</span>
               <span>{NOVEL_STATUS_LABELS[novel.status]}</span>
@@ -662,6 +662,65 @@ const NovelEditor: React.FC = () => {
               </span>
             </div>
           </div>
+          {currentChapter && (
+            <div className="flex items-center gap-3 text-xs whitespace-nowrap">
+              {getCurrentVolumeInfo() ? (
+                <div className="flex items-center gap-1 bg-brand/10 text-brand rounded-full">
+                  <button
+                    className="p-1.5 hover:bg-brand/20 transition-colors disabled:opacity-30"
+                    onClick={() => navigateToVolumeChapter('prev')}
+                    disabled={getCurrentVolumeInfo()?.chapterIndex === 1}
+                    title="上一章"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+                    </svg>
+                  </button>
+                  <div className="flex items-center gap-2 px-2">
+                    <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+                    </svg>
+                    <span className="font-medium">
+                      第{getCurrentVolumeInfo()?.volumeIndex !== undefined ? getCurrentVolumeInfo()!.volumeIndex + 1 : ''}卷
+                    </span>
+                    <span className="text-brand/70">·</span>
+                    <span>{getCurrentVolumeInfo()?.volume.title}</span>
+                    <span className="text-brand/70">·</span>
+                    <span>第{getCurrentVolumeInfo()?.chapterIndex}/{getCurrentVolumeInfo()?.totalChaptersInVolume}章</span>
+                  </div>
+                  <button
+                    className="p-1.5 hover:bg-brand/20 transition-colors disabled:opacity-30"
+                    onClick={() => navigateToVolumeChapter('next')}
+                    disabled={getCurrentVolumeInfo()?.chapterIndex === getCurrentVolumeInfo()?.totalChaptersInVolume}
+                    title="下一章"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                    </svg>
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 px-3 py-1 bg-warning/10 text-warning rounded-full">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                  </svg>
+                  <span>未分配分卷</span>
+                </div>
+              )}
+              <span className="text-ink-faint">本章 {wordCount} 字</span>
+              <select
+                className="input text-xs py-1 w-24"
+                value={currentChapter.status}
+                onChange={(e) =>
+                  handleStatusChange(currentChapter.id, e.target.value as ChapterStatus)
+                }
+              >
+                {Object.entries(CHAPTER_STATUS_LABELS).map(([key, label]) => (
+                  <option key={key} value={key}>{label as string}</option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
@@ -846,68 +905,8 @@ const NovelEditor: React.FC = () => {
                 ))}
               </div>
             </div>
-          )}
+        )}
 
-          {viewMode === 'write' && currentChapter && (
-            <div className="flex items-center gap-3 text-xs">
-              {getCurrentVolumeInfo() && (
-                <div className="flex items-center gap-1 bg-brand/10 text-brand rounded-full overflow-hidden">
-                  <button
-                    className="p-1.5 hover:bg-brand/20 transition-colors disabled:opacity-30"
-                    onClick={() => navigateToVolumeChapter('prev')}
-                    disabled={getCurrentVolumeInfo()?.chapterIndex === 1}
-                    title="上一章"
-                  >
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
-                    </svg>
-                  </button>
-                  <div className="flex items-center gap-2 px-2">
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
-                    </svg>
-                    <span className="font-medium">
-                      第{getCurrentVolumeInfo()?.volumeIndex !== undefined ? getCurrentVolumeInfo()!.volumeIndex + 1 : ''}卷
-                    </span>
-                    <span className="text-brand/70">·</span>
-                    <span>{getCurrentVolumeInfo()?.volume.title}</span>
-                    <span className="text-brand/70">·</span>
-                    <span>第{getCurrentVolumeInfo()?.chapterIndex}/{getCurrentVolumeInfo()?.totalChaptersInVolume}章</span>
-                  </div>
-                  <button
-                    className="p-1.5 hover:bg-brand/20 transition-colors disabled:opacity-30"
-                    onClick={() => navigateToVolumeChapter('next')}
-                    disabled={getCurrentVolumeInfo()?.chapterIndex === getCurrentVolumeInfo()?.totalChaptersInVolume}
-                    title="下一章"
-                  >
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-                    </svg>
-                  </button>
-                </div>
-              )}
-              {!getCurrentVolumeInfo() && (
-                <div className="flex items-center gap-2 px-3 py-1 bg-warning/10 text-warning rounded-full">
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
-                  </svg>
-                  <span>未分配分卷</span>
-                </div>
-              )}
-              <span className="text-ink-faint">本章 {wordCount} 字</span>
-              <select
-                className="input text-xs py-1 w-24"
-                value={currentChapter.status}
-                onChange={(e) =>
-                  handleStatusChange(currentChapter.id, e.target.value as ChapterStatus)
-                }
-              >
-                {Object.entries(CHAPTER_STATUS_LABELS).map(([key, label]) => (
-                  <option key={key} value={key}>{label as string}</option>
-                ))}
-              </select>
-            </div>
-          )}
         </div>
       )}
 
