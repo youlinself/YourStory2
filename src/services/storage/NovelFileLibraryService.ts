@@ -588,7 +588,6 @@ class NovelFileLibraryService {
       characters,
       worldBuilding,
       tags: metadata.tags,
-      goals: [],
       createdAt: new Date(metadata.createdAt),
       updatedAt: new Date(metadata.updatedAt),
     };

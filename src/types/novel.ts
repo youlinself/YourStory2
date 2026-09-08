@@ -104,16 +104,6 @@ export interface Volume {
   chapters: NovelChapter[];
 }
 
-export interface WritingGoal {
-  id: string;
-  novelId: string;
-  type: 'daily' | 'chapter' | 'total';
-  target: number;
-  deadline?: string;
-  completed: boolean;
-  createdAt: string;
-}
-
 export interface Novel {
   id: string;
   title: string;
@@ -128,7 +118,6 @@ export interface Novel {
   characters: Character[];
   worldBuilding: WorldBuilding | null;
   tags: string[];
-  goals: WritingGoal[];
   createdAt: Date;
   updatedAt: Date;
 }

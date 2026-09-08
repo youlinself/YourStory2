@@ -30,17 +30,15 @@ import WritingEnhancementPanel from '../../components/novel/WritingEnhancementPa
 import GlobalSearch from '../../components/novel/GlobalSearch';
 import VersionCompare from '../../components/novel/VersionCompare';
 import TagManager from '../../components/novel/TagManager';
-import WritingGoalsPanel from '../../components/novel/WritingGoalsPanel';
 import InspirationBoard from '../../components/novel/InspirationBoard';
 import VolumeManager from '../../components/novel/VolumeManager';
 import WritingAnalytics from '../../components/novel/WritingAnalytics';
 import ImportModal from '../../components/novel/ImportModal';
 import type { PlotThread } from '../../components/novel/PlotThreadTracker';
-import type { WritingGoal } from '../../types/novel';
 import type { SavedInspiration } from '../../types';
 import type { Volume } from '../../types/novel';
 
-type ViewMode = 'write' | 'outline' | 'characters' | 'world' | 'novelInfo' | 'stats' | 'tags' | 'goals' | 'inspirations' | 'volumes' | 'analytics';
+type ViewMode = 'write' | 'outline' | 'characters' | 'world' | 'novelInfo' | 'stats' | 'tags' | 'inspirations' | 'volumes' | 'analytics';
 
 const MAX_HISTORY = 50;
 const HISTORY_DEBOUNCE_MS = 500;
@@ -313,14 +311,40 @@ const NovelEditor: React.FC = () => {
     }
   }, [historyIndex, contentHistory, currentChapterId, scheduleAutoSave]);
 
+  const getCurrentVolumeInfo = useCallback(() => {
+    if (!currentChapter || !novel?.volumes) return null;
+    const volumeId = currentChapter.volumeId;
+    if (!volumeId) return null;
+    const volume = novel.volumes.find((v) => v.id === volumeId);
+    if (!volume) return null;
+    const volumeChapters = novel.chapters.filter((ch) => ch.volumeId === volumeId);
+    const chapterIndex = volumeChapters.findIndex((ch) => ch.id === currentChapter.id);
+    return {
+      volume,
+      volumeIndex: novel.volumes.findIndex((v) => v.id === volumeId),
+      chapterIndex: chapterIndex >= 0 ? chapterIndex + 1 : null,
+      totalChaptersInVolume: volumeChapters.length,
+    };
+  }, [currentChapter, novel?.volumes, novel?.chapters]);
+
   const handleAddChapter = async () => {
     if (!novelId) return;
 
-    const title = prompt('输入新章节标题：');
+    const currentVolumeInfo = getCurrentVolumeInfo();
+    let defaultTitle = '新章节';
+    if (currentVolumeInfo) {
+      defaultTitle = `${currentVolumeInfo.volume.title} - 第${currentVolumeInfo.totalChaptersInVolume + 1}章`;
+    }
+
+    const title = prompt('输入新章节标题：', defaultTitle);
     if (!title?.trim()) return;
 
     try {
       const chapterId = await addChapter(novelId, title.trim());
+      const currentChapterVolumeId = currentChapter?.volumeId;
+      if (currentChapterVolumeId) {
+        await updateChapter(novelId, chapterId, { volumeId: currentChapterVolumeId });
+      }
       setCurrentChapter(chapterId);
       setViewMode('write');
       toast.addToast({ type: 'success', message: '章节已添加' });
@@ -328,6 +352,19 @@ const NovelEditor: React.FC = () => {
       toast.addToast({ type: 'error', message: '添加失败' });
     }
   };
+
+  const navigateToVolumeChapter = useCallback((direction: 'prev' | 'next') => {
+    if (!currentChapter || !novel?.volumes || !novel?.chapters) return;
+    const volumeId = currentChapter.volumeId;
+    if (!volumeId) return;
+    const volumeChapters = novel.chapters.filter((ch) => ch.volumeId === volumeId);
+    const currentIndex = volumeChapters.findIndex((ch) => ch.id === currentChapter.id);
+    if (currentIndex === -1) return;
+    const targetIndex = direction === 'prev' ? currentIndex - 1 : currentIndex + 1;
+    if (targetIndex >= 0 && targetIndex < volumeChapters.length) {
+      setCurrentChapter(volumeChapters[targetIndex].id);
+    }
+  }, [currentChapter, novel?.volumes, novel?.chapters]);
 
   const handleDeleteChapter = async (chapterId: string) => {
     if (!novelId) return;
@@ -539,29 +576,6 @@ const NovelEditor: React.FC = () => {
     const reordered = volumes.map((v, idx) => ({ ...v, order: idx }));
     useNovelStore.getState().updateNovel(novelId, { volumes: reordered });
   }, [novelId, novel?.volumes]);
-
-  const handleGoalAdd = useCallback((goal: Omit<WritingGoal, 'id' | 'createdAt'>) => {
-    if (!novelId) return;
-    const newGoal: WritingGoal = {
-      ...goal,
-      id: `goal_${Date.now()}`,
-      createdAt: new Date().toISOString(),
-    };
-    const goals = [...(novel?.goals || []), newGoal];
-    useNovelStore.getState().updateNovel(novelId, { goals });
-  }, [novelId, novel?.goals]);
-
-  const handleGoalUpdate = useCallback((goalId: string, updates: Partial<WritingGoal>) => {
-    if (!novelId) return;
-    const goals = (novel?.goals || []).map((g) => (g.id === goalId ? { ...g, ...updates } : g));
-    useNovelStore.getState().updateNovel(novelId, { goals });
-  }, [novelId, novel?.goals]);
-
-  const handleGoalDelete = useCallback((goalId: string) => {
-    if (!novelId) return;
-    const goals = (novel?.goals || []).filter((g) => g.id !== goalId);
-    useNovelStore.getState().updateNovel(novelId, { goals });
-  }, [novelId, novel?.goals]);
 
   const handleInspirationAdd = useCallback((inspiration: Omit<SavedInspiration, 'id' | 'createdAt'>) => {
     const newInspiration: SavedInspiration = {
@@ -779,16 +793,6 @@ const NovelEditor: React.FC = () => {
           </button>
           <button
             className={`text-sm pb-1 border-b-2 transition-all ${
-              viewMode === 'goals'
-                ? 'border-brand text-brand font-medium'
-                : 'border-transparent text-ink-muted hover:text-ink'
-            }`}
-            onClick={() => setViewMode('goals')}
-          >
-            目标
-          </button>
-          <button
-            className={`text-sm pb-1 border-b-2 transition-all ${
               viewMode === 'volumes'
                 ? 'border-brand text-brand font-medium'
                 : 'border-transparent text-ink-muted hover:text-ink'
@@ -845,8 +849,52 @@ const NovelEditor: React.FC = () => {
           )}
 
           {viewMode === 'write' && currentChapter && (
-            <div className="flex items-center gap-3 text-xs text-ink-faint">
-              <span>本章 {wordCount} 字</span>
+            <div className="flex items-center gap-3 text-xs">
+              {getCurrentVolumeInfo() && (
+                <div className="flex items-center gap-1 bg-brand/10 text-brand rounded-full overflow-hidden">
+                  <button
+                    className="p-1.5 hover:bg-brand/20 transition-colors disabled:opacity-30"
+                    onClick={() => navigateToVolumeChapter('prev')}
+                    disabled={getCurrentVolumeInfo()?.chapterIndex === 1}
+                    title="上一章"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+                    </svg>
+                  </button>
+                  <div className="flex items-center gap-2 px-2">
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+                    </svg>
+                    <span className="font-medium">
+                      第{getCurrentVolumeInfo()?.volumeIndex !== undefined ? getCurrentVolumeInfo()!.volumeIndex + 1 : ''}卷
+                    </span>
+                    <span className="text-brand/70">·</span>
+                    <span>{getCurrentVolumeInfo()?.volume.title}</span>
+                    <span className="text-brand/70">·</span>
+                    <span>第{getCurrentVolumeInfo()?.chapterIndex}/{getCurrentVolumeInfo()?.totalChaptersInVolume}章</span>
+                  </div>
+                  <button
+                    className="p-1.5 hover:bg-brand/20 transition-colors disabled:opacity-30"
+                    onClick={() => navigateToVolumeChapter('next')}
+                    disabled={getCurrentVolumeInfo()?.chapterIndex === getCurrentVolumeInfo()?.totalChaptersInVolume}
+                    title="下一章"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                    </svg>
+                  </button>
+                </div>
+              )}
+              {!getCurrentVolumeInfo() && (
+                <div className="flex items-center gap-2 px-3 py-1 bg-warning/10 text-warning rounded-full">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                  </svg>
+                  <span>未分配分卷</span>
+                </div>
+              )}
+              <span className="text-ink-faint">本章 {wordCount} 字</span>
               <select
                 className="input text-xs py-1 w-24"
                 value={currentChapter.status}
@@ -865,14 +913,16 @@ const NovelEditor: React.FC = () => {
 
       <div className="flex-1 flex overflow-hidden">
         {!isFocusMode && viewMode === 'write' && (
-          <div className="w-56 border-r border-border-subtle overflow-y-auto">
+          <div className="w-64 border-r border-border-subtle overflow-y-auto">
             <ChapterList
               chapters={novel.chapters}
+              volumes={novel.volumes}
               currentChapterId={currentChapterId}
               onSelect={(id) => setCurrentChapter(id)}
               onAdd={handleAddChapter}
               onDelete={handleDeleteChapter}
               onReorder={handleReorderChapters}
+              onChapterMoveToVolume={handleChapterMove}
             />
           </div>
         )}
@@ -1058,18 +1108,6 @@ const NovelEditor: React.FC = () => {
               onChapterTagRemove={handleChapterTagRemove}
               onBatchTagAdd={handleBatchTagAdd}
               onBatchTagRemove={handleBatchTagRemove}
-            />
-          )}
-
-          {viewMode === 'goals' && (
-            <WritingGoalsPanel
-              goals={novel.goals || []}
-              currentWordCount={novel.currentWordCount}
-              todayWordCount={writingStats.daily.find((d) => d.date === new Date().toISOString().split('T')[0])?.wordCount || 0}
-              streakDays={writingStats.streak.current}
-              onGoalAdd={handleGoalAdd}
-              onGoalUpdate={handleGoalUpdate}
-              onGoalDelete={handleGoalDelete}
             />
           )}
 

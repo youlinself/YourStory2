@@ -103,7 +103,6 @@ const useNovelStore = create<NovelState>((set, get) => ({
       characters: [],
       worldBuilding: null,
       tags: [],
-      goals: [],
       createdAt: new Date(),
       updatedAt: new Date(),
     };

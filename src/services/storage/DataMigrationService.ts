@@ -190,7 +190,6 @@ const DataMigrationService = {
       characters: novel.characters || [],
       volumes: novel.volumes || [],
       tags: novel.tags || [],
-      goals: novel.goals || [],
       createdAt: novel.createdAt || new Date(),
       updatedAt: novel.updatedAt || new Date(),
     };
