@@ -1,5 +1,6 @@
 import { open as dialogOpen } from '@tauri-apps/plugin-dialog';
-import { mkdir, writeTextFile, readTextFile, exists, remove } from '@tauri-apps/plugin-fs';
+import { mkdir, writeTextFile, readTextFile, exists, remove, readDir, stat } from '@tauri-apps/plugin-fs';
+import * as path from '@tauri-apps/api/path';
 
 export type StorageType = 'localStorage' | 'file';
 
@@ -201,6 +202,205 @@ class FileStorageService {
     } catch (error) {
       console.error('清空文件失败:', error);
       throw error;
+    }
+  }
+
+  async ensureDirectory(dirPath: string): Promise<void> {
+    try {
+      if (this.isTauriEnvironment()) {
+        await mkdir(dirPath, { recursive: true });
+      } else {
+        const storageKey = `__dir_${dirPath}`;
+        if (!localStorage.getItem(storageKey)) {
+          localStorage.setItem(storageKey, 'true');
+        }
+      }
+    } catch (error) {
+      console.error('创建目录失败:', error);
+    }
+  }
+
+  async saveJson(filePath: string, data: unknown): Promise<void> {
+    try {
+      if (this.isTauriEnvironment()) {
+        const dirPath = filePath.substring(0, filePath.lastIndexOf('\\'));
+        await mkdir(dirPath, { recursive: true });
+        await writeTextFile(filePath, JSON.stringify(data, null, 2));
+      } else {
+        const storageKey = `__file_${filePath}`;
+        localStorage.setItem(storageKey, JSON.stringify(data));
+      }
+    } catch (error) {
+      console.error('保存JSON失败:', error);
+      throw error;
+    }
+  }
+
+  async loadJson<T>(filePath: string): Promise<T | null> {
+    try {
+      if (this.isTauriEnvironment()) {
+        const fileExists = await exists(filePath);
+        if (!fileExists) return null;
+        const data = await readTextFile(filePath);
+        return JSON.parse(data) as T;
+      } else {
+        const storageKey = `__file_${filePath}`;
+        const data = localStorage.getItem(storageKey);
+        return data ? JSON.parse(data) : null;
+      }
+    } catch (error) {
+      console.error('加载JSON失败:', error);
+      return null;
+    }
+  }
+
+  async deleteFile(filePath: string): Promise<void> {
+    try {
+      if (this.isTauriEnvironment()) {
+        const fileExists = await exists(filePath);
+        if (fileExists) {
+          await remove(filePath);
+        }
+      } else {
+        const storageKey = `__file_${filePath}`;
+        localStorage.removeItem(storageKey);
+      }
+    } catch (error) {
+      console.error('删除文件失败:', error);
+    }
+  }
+
+  async listFiles(dirPath: string): Promise<string[]> {
+    try {
+      if (this.isTauriEnvironment()) {
+        const dirExists = await exists(dirPath);
+        if (!dirExists) return [];
+        const entries = await readDir(dirPath);
+        return entries.filter((e) => e.isFile).map((e) => e.name);
+      } else {
+        const prefix = `__file_${dirPath}/`;
+        const files: string[] = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith(prefix)) {
+            const fileName = key.replace(prefix, '');
+            if (!fileName.includes('/')) {
+              files.push(fileName);
+            }
+          }
+        }
+        return files;
+      }
+    } catch (error) {
+      console.error('列出文件失败:', error);
+      return [];
+    }
+  }
+
+  async listDirectories(parentPath: string): Promise<string[]> {
+    try {
+      if (this.isTauriEnvironment()) {
+        const dirExists = await exists(parentPath);
+        if (!dirExists) return [];
+        const entries = await readDir(parentPath);
+        return entries.filter((e) => e.isDirectory).map((e) => e.name);
+      } else {
+        const prefix = `__dir_${parentPath}`;
+        const dirs: string[] = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith(prefix)) {
+            dirs.push(key.replace('__dir_', ''));
+          }
+        }
+        return dirs;
+      }
+    } catch (error) {
+      console.error('列出目录失败:', error);
+      return [];
+    }
+  }
+
+  async directoryExists(dirPath: string): Promise<boolean> {
+    try {
+      if (this.isTauriEnvironment()) {
+        return await exists(dirPath);
+      } else {
+        const storageKey = `__dir_${dirPath}`;
+        return localStorage.getItem(storageKey) !== null;
+      }
+    } catch {
+      return false;
+    }
+  }
+
+  async getDirectorySize(dirPath: string): Promise<number> {
+    try {
+      if (this.isTauriEnvironment()) {
+        const dirExists = await exists(dirPath);
+        if (!dirExists) return 0;
+        const entries = await readDir(dirPath);
+        let totalSize = 0;
+        for (const entry of entries) {
+          if (entry.isFile) {
+            const filePath = `${dirPath}/${entry.name}`;
+            const fileStat = await stat(filePath);
+            totalSize += fileStat.size || 0;
+          }
+        }
+        return totalSize;
+      } else {
+        let totalSize = 0;
+        const prefix = `__file_${dirPath}`;
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith(prefix)) {
+            const value = localStorage.getItem(key);
+            if (value) totalSize += value.length * 2;
+          }
+        }
+        return totalSize;
+      }
+    } catch {
+      return 0;
+    }
+  }
+
+  async writeTextFile(filePath: string, content: string): Promise<void> {
+    try {
+      if (this.isTauriEnvironment()) {
+        const dirPath = filePath.substring(0, filePath.lastIndexOf('\\'));
+        await mkdir(dirPath, { recursive: true });
+        await writeTextFile(filePath, content);
+      } else {
+        const storageKey = `__file_${filePath}`;
+        localStorage.setItem(storageKey, content);
+      }
+    } catch (error) {
+      console.error('写入文件失败:', error);
+      throw error;
+    }
+  }
+
+  async deleteDirectory(dirPath: string): Promise<void> {
+    try {
+      if (this.isTauriEnvironment()) {
+        const dirExists = await exists(dirPath);
+        if (dirExists) {
+          await remove(dirPath, { recursive: true });
+        }
+      } else {
+        const keysToRemove: string[] = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && (key.startsWith(`__dir_${dirPath}`) || key.startsWith(`__file_${dirPath}`))) {
+            keysToRemove.push(key);
+          }
+        }
+        keysToRemove.forEach((key) => localStorage.removeItem(key));
+      }
+    } catch (error) {
+      console.error('删除目录失败:', error);
     }
   }
 }
