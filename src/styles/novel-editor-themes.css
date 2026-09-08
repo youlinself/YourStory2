@@ -1,0 +1,257 @@
+:root {
+  --novel-bg-base: #ffffff;
+  --novel-bg-subtle: #f8f9fa;
+  --novel-bg-surface: #f1f3f5;
+  --novel-text-primary: #1a1a2e;
+  --novel-text-secondary: #4a4a6a;
+  --novel-text-faint: #94a3b8;
+  --novel-border-subtle: #e2e8f0;
+  --novel-border-default: #cbd5e1;
+  --novel-brand: #3b82f6;
+  --novel-brand-surface: #eff6ff;
+  --novel-success: #10b981;
+  --novel-warning: #f59e0b;
+  --novel-danger: #ef4444;
+  --novel-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --novel-font-size: 16px;
+  --novel-line-height: 1.8;
+  --novel-paragraph-spacing: 1.5em;
+  --novel-editor-width: 800px;
+}
+
+[data-novel-theme='dark'] {
+  --novel-bg-base: #1a1a2e;
+  --novel-bg-subtle: #16213e;
+  --novel-bg-surface: #0f3460;
+  --novel-text-primary: #e2e8f0;
+  --novel-text-secondary: #94a3b8;
+  --novel-text-faint: #64748b;
+  --novel-border-subtle: #334155;
+  --novel-border-default: #475569;
+  --novel-brand: #60a5fa;
+  --novel-brand-surface: #1e3a5f;
+  --novel-success: #34d399;
+  --novel-warning: #fbbf24;
+  --novel-danger: #f87171;
+}
+
+[data-novel-theme='sepia'] {
+  --novel-bg-base: #f4ecd8;
+  --novel-bg-subtle: #ede4d3;
+  --novel-bg-surface: #e8dfc9;
+  --novel-text-primary: #5c4b37;
+  --novel-text-secondary: #7a6b5a;
+  --novel-text-faint: #a89b8c;
+  --novel-border-subtle: #d4c9b8;
+  --novel-border-default: #c4b9a8;
+  --novel-brand: #8b6914;
+  --novel-brand-surface: #f5e6c8;
+  --novel-success: #6b8e23;
+  --novel-warning: #c4a35a;
+  --novel-danger: #a94442;
+}
+
+[data-novel-theme='green'] {
+  --novel-bg-base: #c8e6c9;
+  --novel-bg-subtle: #a5d6a7;
+  --novel-bg-surface: #81c784;
+  --novel-text-primary: #1b5e20;
+  --novel-text-secondary: #2e7d32;
+  --novel-text-faint: #558b2f;
+  --novel-border-subtle: #81c784;
+  --novel-border-default: #66bb6a;
+  --novel-brand: #2e7d32;
+  --novel-brand-surface: #a5d6a7;
+  --novel-success: #1b5e20;
+  --novel-warning: #f57f17;
+  --novel-danger: #d32f2f;
+}
+
+[data-novel-theme='high-contrast'] {
+  --novel-bg-base: #000000;
+  --novel-bg-subtle: #1a1a1a;
+  --novel-bg-surface: #2a2a2a;
+  --novel-text-primary: #ffffff;
+  --novel-text-secondary: #e0e0e0;
+  --novel-text-faint: #b0b0b0;
+  --novel-border-subtle: #444444;
+  --novel-border-default: #666666;
+  --novel-brand: #ffff00;
+  --novel-brand-surface: #333300;
+  --novel-success: #00ff00;
+  --novel-warning: #ff9900;
+  --novel-danger: #ff0000;
+}
+
+[data-novel-font='serif'] {
+  --novel-font-family: 'Noto Serif SC', 'Source Han Serif SC', 'Source Han Serif CN', 'STSong', 'SimSun', serif;
+}
+
+[data-novel-font='sans'] {
+  --novel-font-family: 'Noto Sans SC', 'Source Han Sans SC', 'Source Han Sans CN', 'Microsoft YaHei', sans-serif;
+}
+
+[data-novel-font='mono'] {
+  --novel-font-family: 'JetBrains Mono', 'Fira Code', 'Source Code Pro', 'Consolas', monospace;
+}
+
+[data-novel-font-size='small'] {
+  --novel-font-size: 14px;
+}
+
+[data-novel-font-size='medium'] {
+  --novel-font-size: 16px;
+}
+
+[data-novel-font-size='large'] {
+  --novel-font-size: 18px;
+}
+
+[data-novel-font-size='xlarge'] {
+  --novel-font-size: 20px;
+}
+
+[data-novel-line-height='compact'] {
+  --novel-line-height: 1.5;
+}
+
+[data-novel-line-height='normal'] {
+  --novel-line-height: 1.8;
+}
+
+[data-novel-line-height='relaxed'] {
+  --novel-line-height: 2.2;
+}
+
+[data-novel-line-height='loose'] {
+  --novel-line-height: 2.5;
+}
+
+.novel-editor-content {
+  background-color: var(--novel-bg-base);
+  color: var(--novel-text-primary);
+  font-family: var(--novel-font-family);
+  font-size: var(--novel-font-size);
+  line-height: var(--novel-line-height);
+  max-width: var(--novel-editor-width);
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.novel-editor-content p {
+  margin-bottom: var(--novel-paragraph-spacing);
+}
+
+.novel-editor-content h1,
+.novel-editor-content h2,
+.novel-editor-content h3 {
+  color: var(--novel-text-primary);
+  font-weight: 600;
+  margin-top: 2em;
+  margin-bottom: 1em;
+}
+
+.novel-editor-content h1 {
+  font-size: 1.8em;
+}
+
+.novel-editor-content h2 {
+  font-size: 1.5em;
+}
+
+.novel-editor-content h3 {
+  font-size: 1.2em;
+}
+
+.novel-editor-content blockquote {
+  border-left: 4px solid var(--novel-brand);
+  padding-left: 1rem;
+  margin: 1.5em 0;
+  color: var(--novel-text-secondary);
+  font-style: italic;
+}
+
+.novel-editor-content code {
+  background-color: var(--novel-bg-subtle);
+  padding: 0.2em 0.4em;
+  border-radius: 3px;
+  font-family: var(--novel-font-family);
+  font-size: 0.9em;
+}
+
+.novel-editor-content pre {
+  background-color: var(--novel-bg-subtle);
+  padding: 1rem;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 1.5em 0;
+}
+
+.novel-editor-content pre code {
+  background: none;
+  padding: 0;
+}
+
+.novel-editor-content hr {
+  border: none;
+  border-top: 1px solid var(--novel-border-subtle);
+  margin: 2em 0;
+}
+
+.novel-editor-content ul,
+.novel-editor-content ol {
+  margin: 1em 0;
+  padding-left: 2em;
+}
+
+.novel-editor-content li {
+  margin-bottom: 0.5em;
+}
+
+.novel-editor-content a {
+  color: var(--novel-brand);
+  text-decoration: underline;
+}
+
+.novel-editor-content a:hover {
+  opacity: 0.8;
+}
+
+.novel-editor-content ::selection {
+  background-color: var(--novel-brand);
+  color: var(--novel-bg-base);
+}
+
+[data-novel-theme='dark'] .novel-editor-content ::selection {
+  background-color: var(--novel-brand);
+  color: #000000;
+}
+
+.novel-editor-focus-mode .novel-editor-content p {
+  opacity: 0.5;
+  transition: opacity 0.3s ease;
+}
+
+.novel-editor-focus-mode .novel-editor-content p:focus,
+.novel-editor-focus-mode .novel-editor-content p:hover,
+.novel-editor-focus-mode .novel-editor-content p.active-paragraph {
+  opacity: 1;
+}
+
+.novel-editor-typewriter-mode .novel-editor-content {
+  padding-bottom: 50vh;
+}
+
+@keyframes novel-cursor-blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+.novel-editor-content:focus {
+  outline: none;
+}
+
+.novel-editor-content .cursor {
+  border-left: 2px solid var(--novel-brand);
+  animation: novel-cursor-blink 1s infinite;
+}

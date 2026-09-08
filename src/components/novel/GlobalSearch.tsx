@@ -1,6 +1,5 @@
-import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import type { NovelChapter, Character } from '../../types/novel';
-import NovelAIContextService from '../../services/ai/NovelAIContextService';
 
 type SearchScope = 'all' | 'content' | 'title' | 'characters' | 'notes';
 type SearchFilter = 'all' | 'outline' | 'draft' | 'polishing' | 'final';
@@ -24,7 +23,6 @@ interface GlobalSearchProps {
 }
 
 const GlobalSearch: React.FC<GlobalSearchProps> = ({
-  novelId,
   chapters,
   characters,
   onChapterSelect,
@@ -35,12 +33,11 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({
   const [statusFilter, setStatusFilter] = useState<SearchFilter>('all');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
-  const [showAdvanced, setShowAdvanced] = useState(false);
+  useState(false);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(-1);
 
   const inputRef = useRef<HTMLInputElement>(null);
-  const aiContextService = NovelAIContextService.getInstance();
 
   useEffect(() => {
     const saved = localStorage.getItem('novel_recent_searches');

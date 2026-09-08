@@ -1,4 +1,4 @@
-import type { Novel, NovelChapter, Volume } from '../../types/novel';
+import type { Novel, NovelChapter } from '../../types/novel';
 import { GENRE_LABELS, NOVEL_STATUS_LABELS } from '../../types/novel';
 
 export type ExportFormat = 'markdown' | 'txt' | 'json' | 'epub' | 'submission' | 'html';

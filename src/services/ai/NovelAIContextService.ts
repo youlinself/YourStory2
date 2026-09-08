@@ -1,9 +1,8 @@
 import NovelFileLibraryService, {
   NovelMetadata,
-  ChapterIndex,
   NovelSearchIndex,
 } from '../storage/NovelFileLibraryService';
-import type { NovelChapter, Character, WorldBuilding } from '../../types/novel';
+import type { WorldBuilding } from '../../types/novel';
 
 export interface AIContextPrompt {
   systemContext: string;

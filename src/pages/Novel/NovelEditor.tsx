@@ -24,8 +24,23 @@ import WorldBuildingPanel from '../../components/novel/WorldBuildingPanel';
 import NovelInfoPanel from '../../components/novel/NovelInfoPanel';
 import MarkdownEditor from '../../components/novel/MarkdownEditor';
 import WritingStatsPanel from '../../components/novel/WritingStatsPanel';
+import OutlineTimeline from '../../components/novel/OutlineTimeline';
+import CharacterRelationshipGraph from '../../components/novel/CharacterRelationshipGraph';
+import WritingEnhancementPanel from '../../components/novel/WritingEnhancementPanel';
+import GlobalSearch from '../../components/novel/GlobalSearch';
+import VersionCompare from '../../components/novel/VersionCompare';
+import TagManager from '../../components/novel/TagManager';
+import WritingGoalsPanel from '../../components/novel/WritingGoalsPanel';
+import InspirationBoard from '../../components/novel/InspirationBoard';
+import VolumeManager from '../../components/novel/VolumeManager';
+import WritingAnalytics from '../../components/novel/WritingAnalytics';
+import ImportModal from '../../components/novel/ImportModal';
+import type { PlotThread } from '../../components/novel/PlotThreadTracker';
+import type { WritingGoal } from '../../types/novel';
+import type { SavedInspiration } from '../../types';
+import type { Volume } from '../../types/novel';
 
-type ViewMode = 'write' | 'outline' | 'characters' | 'world' | 'novelInfo' | 'stats';
+type ViewMode = 'write' | 'outline' | 'characters' | 'world' | 'novelInfo' | 'stats' | 'tags' | 'goals' | 'inspirations' | 'volumes' | 'analytics';
 
 const MAX_HISTORY = 50;
 const HISTORY_DEBOUNCE_MS = 500;
@@ -75,6 +90,13 @@ const NovelEditor: React.FC = () => {
   });
 
   const [aiHistory, setAiHistory] = useState<AIHistoryItem[]>([]);
+  const [showGlobalSearch, setShowGlobalSearch] = useState(false);
+  const [showVersionCompare, setShowVersionCompare] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [showEnhancementPanel, setShowEnhancementPanel] = useState(false);
+  useState<PlotThread[]>([]);
+  const [inspirations, setInspirations] = useState<SavedInspiration[]>([]);
+  const [chapterVersions, setChapterVersions] = useState<Array<{ id: string; content: string; description: string; createdAt: string; wordCount: number; isAutoSave: boolean }>>([]);
 
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const historyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -94,6 +116,22 @@ const NovelEditor: React.FC = () => {
     () => novel?.chapters.find((ch) => ch.id === currentChapterId),
     [novel, currentChapterId]
   );
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        setShowGlobalSearch(true);
+      }
+      if (e.key === 'Escape') {
+        setShowGlobalSearch(false);
+        setShowVersionCompare(false);
+        setShowImportModal(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   useEffect(() => {
     if (novelId) {
@@ -428,6 +466,142 @@ const NovelEditor: React.FC = () => {
     }
   }, [writingStats.goals.dailyWordCount]);
 
+  const handleChapterTagAdd = useCallback((chapterId: string, tag: string) => {
+    if (!novelId) return;
+    const chapter = novel?.chapters.find((ch) => ch.id === chapterId);
+    if (!chapter) return;
+    const tags = [...(chapter.tags || []), tag];
+    updateChapter(novelId, chapterId, { tags });
+  }, [novelId, novel?.chapters, updateChapter]);
+
+  const handleChapterTagRemove = useCallback((chapterId: string, tag: string) => {
+    if (!novelId) return;
+    const chapter = novel?.chapters.find((ch) => ch.id === chapterId);
+    if (!chapter) return;
+    const tags = (chapter.tags || []).filter((t) => t !== tag);
+    updateChapter(novelId, chapterId, { tags });
+  }, [novelId, novel?.chapters, updateChapter]);
+
+  const handleBatchTagAdd = useCallback((chapterIds: string[], tag: string) => {
+    if (!novelId) return;
+    for (const chapterId of chapterIds) {
+      const chapter = novel?.chapters.find((ch) => ch.id === chapterId);
+      if (chapter) {
+        const tags = [...(chapter.tags || []), tag];
+        updateChapter(novelId, chapterId, { tags });
+      }
+    }
+  }, [novelId, novel?.chapters, updateChapter]);
+
+  const handleBatchTagRemove = useCallback((chapterIds: string[], tag: string) => {
+    if (!novelId) return;
+    for (const chapterId of chapterIds) {
+      const chapter = novel?.chapters.find((ch) => ch.id === chapterId);
+      if (chapter) {
+        const tags = (chapter.tags || []).filter((t) => t !== tag);
+        updateChapter(novelId, chapterId, { tags });
+      }
+    }
+  }, [novelId, novel?.chapters, updateChapter]);
+
+  const handleVolumeAdd = useCallback((volume: Omit<Volume, 'id'>) => {
+    if (!novelId) return;
+    const newVolume: Volume = {
+      ...volume,
+      id: `vol_${Date.now()}`,
+    };
+    const volumes = [...(novel?.volumes || []), newVolume];
+    useNovelStore.getState().updateNovel(novelId, { volumes });
+  }, [novelId, novel?.volumes]);
+
+  const handleVolumeUpdate = useCallback((volumeId: string, updates: Partial<Volume>) => {
+    if (!novelId) return;
+    const volumes = (novel?.volumes || []).map((v) => (v.id === volumeId ? { ...v, ...updates } : v));
+    useNovelStore.getState().updateNovel(novelId, { volumes });
+  }, [novelId, novel?.volumes]);
+
+  const handleVolumeDelete = useCallback((volumeId: string) => {
+    if (!novelId) return;
+    const volumes = (novel?.volumes || []).filter((v) => v.id !== volumeId);
+    useNovelStore.getState().updateNovel(novelId, { volumes });
+  }, [novelId, novel?.volumes]);
+
+  const handleChapterMove = useCallback((chapterId: string, volumeId: string | undefined) => {
+    if (!novelId) return;
+    updateChapter(novelId, chapterId, { volumeId });
+  }, [novelId, updateChapter]);
+
+  const handleVolumeReorder = useCallback((fromIndex: number, toIndex: number) => {
+    if (!novelId) return;
+    const volumes = [...(novel?.volumes || [])];
+    const [moved] = volumes.splice(fromIndex, 1);
+    volumes.splice(toIndex, 0, moved);
+    const reordered = volumes.map((v, idx) => ({ ...v, order: idx }));
+    useNovelStore.getState().updateNovel(novelId, { volumes: reordered });
+  }, [novelId, novel?.volumes]);
+
+  const handleGoalAdd = useCallback((goal: Omit<WritingGoal, 'id' | 'createdAt'>) => {
+    if (!novelId) return;
+    const newGoal: WritingGoal = {
+      ...goal,
+      id: `goal_${Date.now()}`,
+      createdAt: new Date().toISOString(),
+    };
+    const goals = [...(novel?.goals || []), newGoal];
+    useNovelStore.getState().updateNovel(novelId, { goals });
+  }, [novelId, novel?.goals]);
+
+  const handleGoalUpdate = useCallback((goalId: string, updates: Partial<WritingGoal>) => {
+    if (!novelId) return;
+    const goals = (novel?.goals || []).map((g) => (g.id === goalId ? { ...g, ...updates } : g));
+    useNovelStore.getState().updateNovel(novelId, { goals });
+  }, [novelId, novel?.goals]);
+
+  const handleGoalDelete = useCallback((goalId: string) => {
+    if (!novelId) return;
+    const goals = (novel?.goals || []).filter((g) => g.id !== goalId);
+    useNovelStore.getState().updateNovel(novelId, { goals });
+  }, [novelId, novel?.goals]);
+
+  const handleInspirationAdd = useCallback((inspiration: Omit<SavedInspiration, 'id' | 'createdAt'>) => {
+    const newInspiration: SavedInspiration = {
+      ...inspiration,
+      id: `insp_${Date.now()}`,
+      createdAt: new Date().toISOString(),
+    };
+    setInspirations((prev) => [...prev, newInspiration]);
+  }, []);
+
+  const handleInspirationDelete = useCallback((id: string) => {
+    setInspirations((prev) => prev.filter((i) => i.id !== id));
+  }, []);
+
+  const handleInspirationUse = useCallback((id: string) => {
+    setInspirations((prev) =>
+      prev.map((i) => (i.id === id ? { ...i, isUsed: true } : i))
+    );
+  }, []);
+
+  const handleSaveVersion = useCallback((description: string) => {
+    if (!currentChapter) return;
+    const version = {
+      id: `ver_${Date.now()}`,
+      content: currentChapter.content,
+      description,
+      createdAt: new Date().toISOString(),
+      wordCount: currentChapter.wordCount,
+      isAutoSave: false,
+    };
+    setChapterVersions((prev) => [version, ...prev]);
+    toast.addToast({ type: 'success', message: '版本已保存' });
+  }, [currentChapter, toast]);
+
+  const handleRestoreVersion = useCallback((content: string) => {
+    if (!currentChapterId) return;
+    handleContentChange(content);
+    toast.addToast({ type: 'success', message: '版本已恢复' });
+  }, [currentChapterId, handleContentChange, toast]);
+
   if (!novel) {
     return (
       <div className="content-panel flex items-center justify-center">
@@ -478,6 +652,15 @@ const NovelEditor: React.FC = () => {
 
         <div className="flex items-center gap-2">
           <button
+            className="btn btn-ghost text-xs"
+            onClick={() => setShowGlobalSearch(true)}
+            title="全局搜索 (Ctrl+K)"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+            </svg>
+          </button>
+          <button
             className={`btn btn-ghost text-xs ${showStats ? 'bg-brand-surface text-brand' : ''}`}
             onClick={() => setShowStats(!showStats)}
             title="写作统计"
@@ -494,6 +677,33 @@ const NovelEditor: React.FC = () => {
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </button>
+          <button
+            className={`btn btn-ghost text-xs ${showEnhancementPanel ? 'bg-brand-surface text-brand' : ''}`}
+            onClick={() => setShowEnhancementPanel(!showEnhancementPanel)}
+            title="写作增强"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
+            </svg>
+          </button>
+          <button
+            className="btn btn-ghost text-xs"
+            onClick={() => setShowVersionCompare(true)}
+            title="版本对比"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m6.75 12l-3-3m0 0l-3 3m3-3v6m-1.5-15H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+            </svg>
+          </button>
+          <button
+            className="btn btn-ghost text-xs"
+            onClick={() => setShowImportModal(true)}
+            title="导入"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 8.25H7.5a2.25 2.25 0 00-2.25 2.25v9a2.25 2.25 0 002.25 2.25h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25H15M9 12l3 3m0 0l3-3m-3 3V2.25" />
             </svg>
           </button>
           <button
@@ -556,6 +766,56 @@ const NovelEditor: React.FC = () => {
             onClick={() => setViewMode('novelInfo')}
           >
             小说信息
+          </button>
+          <button
+            className={`text-sm pb-1 border-b-2 transition-all ${
+              viewMode === 'tags'
+                ? 'border-brand text-brand font-medium'
+                : 'border-transparent text-ink-muted hover:text-ink'
+            }`}
+            onClick={() => setViewMode('tags')}
+          >
+            标签
+          </button>
+          <button
+            className={`text-sm pb-1 border-b-2 transition-all ${
+              viewMode === 'goals'
+                ? 'border-brand text-brand font-medium'
+                : 'border-transparent text-ink-muted hover:text-ink'
+            }`}
+            onClick={() => setViewMode('goals')}
+          >
+            目标
+          </button>
+          <button
+            className={`text-sm pb-1 border-b-2 transition-all ${
+              viewMode === 'volumes'
+                ? 'border-brand text-brand font-medium'
+                : 'border-transparent text-ink-muted hover:text-ink'
+            }`}
+            onClick={() => setViewMode('volumes')}
+          >
+            分卷
+          </button>
+          <button
+            className={`text-sm pb-1 border-b-2 transition-all ${
+              viewMode === 'inspirations'
+                ? 'border-brand text-brand font-medium'
+                : 'border-transparent text-ink-muted hover:text-ink'
+            }`}
+            onClick={() => setViewMode('inspirations')}
+          >
+            灵感
+          </button>
+          <button
+            className={`text-sm pb-1 border-b-2 transition-all ${
+              viewMode === 'analytics'
+                ? 'border-brand text-brand font-medium'
+                : 'border-transparent text-ink-muted hover:text-ink'
+            }`}
+            onClick={() => setViewMode('analytics')}
+          >
+            统计
           </button>
 
           <div className="flex-1" />
@@ -726,6 +986,125 @@ const NovelEditor: React.FC = () => {
           {viewMode === 'novelInfo' && (
             <NovelInfoPanel novel={novel} />
           )}
+
+          {viewMode === 'outline' && (
+            <OutlineTimeline
+              chapters={novel.chapters}
+              volumes={novel.volumes}
+              onChapterSelect={(id) => {
+                setCurrentChapter(id);
+                setViewMode('write');
+              }}
+              onChapterReorder={handleReorderChapters}
+              onSceneAdd={(chapterId, scene) => {
+                if (!novelId) return;
+                const chapter = novel?.chapters.find((ch) => ch.id === chapterId);
+                if (chapter) {
+                  const scenes = [...(chapter.scenes || []), { ...scene, id: `scene_${Date.now()}` }];
+                  updateChapter(novelId, chapterId, { scenes });
+                }
+              }}
+              onSceneDelete={(chapterId, sceneId) => {
+                if (!novelId) return;
+                const chapter = novel?.chapters.find((ch) => ch.id === chapterId);
+                if (chapter) {
+                  const scenes = (chapter.scenes || []).filter((s) => s.id !== sceneId);
+                  updateChapter(novelId, chapterId, { scenes });
+                }
+              }}
+              onVolumeAdd={handleVolumeAdd}
+              onVolumeDelete={handleVolumeDelete}
+              currentChapterId={currentChapterId || undefined}
+            />
+          )}
+
+          {viewMode === 'characters' && (
+            <div className="flex-1 flex overflow-hidden">
+              <CharacterPanel
+                novelId={novel.id}
+                characters={novel.characters}
+              />
+              <CharacterRelationshipGraph
+                characters={novel.characters}
+                onCharacterSelect={() => {
+                  if (novel.chapters.length > 0) {
+                    setCurrentChapter(novel.chapters[0].id);
+                  }
+                }}
+                onRelationshipAdd={(fromId, _toId, relationship) => {
+                  if (!novelId) return;
+                  const character = novel?.characters.find((c) => c.id === fromId);
+                  if (character) {
+                    const relationships = [...(character.relationships || []), relationship];
+                    useNovelStore.getState().updateCharacter(novelId, fromId, { relationships });
+                  }
+                }}
+                onRelationshipDelete={(characterId, targetId) => {
+                  if (!novelId) return;
+                  const character = novel?.characters.find((c) => c.id === characterId);
+                  if (character) {
+                    const relationships = (character.relationships || []).filter((r) => r.targetCharacterId !== targetId);
+                    useNovelStore.getState().updateCharacter(novelId, characterId, { relationships });
+                  }
+                }}
+              />
+            </div>
+          )}
+
+          {viewMode === 'tags' && (
+            <TagManager
+              chapters={novel.chapters}
+              onChapterTagAdd={handleChapterTagAdd}
+              onChapterTagRemove={handleChapterTagRemove}
+              onBatchTagAdd={handleBatchTagAdd}
+              onBatchTagRemove={handleBatchTagRemove}
+            />
+          )}
+
+          {viewMode === 'goals' && (
+            <WritingGoalsPanel
+              goals={novel.goals || []}
+              currentWordCount={novel.currentWordCount}
+              todayWordCount={writingStats.daily.find((d) => d.date === new Date().toISOString().split('T')[0])?.wordCount || 0}
+              streakDays={writingStats.streak.current}
+              onGoalAdd={handleGoalAdd}
+              onGoalUpdate={handleGoalUpdate}
+              onGoalDelete={handleGoalDelete}
+            />
+          )}
+
+          {viewMode === 'inspirations' && (
+            <InspirationBoard
+              inspirations={inspirations}
+              onInspirationAdd={handleInspirationAdd}
+              onInspirationDelete={handleInspirationDelete}
+              onInspirationUse={handleInspirationUse}
+            />
+          )}
+
+          {viewMode === 'volumes' && (
+            <VolumeManager
+              chapters={novel.chapters}
+              volumes={novel.volumes}
+              onVolumeAdd={handleVolumeAdd}
+              onVolumeUpdate={handleVolumeUpdate}
+              onVolumeDelete={handleVolumeDelete}
+              onChapterMove={handleChapterMove}
+              onVolumeReorder={handleVolumeReorder}
+              onChapterSelect={(id) => {
+                setCurrentChapter(id);
+                setViewMode('write');
+              }}
+            />
+          )}
+
+          {viewMode === 'analytics' && (
+            <WritingAnalytics
+              dailyStats={writingStats.daily}
+              totalWords={novel.currentWordCount}
+              streakDays={writingStats.streak.current}
+            />
+          )}
         </div>
 
         {viewMode === 'write' && !isFocusMode && currentChapter && (
@@ -747,6 +1126,54 @@ const NovelEditor: React.FC = () => {
             goals={writingStats.goals}
             totalWords={novel.currentWordCount}
             onOpenGoals={handleOpenGoals}
+          />
+        )}
+
+        {showEnhancementPanel && viewMode === 'write' && currentChapter && (
+          <WritingEnhancementPanel
+            wordCount={wordCount}
+            targetWordCount={novel.targetWordCount}
+            onTypewriterModeToggle={() => {}}
+            onFocusModeToggle={() => setIsFocusMode(!isFocusMode)}
+            isTypewriterMode={false}
+            isFocusMode={isFocusMode}
+          />
+        )}
+
+        {showGlobalSearch && (
+          <GlobalSearch
+            novelId={novel.id}
+            chapters={novel.chapters}
+            characters={novel.characters}
+            onChapterSelect={(id) => {
+              setCurrentChapter(id);
+              setViewMode('write');
+              setShowGlobalSearch(false);
+            }}
+            onCharacterSelect={() => {
+              setViewMode('characters');
+              setShowGlobalSearch(false);
+            }}
+          />
+        )}
+
+        {showVersionCompare && currentChapter && (
+          <VersionCompare
+            versions={chapterVersions}
+            currentContent={currentChapter.content}
+            onRestoreVersion={handleRestoreVersion}
+            onSaveVersion={handleSaveVersion}
+            onClose={() => setShowVersionCompare(false)}
+          />
+        )}
+
+        {showImportModal && (
+          <ImportModal
+            onImport={(result) => {
+              setShowImportModal(false);
+              toast.addToast({ type: 'success', message: `成功导入 ${result.chapters.length} 个章节` });
+            }}
+            onClose={() => setShowImportModal(false)}
           />
         )}
       </div>

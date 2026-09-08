@@ -25,7 +25,6 @@ interface DiffResult {
 const VersionCompare: React.FC<VersionCompareProps> = ({
   versions,
   currentContent,
-  onRestoreVersion,
   onSaveVersion,
   onClose,
 }) => {

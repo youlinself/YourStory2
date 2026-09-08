@@ -1,6 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import type { NovelChapter } from '../../types/novel';
-import { generateId } from '../../utils';
 
 export type PlotThreadType = 'foreshadowing' | 'clue' | 'conflict' | 'subplot' | 'mystery' | 'romance' | 'quest';
 export type PlotThreadStatus = 'active' | 'resolved' | 'dormant' | 'abandoned';

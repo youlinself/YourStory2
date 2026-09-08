@@ -66,7 +66,6 @@ const CharacterRelationshipGraph: React.FC<CharacterRelationshipGraphProps> = ({
     const centerX = canvasWidth / 2;
     const centerY = canvasHeight / 2;
 
-    const protagonist = characters.find((c) => c.role === 'protagonist');
     const newNodes: GraphNode[] = characters.map((char, index) => {
       const angle = (2 * Math.PI * index) / characters.length;
       const radius = char.role === 'protagonist' ? 0 : 150 + Math.random() * 50;

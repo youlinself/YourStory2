@@ -5,13 +5,12 @@ import { CHAPTER_STATUS_LABELS } from '../../types/novel';
 interface OutlineTimelineProps {
   chapters: NovelChapter[];
   volumes: Volume[];
+  novelId?: string;
   onChapterSelect: (chapterId: string) => void;
   onChapterReorder: (fromIndex: number, toIndex: number) => void;
   onSceneAdd: (chapterId: string, scene: Omit<Scene, 'id'>) => void;
-  onSceneUpdate: (chapterId: string, sceneId: string, updates: Partial<Scene>) => void;
   onSceneDelete: (chapterId: string, sceneId: string) => void;
   onVolumeAdd: (volume: Omit<Volume, 'id'>) => void;
-  onVolumeUpdate: (volumeId: string, updates: Partial<Volume>) => void;
   onVolumeDelete: (volumeId: string) => void;
   currentChapterId?: string;
 }
@@ -21,13 +20,12 @@ type ViewMode = 'timeline' | 'corkboard' | 'list';
 const OutlineTimeline: React.FC<OutlineTimelineProps> = ({
   chapters,
   volumes,
+  novelId,
   onChapterSelect,
   onChapterReorder,
   onSceneAdd,
-  onSceneUpdate,
   onSceneDelete,
   onVolumeAdd,
-  onVolumeUpdate,
   onVolumeDelete,
   currentChapterId,
 }) => {
@@ -90,10 +88,11 @@ const OutlineTimeline: React.FC<OutlineTimelineProps> = ({
       order: volumes.length,
       description: '',
       chapters: [],
+      novelId: novelId || '',
     });
     setNewVolumeTitle('');
     setShowVolumeModal(false);
-  }, [newVolumeTitle, volumes.length, onVolumeAdd]);
+  }, [newVolumeTitle, volumes.length, novelId, onVolumeAdd]);
 
   const handleAddScene = useCallback((chapterId: string) => {
     if (!newSceneTitle.trim()) return;
@@ -105,6 +104,7 @@ const OutlineTimeline: React.FC<OutlineTimelineProps> = ({
       characters: [],
       location: '',
       goal: newSceneGoal.trim(),
+      chapterId,
     });
     setNewSceneTitle('');
     setNewSceneGoal('');

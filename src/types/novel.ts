@@ -66,6 +66,17 @@ export interface Scene {
   goal: string;
 }
 
+export interface Annotation {
+  id: string;
+  startPos: number;
+  endPos: number;
+  text: string;
+  note: string;
+  type: 'comment' | 'todo' | 'idea';
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface NovelChapter {
   id: string;
   novelId: string;
@@ -77,6 +88,8 @@ export interface NovelChapter {
   wordCount: number;
   notes: string;
   volumeId?: string;
+  tags: string[];
+  annotations: Annotation[];
   scenes: Scene[];
   createdAt: Date;
   updatedAt: Date;
@@ -89,6 +102,16 @@ export interface Volume {
   order: number;
   description: string;
   chapters: NovelChapter[];
+}
+
+export interface WritingGoal {
+  id: string;
+  novelId: string;
+  type: 'daily' | 'chapter' | 'total';
+  target: number;
+  deadline?: string;
+  completed: boolean;
+  createdAt: string;
 }
 
 export interface Novel {
@@ -105,6 +128,7 @@ export interface Novel {
   characters: Character[];
   worldBuilding: WorldBuilding | null;
   tags: string[];
+  goals: WritingGoal[];
   createdAt: Date;
   updatedAt: Date;
 }

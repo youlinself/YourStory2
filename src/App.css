@@ -24,6 +24,7 @@
   
   /* Backgrounds */
   --color-bg: #faf8f5;
+  --color-bg-base: #faf8f5;
   --color-bg-elevated: #ffffff;
   --color-bg-subtle: #f5f0eb;
   --color-bg-hover: rgba(0, 0, 0, 0.02);
@@ -1132,6 +1133,7 @@ th {
   --color-ink-faint: #606060;
 
   --color-bg: #1a1a1a;
+  --color-bg-base: #1a1a1a;
   --color-bg-elevated: #242424;
   --color-bg-subtle: #2e2e2e;
   --color-bg-hover: rgba(255, 255, 255, 0.04);
