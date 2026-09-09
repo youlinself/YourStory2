@@ -179,6 +179,20 @@ const NovelEditor: React.FC = () => {
     return chineseChars + englishWords;
   };
 
+  const TAG_COLORS = [
+    '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
+    '#ec4899', '#14b8a6', '#f97316', '#6366f1', '#84cc16',
+    '#06b6d4', '#84cc16', '#f43f5e', '#8b5cf6', '#0ea5e9',
+  ];
+
+  const getTagColor = (tagName: string): string => {
+    let hash = 0;
+    for (let i = 0; i < tagName.length; i++) {
+      hash = tagName.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return TAG_COLORS[Math.abs(hash) % TAG_COLORS.length];
+  };
+
   const updateWritingStats = useCallback(
     (_novelId: string, chapterId: string, newContent: string) => {
       const today = new Date().toISOString().split('T')[0];
@@ -762,6 +776,42 @@ const NovelEditor: React.FC = () => {
                 </div>
               )}
               <span className="text-ink-faint">本章 {wordCount} 字</span>
+              {(currentChapter.tags || []).length > 0 && (
+                <div className="flex items-center gap-1">
+                  {(currentChapter.tags || []).slice(0, 4).map((tag) => (
+                    <span
+                      key={tag}
+                      className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] text-white"
+                      style={{ backgroundColor: getTagColor(tag) }}
+                    >
+                      {tag}
+                      <button
+                        className="hover:bg-white/20 rounded"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleChapterTagRemove(currentChapter.id, tag);
+                        }}
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                  {(currentChapter.tags || []).length > 4 && (
+                    <span className="text-[10px] text-ink-faint">+{(currentChapter.tags || []).length - 4}</span>
+                  )}
+                </div>
+              )}
+              <button
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs border border-dashed border-ink-faint text-ink-faint hover:border-brand hover:text-brand transition-colors"
+                onClick={() => setViewMode('tags')}
+                title="管理标签"
+              >
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 6h.008v.008H6V6z" />
+                </svg>
+                + 标签
+              </button>
               <select
                 className="input text-xs py-1 w-24"
                 value={currentChapter.status}
@@ -1002,6 +1052,8 @@ const NovelEditor: React.FC = () => {
               onDelete={handleDeleteChapter}
               onReorder={handleReorderChapters}
               onChapterMoveToVolume={handleChapterMove}
+              onTagAdd={handleChapterTagAdd}
+              onTagRemove={handleChapterTagRemove}
             />
           </div>
         )}
@@ -1149,6 +1201,7 @@ const NovelEditor: React.FC = () => {
               />
               <CharacterRelationshipGraph
                 characters={novel.characters}
+                chapters={novel.chapters.map((ch) => ({ id: ch.id, title: ch.title }))}
                 onCharacterSelect={() => {
                   if (novel.chapters.length > 0) {
                     setCurrentChapter(novel.chapters[0].id);
@@ -1169,6 +1222,10 @@ const NovelEditor: React.FC = () => {
                     const relationships = (character.relationships || []).filter((r) => r.targetCharacterId !== targetId);
                     useNovelStore.getState().updateCharacter(novelId, characterId, { relationships });
                   }
+                }}
+                onCharacterArcUpdate={(characterId, arc) => {
+                  if (!novelId) return;
+                  useNovelStore.getState().updateCharacter(novelId, characterId, { characterArc: arc });
                 }}
               />
             </div>

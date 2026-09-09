@@ -24,6 +24,22 @@ export interface Relationship {
   description?: string;
 }
 
+export type ArcNodeType = 'turning_point' | 'growth' | 'setback' | 'revelation' | 'decision' | 'climax' | 'resolution';
+
+export interface CharacterArcNode {
+  id: string;
+  title: string;
+  description: string;
+  arcType: ArcNodeType;
+  chapterId?: string;
+  order: number;
+  createdAt: string;
+}
+
+export interface CharacterArc {
+  nodes: CharacterArcNode[];
+}
+
 export interface Character {
   id: string;
   novelId: string;
@@ -39,8 +55,29 @@ export interface Character {
   relationships: Relationship[];
   avatar: string;
   notes: string;
+  characterArc?: CharacterArc;
   createdAt: Date;
 }
+
+export const ARC_NODE_TYPES: Record<ArcNodeType, string> = {
+  turning_point: '转折点',
+  growth: '成长',
+  setback: '挫折',
+  revelation: '领悟',
+  decision: '抉择',
+  climax: '高潮',
+  resolution: '结局',
+};
+
+export const ARC_NODE_COLORS: Record<ArcNodeType, string> = {
+  turning_point: '#f59e0b',
+  growth: '#10b981',
+  setback: '#ef4444',
+  revelation: '#8b5cf6',
+  decision: '#3b82f6',
+  climax: '#ec4899',
+  resolution: '#14b8a6',
+};
 
 export interface WorldBuilding {
   id: string;
