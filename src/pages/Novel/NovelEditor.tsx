@@ -43,6 +43,12 @@ import type { Volume } from '../../types/novel';
 
 type ViewMode = 'write' | 'outline' | 'characters' | 'world' | 'novelInfo' | 'stats' | 'tags' | 'inspirations' | 'volumes' | 'analytics' | 'skills';
 
+interface SelectionRange {
+  start: number;
+  end: number;
+  text: string;
+}
+
 const MAX_HISTORY = 50;
 const HISTORY_DEBOUNCE_MS = 500;
 const AUTO_SAVE_DEBOUNCE_MS = 1000;
@@ -72,6 +78,7 @@ const NovelEditor: React.FC = () => {
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved');
   const [showStats, setShowStats] = useState(false);
   const [selectedThinkTankMemberId, setSelectedThinkTankMemberId] = useState<string | null>(null);
+  const [selectionRange, setSelectionRange] = useState<SelectionRange | null>(null);
 
   const [contentHistory, setContentHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
@@ -424,7 +431,6 @@ const NovelEditor: React.FC = () => {
 
   const handleAIAssist = async (
     type: 'continue' | 'polish' | 'expand' | 'suggest',
-    selectedText?: string,
     params?: AIParams,
     memberId?: string | null
   ) => {
@@ -475,21 +481,21 @@ const NovelEditor: React.FC = () => {
           );
           break;
         case 'polish':
-          if (!selectedText) {
+          if (!selectionRange) {
             toast.addToast({ type: 'warning', message: '请先选择要润色的文本' });
             return null;
           }
-          result = await aiService.polishText(selectedText, params?.continue.style);
+          result = await aiService.polishText(selectionRange.text, params?.continue.style);
           break;
         case 'expand':
-          if (!selectedText) {
+          if (!selectionRange) {
             toast.addToast({ type: 'warning', message: '请先选择要扩写的文本' });
             return null;
           }
-          result = await aiService.expandText(selectedText, params?.continue.direction);
+          result = await aiService.expandText(selectionRange.text, params?.continue.direction);
           break;
         case 'suggest':
-          result = await aiService.generatePlotSuggestions(novel.chapters, novel.synopsis);
+          result = await aiService.generatePlotSuggestions(currentChapter, novel.synopsis);
           break;
       }
 
@@ -497,7 +503,7 @@ const NovelEditor: React.FC = () => {
         const historyItem: AIHistoryItem = {
           id: `ai_${Date.now()}`,
           type,
-          input: selectedText || currentChapter.content.slice(-500),
+          input: selectionRange?.text || currentChapter.content.slice(-500),
           output: Array.isArray(result) ? result.join('\n') : result,
           params: params || {
             continue: { length: 'medium', style: 'original', direction: '', temperature: 0.7 },
@@ -521,6 +527,10 @@ const NovelEditor: React.FC = () => {
       return null;
     }
   };
+
+  const handleSelectionChange = useCallback((range: SelectionRange | null) => {
+    setSelectionRange(range);
+  }, []);
 
   const handleClearHistory = useCallback(() => {
     setAiHistory([]);
@@ -1009,6 +1019,7 @@ const NovelEditor: React.FC = () => {
                   saveStatus={saveStatus}
                   onUndo={handleUndo}
                   onRedo={handleRedo}
+                  onSelectionChange={handleSelectionChange}
                   canUndo={historyIndex > 0}
                   canRedo={historyIndex < contentHistory.length - 1}
                 />
@@ -1225,14 +1236,25 @@ const NovelEditor: React.FC = () => {
           <AIAssistantPanel
             onAssist={handleAIAssist}
             onInsertText={(text) => {
-              const newContent = localContentRef.current + text;
-              handleContentChange(newContent);
+              if (selectionRange) {
+                const content = localContentRef.current;
+                const newContent =
+                  content.substring(0, selectionRange.start) +
+                  text +
+                  content.substring(selectionRange.end);
+                handleContentChange(newContent);
+                setSelectionRange(null);
+              } else {
+                const newContent = localContentRef.current + text;
+                handleContentChange(newContent);
+              }
             }}
             history={aiHistory}
             onClearHistory={handleClearHistory}
             onToggleFavorite={handleToggleFavorite}
             selectedMemberId={selectedThinkTankMemberId}
             onSelectedMemberChange={setSelectedThinkTankMemberId}
+            selectedText={selectionRange?.text || ''}
           />
         )}
 

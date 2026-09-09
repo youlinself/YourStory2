@@ -22,7 +22,7 @@ const DEFAULT_CONFIG: Partial<NovelAIServiceConfig> = {
   model: 'gpt-4o-mini',
   baseUrl: 'https://api.openai.com/v1',
   temperature: 0.7,
-  maxOutputTokens: 3000,
+  maxOutputTokens: 16000,
 };
 
 class NovelAIService {
@@ -46,9 +46,10 @@ class NovelAIService {
 
   private async sendRequest(
     messages: Array<{ role: string; content: string }>,
+    maxTokens?: number,
   ): Promise<string> {
     const vendorLimit = getMaxOutputTokens(this.vendor);
-    const maxTokens = Math.min(this.maxOutputTokens, vendorLimit);
+    const maxTokensValue = Math.min(maxTokens ?? this.maxOutputTokens, vendorLimit);
     const activeModel = this.customModelName || this.model;
 
     try {
@@ -61,7 +62,7 @@ class NovelAIService {
         body: JSON.stringify({
           model: activeModel,
           messages,
-          max_tokens: maxTokens,
+          max_tokens: maxTokensValue,
           temperature: this.temperature,
         }),
       });
@@ -174,6 +175,12 @@ class NovelAIService {
       ? `世界设定：${worldBuilding.setting}\n时代：${worldBuilding.era}\n地点：${worldBuilding.location}\n力量体系：${worldBuilding.magicSystem || '无'}`
       : '无特殊世界设定';
 
+    const MAX_CONTENT_LENGTH = 6000;
+    let chapterContent = chapter.content || '';
+    if (chapterContent.length > MAX_CONTENT_LENGTH) {
+      chapterContent = await this.compressChapterContent(chapterContent);
+    }
+
     const messages = [
       {
         role: 'system',
@@ -199,7 +206,7 @@ ${worldInfo}
         content: `【章节标题】${chapter.title}
 
 【前文内容】
-${chapter.content.slice(-2000) || '（这是章节开头，请开始写作）'}
+${chapterContent || '（这是章节开头，请开始写作）'}
 
 请续写接下来的内容：`,
       },
@@ -282,18 +289,23 @@ ${direction ? `【扩写方向】${direction}` : ''}
   }
 
   async generatePlotSuggestions(
-    chapters: NovelChapter[],
+    currentChapter: NovelChapter,
     synopsis: string,
   ): Promise<string[]> {
-    const chapterSummary = chapters
-      .slice(-5)
-      .map((ch, i) => `第${i + 1}章《${ch.title}》：${ch.summary || ch.content.slice(0, 100)}`)
-      .join('\n');
+    const MAX_CONTENT_LENGTH = 6000;
+
+    let chapterContent = currentChapter.content || '';
+
+    if (chapterContent.length > MAX_CONTENT_LENGTH) {
+      chapterContent = await this.compressChapterContent(chapterContent);
+    }
+
+    const chapterSummary = `《${currentChapter.title}》\n${currentChapter.summary || '暂无摘要'}\n\n【章节内容】\n${chapterContent}`;
 
     const messages = [
       {
         role: 'system',
-        content: `你是一位富有创意的小说策划。请根据已有情节，提供3-5个合理的后续情节发展方向。
+        content: `你是一位富有创意的小说策划。请根据当前章节内容，提供3-5个合理的后续情节发展方向。
 
 【输出格式】
 请输出JSON格式，包含一个suggestions数组，每个元素是一个情节建议字符串。
@@ -304,10 +316,10 @@ ${direction ? `【扩写方向】${direction}` : ''}
         content: `【作品简介】
 ${synopsis || '暂无简介'}
 
-【已有章节】
-${chapterSummary || '暂无已有章节'}
+【当前章节】
+${chapterSummary}
 
-请提供后续情节建议：`,
+请基于当前章节的情节发展，提供后续情节建议：`,
       },
     ];
 
@@ -321,6 +333,36 @@ ${chapterSummary || '暂无已有章节'}
       return [];
     } catch {
       return [];
+    }
+  }
+
+  private async compressChapterContent(content: string): Promise<string> {
+    const COMPRESS_MAX_TOKENS = 16000;
+    const messages = [
+      {
+        role: 'system',
+        content: `你是一位专业的内容编辑。请将以下章节内容压缩到6000字以内，保留关键情节、人物对话和重要描写，去除冗余的修饰和重复内容。
+
+【输出要求】
+- 保持原文的叙事风格和语气
+- 保留关键情节转折点
+- 保留重要的人物对话
+- 压缩环境描写和心理描写
+- 使用简洁的语言概括次要情节`,
+      },
+      {
+        role: 'user',
+        content: `请将以下内容压缩到6000字以内：
+
+${content}`,
+      },
+    ];
+
+    try {
+      const response = await this.sendRequest(messages, COMPRESS_MAX_TOKENS);
+      return response || content.slice(0, 6000);
+    } catch {
+      return content.slice(0, 6000);
     }
   }
 

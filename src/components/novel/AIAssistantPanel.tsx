@@ -6,7 +6,6 @@ import ThinkTankSelector from './ThinkTankSelector';
 interface AIAssistantPanelProps {
   onAssist: (
     type: 'continue' | 'polish' | 'expand' | 'suggest',
-    selectedText?: string,
     params?: AIParams,
     memberId?: string | null
   ) => Promise<string | string[] | null>;
@@ -16,6 +15,7 @@ interface AIAssistantPanelProps {
   onToggleFavorite: (id: string) => void;
   selectedMemberId?: string | null;
   onSelectedMemberChange?: (memberId: string | null) => void;
+  selectedText?: string;
 }
 
 type AssistantTab = 'write' | 'inspire' | 'name' | 'history';
@@ -28,6 +28,7 @@ const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
   onToggleFavorite,
   selectedMemberId = null,
   onSelectedMemberChange,
+  selectedText = '',
 }) => {
   const [activeTab, setActiveTab] = useState<AssistantTab>('write');
   const [isLoading, setIsLoading] = useState(false);
@@ -45,7 +46,7 @@ const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
       setSuggestions([]);
 
       try {
-        const response = await onAssist(type, undefined, params, selectedMemberId);
+        const response = await onAssist(type, params, selectedMemberId);
         if (Array.isArray(response)) {
           setSuggestions(response);
         } else if (typeof response === 'string') {
@@ -65,19 +66,6 @@ const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
       await handleAssist('continue');
     }
   }, [activeTab, handleAssist]);
-
-  const handleInsertPartial = useCallback(
-    (text: string) => {
-      const selection = window.getSelection();
-      if (selection && selection.toString()) {
-        onInsertText(selection.toString());
-      } else {
-        onInsertText(text);
-      }
-      setResult('');
-    },
-    [onInsertText]
-  );
 
   const handleNameGenerate = async () => {
     if (!nameDescription.trim()) return;
@@ -268,8 +256,9 @@ const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
         </button>
         <button
           className="p-2 rounded-lg bg-bg-subtle hover:bg-brand/10 hover:text-brand transition-colors text-center"
-          onClick={() => handleAssist('polish')}
-          disabled={isLoading}
+          onClick={() => selectedText && handleAssist('polish')}
+          disabled={isLoading || !selectedText}
+          title={selectedText ? '润色选中文本' : '请先选择要润色的文本'}
         >
           <svg className="w-5 h-5 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
@@ -278,8 +267,9 @@ const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
         </button>
         <button
           className="p-2 rounded-lg bg-bg-subtle hover:bg-brand/10 hover:text-brand transition-colors text-center"
-          onClick={() => handleAssist('expand')}
-          disabled={isLoading}
+          onClick={() => selectedText && handleAssist('expand')}
+          disabled={isLoading || !selectedText}
+          title={selectedText ? '扩写选中文本' : '请先选择要扩写的文本'}
         >
           <svg className="w-5 h-5 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" />
@@ -314,12 +304,6 @@ const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
         <div className="p-3 rounded-lg bg-bg-subtle border border-border-subtle">
           <p className="text-xs text-ink leading-relaxed whitespace-pre-wrap">{result}</p>
           <div className="flex flex-wrap gap-2 mt-3">
-            <button
-              className="btn btn-primary btn-sm text-xs flex-1"
-              onClick={() => handleInsertPartial(result)}
-            >
-              全部插入
-            </button>
             <button
               className="btn btn-ghost btn-sm text-xs"
               onClick={handleRegenerate}

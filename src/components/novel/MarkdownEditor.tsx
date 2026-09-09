@@ -2,6 +2,12 @@ import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import MDEditor from '@uiw/react-md-editor';
 import type { EditorMode, SaveStatus } from '../../types';
 
+interface SelectionRange {
+  start: number;
+  end: number;
+  text: string;
+}
+
 interface MarkdownEditorProps {
   initialContent: string;
   onChange: (value: string) => void;
@@ -12,6 +18,7 @@ interface MarkdownEditorProps {
   onRedo?: () => void;
   onFind?: () => void;
   onReplace?: () => void;
+  onSelectionChange?: (range: SelectionRange | null) => void;
   canUndo?: boolean;
   canRedo?: boolean;
 }
@@ -26,6 +33,7 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
   onRedo,
   onFind,
   onReplace,
+  onSelectionChange,
   canUndo = false,
   canRedo = false,
 }) => {
@@ -33,6 +41,7 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
   const [showFindReplace, setShowFindReplace] = useState(false);
   const [findText, setFindText] = useState('');
   const [replaceText, setReplaceText] = useState('');
+  const [currentSelection, setCurrentSelection] = useState<SelectionRange | null>(null);
 
   const contentRef = useRef(initialContent);
   const isExternalUpdate = useRef(false);
@@ -48,6 +57,43 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
       }, 0);
     }
   }, [initialContent]);
+
+  useEffect(() => {
+    if (!onSelectionChange) return;
+
+    const handleSelectionChange = () => {
+      const textarea = textareaRef.current || document.querySelector('textarea') as HTMLTextAreaElement | null;
+      if (!textarea) return;
+
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const selected = textarea.value.substring(start, end);
+
+      if (selected.length > 0) {
+        const range = { start, end, text: selected };
+        setCurrentSelection(range);
+        onSelectionChange(range);
+      } else {
+        setCurrentSelection(null);
+        onSelectionChange(null);
+      }
+    };
+
+    document.addEventListener('selectionchange', handleSelectionChange);
+    const textarea = textareaRef.current || document.querySelector('textarea');
+    if (textarea) {
+      textarea.addEventListener('mouseup', handleSelectionChange);
+      textarea.addEventListener('keyup', handleSelectionChange);
+    }
+
+    return () => {
+      document.removeEventListener('selectionchange', handleSelectionChange);
+      if (textarea) {
+        textarea.removeEventListener('mouseup', handleSelectionChange);
+        textarea.removeEventListener('keyup', handleSelectionChange);
+      }
+    };
+  }, [onSelectionChange]);
 
   const handleLocalChange = useCallback(
     (value: string) => {
@@ -257,10 +303,43 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
     </div>
   );
 
+  const renderSelectionBar = () => {
+    if (!currentSelection) return null;
+
+    const previewText = currentSelection.text.length > 50
+      ? currentSelection.text.slice(0, 50) + '...'
+      : currentSelection.text;
+
+    return (
+      <div className="flex items-center gap-3 px-3 py-2 border-b border-brand/20 bg-brand/5">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <svg className="w-4 h-4 text-brand flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15.042 21.672L13.684 16.6m0 0l-2.51 2.225.569-9.47 5.227 7.917-3.286-.672zM12 2.25V4.5m5.834.166l-1.591 1.591M20.25 10.5H18M7.757 14.743l-1.59 1.59M6 10.5H3.75m4.007-4.243l-1.59-1.59" />
+          </svg>
+          <span className="text-xs text-brand font-medium">已选择 {currentSelection.text.length} 字</span>
+          <span className="text-xs text-ink-muted truncate">{previewText}</span>
+        </div>
+        <button
+          className="p-1 rounded hover:bg-bg-base transition-colors text-ink-muted hover:text-ink"
+          onClick={() => {
+            setCurrentSelection(null);
+            onSelectionChange?.(null);
+          }}
+          title="取消选择"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+    );
+  };
+
   if (mode === 'markdown' || mode === 'split') {
     return (
       <div className="flex-1 flex flex-col overflow-hidden" onKeyDown={handleKeyDown}>
         {renderToolbar()}
+        {renderSelectionBar()}
         {showFindReplace && renderFindReplace()}
         {mode === 'split' ? (
           <div className="flex-1 flex overflow-hidden">
@@ -308,6 +387,7 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
   return (
     <div className="flex-1 flex flex-col overflow-hidden" onKeyDown={handleKeyDown}>
       {renderToolbar()}
+      {renderSelectionBar()}
       {showFindReplace && renderFindReplace()}
       <textarea
         ref={textareaRef}
