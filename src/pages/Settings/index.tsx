@@ -918,6 +918,16 @@ const AddMemberModal: React.FC<AddMemberModalProps> = ({ onClose, onAdd }) => {
               </div>
 
               <div>
+                <label className="text-xs text-ink-muted mb-1 block">Base URL</label>
+                <input
+                  className="input w-full"
+                  placeholder="https://api.example.com/v1"
+                  value={config.baseUrl}
+                  onChange={(e) => setConfig({ ...config, baseUrl: e.target.value })}
+                />
+              </div>
+
+              <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="text-xs text-ink-muted">温度参数</label>
                   <span className="text-xs text-ink">{config.temperature.toFixed(1)}</span>
