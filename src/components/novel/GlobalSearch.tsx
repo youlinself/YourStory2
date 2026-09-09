@@ -20,6 +20,7 @@ interface GlobalSearchProps {
   characters: Character[];
   onChapterSelect: (chapterId: string) => void;
   onCharacterSelect: (characterId: string) => void;
+  onClose: () => void;
 }
 
 const GlobalSearch: React.FC<GlobalSearchProps> = ({
@@ -27,6 +28,7 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({
   characters,
   onChapterSelect,
   onCharacterSelect,
+  onClose,
 }) => {
   const [query, setQuery] = useState('');
   const [scope, setScope] = useState<SearchScope>('all');
@@ -268,10 +270,7 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({
           )}
           <button
             className="text-ink-faint hover:text-ink"
-            onClick={() => {
-              setQuery('');
-              setResults([]);
-            }}
+            onClick={onClose}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
