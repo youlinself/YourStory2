@@ -36,6 +36,7 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
 
   const contentRef = useRef(initialContent);
   const isExternalUpdate = useRef(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (initialContent !== contentRef.current) {
@@ -57,8 +58,34 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
     [onChange]
   );
 
+  const insertIndent = useCallback(() => {
+    const textarea = textareaRef.current || document.querySelector('textarea') as HTMLTextAreaElement | null;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const indent = '  ';
+
+    const newContent =
+      localContent.substring(0, start) + indent + localContent.substring(end);
+
+    setLocalContent(newContent);
+    contentRef.current = newContent;
+    onChange(newContent);
+
+    requestAnimationFrame(() => {
+      textarea.selectionStart = start + indent.length;
+      textarea.selectionEnd = start + indent.length;
+    });
+  }, [localContent, onChange]);
+
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        insertIndent();
+        return;
+      }
       if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
         e.preventDefault();
         if (e.shiftKey) {
@@ -82,7 +109,7 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
         onReplace?.();
       }
     },
-    [onUndo, onRedo, onFind, onReplace]
+    [onUndo, onRedo, onFind, onReplace, insertIndent]
   );
 
   const handleReplaceAll = useCallback(() => {
@@ -283,6 +310,7 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
       {renderToolbar()}
       {showFindReplace && renderFindReplace()}
       <textarea
+        ref={textareaRef}
         className="flex-1 w-full resize-none bg-transparent text-base text-ink leading-relaxed focus:outline-none p-6"
         placeholder={placeholder}
         value={localContent}
