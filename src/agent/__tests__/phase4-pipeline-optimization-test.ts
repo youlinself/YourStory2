@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Phase 4 管道与优化 - 逻辑验证脚本
  * 运行方式: npx tsx src/agent/__tests__/phase4-pipeline-optimization-test.ts
  */
@@ -17,7 +17,11 @@ import {
 import { TokenBudgetManager } from '../optimization/TokenBudget'
 import { ContextCompressor } from '../optimization/ContextCompressor'
 import { RetryPolicy } from '../optimization/RetryPolicy'
-import { EventEmitter } from '../events/EventEmitter'
+import { EventEmitter, SessionLog, MemoryEventStore } from '../events'
+
+function createEventEmitter(): EventEmitter {
+  return new EventEmitter(new SessionLog(), new MemoryEventStore())
+}
 import type { PipelineContext } from '../pipeline/types'
 import type { ToolDefinition, ToolResult } from '../tools/ToolTypes'
 import type { LLMAdapter } from '../llm/LLMAdapter'
@@ -104,7 +108,7 @@ const createPipelineContext = (overrides: Partial<PipelineContext> = {}): Pipeli
 // ============================================================
 async function testExtractionPipeline(): Promise<void> {
   await runAsync('ExtractionPipeline - 基本执行', async () => {
-    const events = new EventEmitter()
+    const events = createEventEmitter()
     const pipeline = new ExtractionPipeline(events)
     const tool = createMockTool('test_tool', { success: true, data: { output: 'result' } })
     const context = createPipelineContext()
@@ -117,7 +121,7 @@ async function testExtractionPipeline(): Promise<void> {
   })
 
   await runAsync('ExtractionPipeline - pre-hook 拒绝执行', async () => {
-    const events = new EventEmitter()
+    const events = createEventEmitter()
     const pipeline = new ExtractionPipeline(events)
 
     pipeline.addPreHook(async () => ({ kind: 'deny', reason: '测试拒绝' }))
@@ -133,7 +137,7 @@ async function testExtractionPipeline(): Promise<void> {
   })
 
   await runAsync('ExtractionPipeline - post-hook 阻止结果', async () => {
-    const events = new EventEmitter()
+    const events = createEventEmitter()
     const pipeline = new ExtractionPipeline(events)
 
     pipeline.addPostHook(async (_ctx, _result, _next) => ({
@@ -152,7 +156,7 @@ async function testExtractionPipeline(): Promise<void> {
   })
 
   await runAsync('ExtractionPipeline - hook 链式执行', async () => {
-    const events = new EventEmitter()
+    const events = createEventEmitter()
     const pipeline = new ExtractionPipeline(events)
     const executionOrder: string[] = []
 
@@ -175,7 +179,7 @@ async function testExtractionPipeline(): Promise<void> {
   })
 
   await runAsync('ExtractionPipeline - 工具执行异常', async () => {
-    const events = new EventEmitter()
+    const events = createEventEmitter()
     const pipeline = new ExtractionPipeline(events)
 
     const errorTool: ToolDefinition = {
@@ -195,7 +199,7 @@ async function testExtractionPipeline(): Promise<void> {
   })
 
   await runAsync('ExtractionPipeline - 注销 hook', async () => {
-    const events = new EventEmitter()
+    const events = createEventEmitter()
     const pipeline = new ExtractionPipeline(events)
 
     const hook = async () => ({ kind: 'deny' as const, reason: '阻止' })
@@ -208,7 +212,7 @@ async function testExtractionPipeline(): Promise<void> {
   })
 
   await runAsync('ExtractionPipeline - 清空所有 hook', async () => {
-    const events = new EventEmitter()
+    const events = createEventEmitter()
     const pipeline = new ExtractionPipeline(events)
 
     pipeline.addPreHook(async (_ctx, next) => next())
@@ -438,7 +442,7 @@ async function testContextCompressor(): Promise<void> {
       { role: 'user', content: '你好', timestamp: Date.now() }
     ]
 
-    assertEqual(compressor.shouldCompress(history, 20, 50000), false, '短历史不需要压缩')
+    assertEqual(compressor.shouldCompressLegacy(history, 20, 50000), false, '短历史不需要压缩')
   })
 
   await runAsync('ContextCompressor - 需要压缩（轮次超限）', async () => {
@@ -449,7 +453,7 @@ async function testContextCompressor(): Promise<void> {
       timestamp: Date.now() + i
     }))
 
-    assertEqual(compressor.shouldCompress(history, 20, 50000), true, '超过 20 轮需要压缩')
+    assertEqual(compressor.shouldCompressLegacy(history, 20, 50000), true, '超过 20 轮需要压缩')
   })
 
   await runAsync('ContextCompressor - 执行压缩', async () => {

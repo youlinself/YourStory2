@@ -3,36 +3,24 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   Sparkles,
   Send,
-  Users,
-  TreePine,
-  Cake,
-  School,
   Lightbulb,
   Save,
   Download,
   Settings,
-  Clock,
-  PencilLine,
-  MessagesSquare,
-  ChevronDown,
-  ChevronRight,
   BookOpen,
   PenLine,
   CheckCircle,
-  Code,
-  BookOpenText,
-  Zap,
+  PanelRightOpen,
+  PanelRightClose,
 } from 'lucide-react';
 import { useAIStore, useAutobiographyStore } from '../../stores';
 import { useAgentStore } from '../../stores/agentStore';
 import ExportService from '../../services/export/ExportService';
 import { generateId } from '../../utils';
-import { useChatScroll, useRunTimer } from '../../hooks/useChatScroll';
 import { useToast } from '../../components/common';
-import { SkillSwitcher } from '../../components/dialogue/SkillSwitcher';
-import { CommandPanel } from '../../components/dialogue/CommandPanel';
-import { EventLogPanel } from '../../components/debug/EventLogPanel';
-import MDEditor from '@uiw/react-md-editor';
+import ChatPanel from '../../components/dialogue/ChatPanel';
+import SuggestionBar from '../../components/dialogue/SuggestionBar';
+import SidePanel from '../../components/dialogue/SidePanel';
 import Modal from '../../components/ui/Modal';
 import '../../styles/dialogue.css';
 
@@ -63,15 +51,17 @@ const DialogueAgent: React.FC = () => {
 
   const [inputValue, setInputValue] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false);
-  const [showDebugPanel, setShowDebugPanel] = useState(false);
+  const [isRightPanelOpen, setIsRightPanelOpen] = useState(true);
   const [showCreateChapterModal, setShowCreateChapterModal] = useState(false);
   const [newChapterTitle, setNewChapterTitle] = useState('');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [pendingNavigationPath, setPendingNavigationPath] = useState<string | null>(null);
+  const [sidePanelMode, setSidePanelMode] = useState<'outline' | 'draft'>('outline');
+  const [suggestions, setSuggestions] = useState<Array<{ id: string; text: string; type: string }>>([]);
+  const [isGeneratingSuggestions, setIsGeneratingSuggestions] = useState(false);
 
-  const { loadSettings } = useAIStore();
+  const { loadSettings, apiKey, model, baseUrl, vendor, temperature, customModelName } = useAIStore();
 
   const {
     agent,
@@ -79,7 +69,6 @@ const DialogueAgent: React.FC = () => {
     isLoading,
     error,
     activeSkills,
-    pendingToolCalls,
     initialize,
     createSession,
     resumeSession,
@@ -91,44 +80,21 @@ const DialogueAgent: React.FC = () => {
 
   const {
     autobiography,
-    isLoading: isAutobiographyLoading,
     load: loadAutobiography,
     updateChapterDraft,
+    createChapter,
   } = useAutobiographyStore();
 
   const currentChapter = autobiography?.chapters.find((ch) => ch.id === chapterId) || null;
 
-  const messages = currentSession?.history?.map(turn => ({
+  const messages = currentSession?.history?.map((turn) => ({
     id: generateId(),
     content: turn.content,
     isUser: turn.role === 'user',
     timestamp: new Date(turn.timestamp),
     type: 'text' as const,
+    extractedContent: undefined,
   })) || [];
-
-  const { listRef, columnRef, atBottom, scrollToBottom } = useChatScroll(messages);
-  const { elapsedMs, formatDuration } = useRunTimer(isLoading ? Date.now() : null);
-
-  const topicItems = [
-    { icon: TreePine, label: '老家的环境', color: 'sage', description: '那条小河，那棵老槐树，那个宁静的小镇' },
-    { icon: Users, label: '童年的玩伴们', color: 'gold', description: '一起长大的朋友，那些无忧无虑的时光' },
-    { icon: Cake, label: '难忘的生日', color: 'brand', description: '那些特别的庆祝时刻，收到过的礼物' },
-    { icon: School, label: '小学的时光', color: 'sage', description: '校园里的记忆，第一份友谊' },
-  ];
-
-  const outlineItems = autobiography?.chapters?.map((ch) => ({
-    id: ch.id,
-    title: ch.title,
-    status: ch.status === 'completed' ? '已完成' : ch.status === 'in_progress' ? '进行中' : ch.status === 'draft' ? '草稿' : '待探索',
-    words: ch.content?.length || 0,
-    color: ch.status === 'completed' ? 'sage' : ch.status === 'in_progress' ? 'brand' : 'muted',
-  })) || [];
-
-  const suggestionChips = [
-    { color: 'sage', text: '聊聊老家的环境', icon: TreePine },
-    { color: 'gold', text: '童年的玩伴们', icon: Users },
-    { color: 'brand', text: '难忘的生日', icon: Cake },
-  ];
 
   useEffect(() => {
     loadSettings();
@@ -162,6 +128,31 @@ const DialogueAgent: React.FC = () => {
       setHasUnsavedChanges(true);
     }
   }, [currentSession?.history.length]);
+
+  useEffect(() => {
+    if (!currentSession || currentSession.history.length === 0) return;
+    if (currentSession.history.length % 3 !== 0) return;
+
+    const generateSuggestions = async () => {
+      setIsGeneratingSuggestions(true);
+      try {
+        const { default: AIService } = await import('../../services/ai/AIService');
+        const aiService = new AIService({ apiKey, model, baseUrl, vendor, temperature, customModelName });
+        const result = await aiService.generateSuggestions(
+          autobiography || null,
+          chapterId || null,
+          messages,
+        );
+        setSuggestions(result);
+      } catch (err) {
+        console.error('生成建议失败:', err);
+      } finally {
+        setIsGeneratingSuggestions(false);
+      }
+    };
+
+    generateSuggestions();
+  }, [currentSession?.history.length, apiKey, model, baseUrl, vendor, temperature, customModelName, autobiography, chapterId, messages]);
 
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
@@ -217,18 +208,18 @@ const DialogueAgent: React.FC = () => {
 
     try {
       await handleMessage(content, { generateFollowUpQuestions: false });
+      setSuggestions([]);
     } catch (error) {
       console.error('发送消息错误:', error);
       addToast({ type: 'error', message: '发送消息失败，请重试' });
     }
   };
 
-  const handleTopicClick = (label: string) => {
-    setInputValue(`我想先聊聊${label}`);
-  };
-
-  const handleSuggestionClick = (text: string) => {
-    setInputValue(text);
+  const handleSuggestionClick = (suggestion: { text: string }) => {
+    setInputValue(suggestion.text);
+    if (textareaRef.current) {
+      textareaRef.current.focus();
+    }
   };
 
   const handleSaveDraft = async () => {
@@ -267,10 +258,6 @@ const DialogueAgent: React.FC = () => {
     addToast({ type: 'success', message: '章节已导出' });
   };
 
-  const handleDialogueSettings = () => {
-    handleNavigateWithCheck('/settings');
-  };
-
   const handleStartChapter = () => {
     setNewChapterTitle('');
     setShowCreateChapterModal(true);
@@ -283,7 +270,7 @@ const DialogueAgent: React.FC = () => {
       await useAutobiographyStore.getState().create();
       autobiographyData = useAutobiographyStore.getState().autobiography;
     }
-    const newChapterId = await useAutobiographyStore.getState().createChapter(newChapterTitle.trim());
+    const newChapterId = await createChapter(newChapterTitle.trim());
     if (newChapterId) {
       setShowCreateChapterModal(false);
       setNewChapterTitle('');
@@ -291,8 +278,12 @@ const DialogueAgent: React.FC = () => {
     }
   };
 
-  const handleOutlineItemClick = (chapterId: string) => {
-    handleNavigateWithCheck(`/dialogue/${chapterId}`);
+  const handleSwitchChapter = (targetChapterId: string | null) => {
+    if (targetChapterId === null) {
+      navigate('/dialogue');
+    } else {
+      handleNavigateWithCheck(`/dialogue/${targetChapterId}`);
+    }
   };
 
   const handleApproveContent = async () => {
@@ -311,6 +302,26 @@ const DialogueAgent: React.FC = () => {
     } else {
       addToast({ type: 'warning', message: '暂无可确认的内容' });
     }
+  };
+
+  const handleGenerateSummary = async () => {
+    if (!currentSession || (!currentChapter?.content && !currentChapter?.draftContent)) {
+      addToast({ type: 'warning', message: '暂无可生成摘要的内容' });
+      return;
+    }
+    addToast({ type: 'info', message: '摘要生成功能开发中...' });
+  };
+
+  const handleApproveExtract = async (_messageId: string) => {
+    addToast({ type: 'success', message: '内容已确认写入' });
+  };
+
+  const handleRejectExtract = async (_messageId: string) => {
+    addToast({ type: 'info', message: '内容已丢弃' });
+  };
+
+  const handleEditExtract = async (_messageId: string, _editedContent: string) => {
+    addToast({ type: 'success', message: '内容已编辑' });
   };
 
   return (
@@ -339,17 +350,10 @@ const DialogueAgent: React.FC = () => {
           <div className="header-actions">
             <button
               className="icon-button"
-              title={showDebugPanel ? '隐藏调试面板' : '显示调试面板'}
-              onClick={() => setShowDebugPanel(!showDebugPanel)}
+              title={isRightPanelOpen ? '收起面板' : '展开面板'}
+              onClick={() => setIsRightPanelOpen(!isRightPanelOpen)}
             >
-              <Code size={18} strokeWidth={1.5} />
-            </button>
-            <button
-              className="icon-button"
-              title={rightPanelCollapsed ? '展开面板' : '收起面板'}
-              onClick={() => setRightPanelCollapsed(!rightPanelCollapsed)}
-            >
-              {rightPanelCollapsed ? <ChevronRight size={18} strokeWidth={1.5} /> : <ChevronDown size={18} strokeWidth={1.5} />}
+              {isRightPanelOpen ? <PanelRightClose size={18} strokeWidth={1.5} /> : <PanelRightOpen size={18} strokeWidth={1.5} />}
             </button>
           </div>
         </header>
@@ -361,111 +365,39 @@ const DialogueAgent: React.FC = () => {
           </div>
         )}
 
-        <div className="message-list" ref={listRef}>
-          <div ref={columnRef}>
-            {!currentSession?.history?.length && (
-              <div className="welcome-hero">
-                <div className="hero-icon">
-                  <BookOpen size={32} strokeWidth={1.5} className="text-brand" />
-                </div>
-                <h1 className="hero-title">开始你的故事创作之旅</h1>
-                <p className="hero-subtitle">
-                  Story 助手将引导你通过对话的方式，把珍贵的记忆一一记录下来
-                </p>
+        {!currentSession?.history?.length && (
+          <div className="welcome-hero">
+            <div className="hero-icon">
+              <BookOpen size={32} strokeWidth={1.5} className="text-brand" />
+            </div>
+            <h1 className="hero-title">开始你的故事创作之旅</h1>
+            <p className="hero-subtitle">
+              Story 助手将引导你通过对话的方式，把珍贵的记忆一一记录下来
+            </p>
 
-                <div className="topic-grid">
-                  {topicItems.map((topic, index) => (
-                    <button
-                      key={index}
-                      className={`topic-card topic-card-${topic.color}`}
-                      onClick={() => handleTopicClick(topic.label)}
-                    >
-                      <div className={`topic-icon-wrapper bg-${topic.color}-light`}>
-                        <topic.icon size={20} strokeWidth={1.5} className={`text-${topic.color}`} />
-                      </div>
-                      <span className="topic-label">{topic.label}</span>
-                      <p className="topic-description">{topic.description}</p>
-                    </button>
-                  ))}
-                </div>
-
-                <div className="hero-cta">
-                  <button className="btn btn-primary btn-lg" onClick={handleStartChapter}>
-                    <PenLine size={18} strokeWidth={2} />
-                    开始第一章 · 童年记忆
-                  </button>
-                  <p className="cta-hint">选择一个话题开始，或直接点击按钮开启创作</p>
-                </div>
-              </div>
-            )}
-
-            {messages.map((msg) => (
-              <div
-                key={msg.id}
-                className={`message-row ${msg.isUser ? 'message-row-user' : 'message-row-ai'}`}
-              >
-                {!msg.isUser && (
-                  <div className="avatar brand-gradient text-white">
-                    <Sparkles size={16} strokeWidth={1.5} />
-                  </div>
-                )}
-                <div className={`chat-bubble ${msg.isUser ? 'chat-bubble-user' : 'chat-bubble-ai'}`}>
-                  {msg.isUser ? (
-                    <p>{msg.content}</p>
-                  ) : (
-                    <div className="markdown-content">
-                      <MDEditor.Markdown source={msg.content} />
-                    </div>
-                  )}
-                  <span className="message-time">
-                    {new Date(msg.timestamp).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}
-                  </span>
-                </div>
-                {msg.isUser && (
-                  <div className="avatar avatar-user">
-                    <Users size={16} strokeWidth={1.5} />
-                  </div>
-                )}
-              </div>
-            ))}
-
-            {isLoading && (
-              <div className="message-row message-row-ai">
-                <div className="avatar brand-gradient text-white">
-                  <Sparkles size={16} strokeWidth={1.5} />
-                </div>
-                <div className="chat-bubble chat-bubble-ai">
-                  <div className="typing-indicator">
-                    <span className="typing-dot" />
-                    <span className="typing-dot" />
-                    <span className="typing-dot" />
-                  </div>
-                </div>
-              </div>
-            )}
+            <div className="hero-cta">
+              <button className="btn btn-primary btn-lg" onClick={handleStartChapter}>
+                <PenLine size={18} strokeWidth={2} />
+                开始第一章 · 童年记忆
+              </button>
+              <p className="cta-hint">或直接输入你想记录的故事</p>
+            </div>
           </div>
+        )}
 
-          {!atBottom && (
-            <button className="scroll-to-bottom" onClick={scrollToBottom}>
-              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 13.5L12 21m0 0l-7.5-7.5M12 21V3" />
-              </svg>
-            </button>
-          )}
-        </div>
+        <ChatPanel
+          messages={messages}
+          isLoading={isLoading}
+          onApproveExtract={handleApproveExtract}
+          onRejectExtract={handleRejectExtract}
+          onEditExtract={handleEditExtract}
+        />
 
-        <div className="suggestion-chips-row">
-          {suggestionChips.map((chip, index) => (
-            <button
-              key={index}
-              className="chip"
-              onClick={() => handleSuggestionClick(chip.text)}
-            >
-              <chip.icon size={14} strokeWidth={1.5} className={`text-${chip.color}`} style={{ marginRight: 6 }} />
-              {chip.text}
-            </button>
-          ))}
-        </div>
+        <SuggestionBar
+          suggestions={suggestions as any}
+          onSuggestionClick={handleSuggestionClick}
+          isGenerating={isGeneratingSuggestions}
+        />
 
         <div className="composer-area">
           <div className="composer-input-wrap">
@@ -475,7 +407,7 @@ const DialogueAgent: React.FC = () => {
             <textarea
               ref={textareaRef}
               className="composer-textarea"
-              placeholder="关于这个问题，你还想补充些什么呢？"
+              placeholder="分享你的故事，AI 会帮你整理成自传..."
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={(e) => {
@@ -500,126 +432,47 @@ const DialogueAgent: React.FC = () => {
               按 <kbd>Enter</kbd> 发送，<kbd>Shift + Enter</kbd> 换行
             </p>
             <span className="char-count">
-              已记录 {messages.filter(m => !m.isUser).reduce((sum, m) => sum + m.content.length, 0).toLocaleString()} 字
+              已记录 {messages.filter((m) => !m.isUser).reduce((sum, m) => sum + m.content.length, 0).toLocaleString()} 字
               {currentChapter ? ` · 本章 ${currentChapter.content?.length || 0} 字` : ''}
             </span>
           </div>
         </div>
       </div>
 
-      {!rightPanelCollapsed && (
+      {isRightPanelOpen && (
         <aside className="right-panel">
-          <section className="panel-section">
-            <h3 className="panel-section-title">技能选择</h3>
-            <SkillSwitcher />
-          </section>
-
-          <section className="panel-section">
-            <h3 className="panel-section-title">章节大纲</h3>
-            <div className="card">
-              {isAutobiographyLoading ? (
-                <div className="outline-loading">
-                  <div className="loading-spinner" />
-                  <span>加载中...</span>
-                </div>
-              ) : outlineItems.length === 0 ? (
-                <div className="outline-empty">
-                  <BookOpenText size={24} strokeWidth={1.5} className="text-muted" />
-                  <p>暂无章节</p>
-                  <p className="text-muted text-sm">开始对话后，系统会自动为你创建章节</p>
-                </div>
-              ) : (
-                outlineItems.map((item, index) => (
-                  <div
-                    key={item.id || index}
-                    className={`outline-item ${item.status === '进行中' ? 'outline-item-active' : ''}`}
-                    onClick={() => item.id && handleOutlineItemClick(item.id)}
-                    style={{ cursor: item.id ? 'pointer' : 'default' }}
-                  >
-                    <div className={`timeline-dot bg-${item.color}`} />
-                    <div className="outline-item-content">
-                      <p className={`outline-item-title ${item.status === '进行中' ? 'text-brand' : ''}`}>
-                        {index + 1}. {item.title}
-                      </p>
-                      <p className="outline-item-status">
-                        {item.status === '进行中' ? `进行中 · ${item.words} 字` : item.status}
-                      </p>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </section>
-
-          <section className="panel-section">
-            <h3 className="panel-section-title">写作统计</h3>
-            <div className="card p-3">
-              <div className="stat-row">
-                <div className="stat-label-with-icon">
-                  <PencilLine size={14} strokeWidth={1.5} className="text-brand" />
-                  <span>已记录字数</span>
-                </div>
-                <span className="stat-value tabular-nums">
-                  {messages.filter(m => !m.isUser).reduce((sum, m) => sum + m.content.length, 0).toLocaleString()}
-                </span>
-              </div>
-              <div className="stat-row">
-                <div className="stat-label-with-icon">
-                  <MessagesSquare size={14} strokeWidth={1.5} className="text-sage" />
-                  <span>对话轮次</span>
-                </div>
-                <span className="stat-value tabular-nums">{messages.filter(m => m.isUser).length}</span>
-              </div>
-              <div className="stat-row">
-                <div className="stat-label-with-icon">
-                  <Clock size={14} strokeWidth={1.5} className="text-gold" />
-                  <span>本次时长</span>
-                </div>
-                <span className="stat-value tabular-nums">{formatDuration(elapsedMs)}</span>
-              </div>
-              <div className="stat-row">
-                <div className="stat-label-with-icon">
-                  <Zap size={14} strokeWidth={1.5} className="text-brand" />
-                  <span>工具调用</span>
-                </div>
-                <span className="stat-value tabular-nums">{pendingToolCalls.length}</span>
-              </div>
-            </div>
-          </section>
-
-          <section className="panel-section">
-            <h3 className="panel-section-title">命令面板</h3>
-            <CommandPanel session={currentSession} />
-          </section>
-
-          {showDebugPanel && (
-            <section className="panel-section">
-              <h3 className="panel-section-title">调试面板</h3>
-              <EventLogPanel />
-            </section>
-          )}
-
-          <section className="panel-section">
-            <h3 className="panel-section-title">快捷操作</h3>
-            <div className="quick-actions">
-              <button className="quick-action-item" onClick={handleSaveDraft}>
-                <Save size={16} strokeWidth={1.5} />
-                <span>保存草稿</span>
-              </button>
-              <button className="quick-action-item" onClick={handleApproveContent}>
-                <CheckCircle size={16} strokeWidth={1.5} />
-                <span>确认内容</span>
-              </button>
-              <button className="quick-action-item" onClick={handleExportChapter}>
-                <Download size={16} strokeWidth={1.5} />
-                <span>导出章节</span>
-              </button>
-              <button className="quick-action-item" onClick={handleDialogueSettings}>
-                <Settings size={16} strokeWidth={1.5} />
-                <span>设置</span>
-              </button>
-            </div>
-          </section>
+          <SidePanel
+            isOpen={isRightPanelOpen}
+            mode={sidePanelMode}
+            onModeChange={setSidePanelMode}
+            onClose={() => setIsRightPanelOpen(false)}
+            autobiography={autobiography}
+            currentChapterId={chapterId || null}
+            onSwitchChapter={handleSwitchChapter}
+            onCreateChapter={handleStartChapter}
+            currentChapter={currentChapter}
+            pendingExtracts={[]}
+            onConfirmDraft={handleApproveContent}
+            onGenerateSummary={handleGenerateSummary}
+          />
+          <div className="quick-actions-panel shrink-0">
+            <button className="quick-action-item" onClick={handleSaveDraft}>
+              <Save size={16} strokeWidth={1.5} />
+              <span>保存草稿</span>
+            </button>
+            <button className="quick-action-item" onClick={handleApproveContent}>
+              <CheckCircle size={16} strokeWidth={1.5} />
+              <span>确认内容</span>
+            </button>
+            <button className="quick-action-item" onClick={handleExportChapter}>
+              <Download size={16} strokeWidth={1.5} />
+              <span>导出章节</span>
+            </button>
+            <button className="quick-action-item" onClick={() => navigate('/settings')}>
+              <Settings size={16} strokeWidth={1.5} />
+              <span>设置</span>
+            </button>
+          </div>
         </aside>
       )}
 

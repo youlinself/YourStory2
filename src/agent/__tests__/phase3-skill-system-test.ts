@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Phase 3 技能系统 - 逻辑验证脚本
  * 运行方式: npx tsx src/agent/__tests__/phase3-skill-system-test.ts
  */
@@ -7,7 +7,7 @@ declare const process: { exit(code?: number): never }
 
 import { SkillRegistry } from '../skills/SkillRegistry'
 import { ToolRegistry } from '../tools/ToolRegistry'
-import { EventEmitter } from '../events/EventEmitter'
+import { EventEmitter, SessionLog, MemoryEventStore } from '../events'
 import { AutobiographyAgent } from '../AutobiographyAgent'
 import { MemoryStorageAdapter } from '../session'
 import {
@@ -18,7 +18,12 @@ import {
   registerAutobiographySkills,
   autobiographySkills
 } from '../skills/autobiography'
-import type { SkillContext } from '../skills/SkillTypes'
+
+function createEventEmitter(): EventEmitter {
+  return new EventEmitter(new SessionLog(), new MemoryEventStore())
+}
+
+import type { SkillContext } from '../skills/SkillTypes'
 import type { SessionContext } from '../session/types'
 import { extractContentTool, generateQuestionsTool, checkConsistencyTool, timelineAnalyzeTool } from '../tools/autobiography'
 
@@ -87,7 +92,7 @@ function createMockSkillContext(sessionId: string): SkillContext {
 async function testSkillRegistry(): Promise<void> {
   await runAsync('SkillRegistry - 注册技能', async () => {
     const toolRegistry = new ToolRegistry()
-    const events = new EventEmitter()
+    const events = createEventEmitter()
     const registry = new SkillRegistry(toolRegistry, events)
 
     const unregister = registry.register(deepInterviewSkill)
@@ -101,7 +106,7 @@ async function testSkillRegistry(): Promise<void> {
 
   await runAsync('SkillRegistry - 重复注册报错', async () => {
     const toolRegistry = new ToolRegistry()
-    const events = new EventEmitter()
+    const events = createEventEmitter()
     const registry = new SkillRegistry(toolRegistry, events)
 
     registry.register(deepInterviewSkill)
@@ -118,7 +123,7 @@ async function testSkillRegistry(): Promise<void> {
 
   await runAsync('SkillRegistry - 批量注册', async () => {
     const toolRegistry = new ToolRegistry()
-    const events = new EventEmitter()
+    const events = createEventEmitter()
     const registry = new SkillRegistry(toolRegistry, events)
 
     const unregister = registry.registerAll(autobiographySkills)
@@ -134,7 +139,7 @@ async function testSkillRegistry(): Promise<void> {
     toolRegistry.register(extractContentTool)
     toolRegistry.register(generateQuestionsTool)
 
-    const events = new EventEmitter()
+    const events = createEventEmitter()
     const registry = new SkillRegistry(toolRegistry, events)
     registry.register(deepInterviewSkill)
 
@@ -150,7 +155,7 @@ async function testSkillRegistry(): Promise<void> {
 
   await runAsync('SkillRegistry - 激活不存在的技能报错', async () => {
     const toolRegistry = new ToolRegistry()
-    const events = new EventEmitter()
+    const events = createEventEmitter()
     const registry = new SkillRegistry(toolRegistry, events)
 
     const context = createMockSkillContext('test-session')
@@ -170,7 +175,7 @@ async function testSkillRegistry(): Promise<void> {
     toolRegistry.register(extractContentTool)
     toolRegistry.register(generateQuestionsTool)
 
-    const events = new EventEmitter()
+    const events = createEventEmitter()
     const registry = new SkillRegistry(toolRegistry, events)
     registry.register(deepInterviewSkill)
 
@@ -189,7 +194,7 @@ async function testSkillRegistry(): Promise<void> {
     toolRegistry.register(extractContentTool)
     toolRegistry.register(generateQuestionsTool)
 
-    const events = new EventEmitter()
+    const events = createEventEmitter()
     const registry = new SkillRegistry(toolRegistry, events)
     registry.register(deepInterviewSkill)
 
@@ -209,7 +214,7 @@ async function testSkillRegistry(): Promise<void> {
     toolRegistry.register(checkConsistencyTool)
     toolRegistry.register(timelineAnalyzeTool)
 
-    const events = new EventEmitter()
+    const events = createEventEmitter()
     const registry = new SkillRegistry(toolRegistry, events)
     registry.registerAll(autobiographySkills)
 
@@ -233,7 +238,7 @@ async function testSkillRegistry(): Promise<void> {
     toolRegistry.register(extractContentTool)
     toolRegistry.register(generateQuestionsTool)
 
-    const events = new EventEmitter()
+    const events = createEventEmitter()
     const registry = new SkillRegistry(toolRegistry, events)
     registry.register(deepInterviewSkill)
 
@@ -344,7 +349,7 @@ async function testSkillRegistration(): Promise<void> {
     toolRegistry.register(checkConsistencyTool)
     toolRegistry.register(timelineAnalyzeTool)
 
-    const events = new EventEmitter()
+    const events = createEventEmitter()
     const registry = new SkillRegistry(toolRegistry, events)
 
     const unregister = registerAutobiographySkills(registry)
@@ -369,7 +374,7 @@ async function testIntegration(): Promise<void> {
     toolRegistry.register(checkConsistencyTool)
     toolRegistry.register(timelineAnalyzeTool)
 
-    const events = new EventEmitter()
+    const events = createEventEmitter()
     const skillRegistry = new SkillRegistry(toolRegistry, events)
     registerAutobiographySkills(skillRegistry)
 
@@ -396,7 +401,7 @@ async function testIntegration(): Promise<void> {
     toolRegistry.register(checkConsistencyTool)
     toolRegistry.register(timelineAnalyzeTool)
 
-    const events = new EventEmitter()
+    const events = createEventEmitter()
     const skillRegistry = new SkillRegistry(toolRegistry, events)
     registerAutobiographySkills(skillRegistry)
 
@@ -424,7 +429,7 @@ async function testIntegration(): Promise<void> {
     toolRegistry.register(checkConsistencyTool)
     toolRegistry.register(timelineAnalyzeTool)
 
-    const events = new EventEmitter()
+    const events = createEventEmitter()
     const skillRegistry = new SkillRegistry(toolRegistry, events)
     registerAutobiographySkills(skillRegistry)
 
@@ -445,7 +450,7 @@ async function testIntegration(): Promise<void> {
     toolRegistry.register(checkConsistencyTool)
     toolRegistry.register(timelineAnalyzeTool)
 
-    const events = new EventEmitter()
+    const events = createEventEmitter()
     const skillRegistry = new SkillRegistry(toolRegistry, events)
     registerAutobiographySkills(skillRegistry)
 

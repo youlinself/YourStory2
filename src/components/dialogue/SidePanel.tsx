@@ -39,9 +39,9 @@ const SidePanel: React.FC<SidePanelProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="w-72 bg-bg-elevated border-l border-border-subtle flex flex-col shrink-0 animate-fade-in">
+    <div className="flex-1 flex flex-col min-h-0 animate-fade-in">
       {/* 标签切换 */}
-      <div className="flex border-b border-border-subtle">
+      <div className="flex shrink-0 border-b border-border-subtle">
         <button
           onClick={() => onModeChange('outline')}
           className={`flex-1 px-3 py-2.5 text-xs font-medium transition-colors ${
@@ -74,7 +74,7 @@ const SidePanel: React.FC<SidePanelProps> = ({
       </div>
 
       {/* 内容区域 */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto min-h-0">
         {mode === 'outline' ? (
           <OutlineView
             autobiography={autobiography}

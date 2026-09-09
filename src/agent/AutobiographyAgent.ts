@@ -1,6 +1,6 @@
 import { SessionManager, type StorageAdapter } from './session'
 import { ToolRegistry } from './tools'
-import { EventEmitter } from './events'
+import { EventEmitter, SessionLog, MemoryEventStore } from './events'
 import { SkillRegistry } from './skills'
 import { getLogger } from './logging'
 import { AgentError, ErrorCode, SessionError, ToolError, TokenBudgetError } from './errors'
@@ -12,6 +12,12 @@ import type { AutobiographySession, SessionContext, ConversationTurn } from './s
 import type { ToolDefinition, ToolResult, ToolExecutionContext } from './tools/ToolTypes'
 import type AIService from '@/services/ai/AIService'
 import { PromptComposer } from '@/ai_config'
+import { TurnController } from './turn'
+import { AgentHandle } from './handle'
+import { SubagentManager } from './subagent'
+import { WorkflowEngine } from './workflow'
+import { GoalManager } from './goal'
+import { CapabilityRegistry } from './capability'
 
 const logger = getLogger()
 
@@ -38,17 +44,32 @@ export class AutobiographyAgent {
   readonly skillRegistry: SkillRegistry
   readonly tokenBudgetManager: TokenBudgetManager
   readonly contextCompressor: ContextCompressor | null
+  readonly turnController: TurnController
+  readonly subagentManager: SubagentManager
+  readonly workflowEngine: WorkflowEngine
+  readonly goalManager: GoalManager
+  readonly capabilityRegistry: CapabilityRegistry
   private aiService: AIService | null = null
   private compressionConfig: CompressionOptions
   private sessionQueues: Map<string, Promise<void>> = new Map()
+  private sessionLogs: Map<string, SessionLog> = new Map()
+  private agentHandles: Map<string, AgentHandle> = new Map()
+  private eventStore: MemoryEventStore
 
   constructor(config: AutobiographyAgentConfig) {
+    this.eventStore = new MemoryEventStore()
+    const sessionLog = new SessionLog()
     this.sessionManager = new SessionManager(config.storage)
     this.toolRegistry = new ToolRegistry()
-    this.events = new EventEmitter()
+    this.events = new EventEmitter(sessionLog, this.eventStore)
     this.skillRegistry = new SkillRegistry(this.toolRegistry, this.events)
     this.tokenBudgetManager = new TokenBudgetManager()
     this.aiService = config.aiService || null
+    this.turnController = new TurnController()
+    this.subagentManager = new SubagentManager()
+    this.workflowEngine = new WorkflowEngine()
+    this.goalManager = new GoalManager()
+    this.capabilityRegistry = new CapabilityRegistry()
     this.compressionConfig = {
       keepRecent: config.contextCompression?.keepRecent ?? 5,
       maxTurns: config.contextCompression?.maxTurns ?? 20,
@@ -71,7 +92,6 @@ export class AutobiographyAgent {
     }
   }
 
-  /** 设置内部事件监听 */
   private setupEventListeners(): void {
     this.events.on('session/created', ({ sessionId, chapterId }) => {
       logger.info('Agent', 'Session created', { sessionId, chapterId })
@@ -96,7 +116,28 @@ export class AutobiographyAgent {
     })
   }
 
-  /** 检查并执行上下文压缩 */
+  getSessionLog(sessionId: string): SessionLog {
+    let log = this.sessionLogs.get(sessionId)
+    if (!log) {
+      log = new SessionLog()
+      this.sessionLogs.set(sessionId, log)
+    }
+    return log
+  }
+
+  getHandle(sessionId: string): AgentHandle | undefined {
+    return this.agentHandles.get(sessionId)
+  }
+
+  private createHandle(sessionId: string, session: AutobiographySession): AgentHandle {
+    let handle = this.agentHandles.get(sessionId)
+    if (!handle) {
+      handle = new AgentHandle(sessionId, session)
+      this.agentHandles.set(sessionId, handle)
+    }
+    return handle
+  }
+
   async checkAndCompressContext(sessionId: string): Promise<boolean> {
     if (!this.contextCompressor) {
       return false
@@ -107,7 +148,7 @@ export class AutobiographyAgent {
       return false
     }
 
-    const shouldCompress = this.contextCompressor.shouldCompress(
+    const shouldCompress = this.contextCompressor.shouldCompressLegacy(
       session.history,
       this.compressionConfig.maxTurns,
       this.compressionConfig.maxTokens
@@ -123,7 +164,7 @@ export class AutobiographyAgent {
     })
 
     try {
-      const result = await this.contextCompressor.compress(session.history, this.compressionConfig)
+      const result = await this.contextCompressor.compressWithLock(session.history, this.compressionConfig)
 
       session.history = result.compressedHistory
       this.events.emit('context/compressed', {
@@ -150,7 +191,6 @@ export class AutobiographyAgent {
     }
   }
 
-  /** 检查 Token 预算 */
   checkTokenBudget(sessionId: string): { canProceed: boolean; remaining: number } {
     const remaining = this.tokenBudgetManager.getRemaining(sessionId)
     const stats = this.tokenBudgetManager.getStats(sessionId)
@@ -158,7 +198,6 @@ export class AutobiographyAgent {
     return { canProceed, remaining }
   }
 
-  /** 记录 Token 使用 */
   recordTokenUsage(sessionId: string, tokens: number): void {
     this.tokenBudgetManager.recordUsage(sessionId, tokens)
     const stats = this.tokenBudgetManager.getStats(sessionId)
@@ -167,56 +206,51 @@ export class AutobiographyAgent {
     }
   }
 
-  /** 创建会话 */
   async createSession(chapterId: string, context: SessionContext): Promise<AutobiographySession> {
     const session = await this.sessionManager.create(chapterId, context)
     this.tokenBudgetManager.initSession(session.id)
     this.events.emit('session/created', { sessionId: session.id, chapterId })
+    this.createHandle(session.id, session)
     return session
   }
 
-  /** 恢复会话 */
   async resumeSession(sessionId: string): Promise<AutobiographySession | null> {
     const session = await this.sessionManager.resume(sessionId)
     if (session) {
       this.events.emit('session/resumed', { sessionId })
+      this.createHandle(sessionId, session)
     }
     return session
   }
 
-  /** 暂停会话 */
   async pauseSession(sessionId: string): Promise<void> {
     await this.sessionManager.pause(sessionId)
     this.events.emit('session/paused', { sessionId })
   }
 
-  /** 关闭会话 */
   async closeSession(sessionId: string): Promise<void> {
     await this.sessionManager.close(sessionId)
     this.events.emit('session/closed', { sessionId })
+    this.agentHandles.delete(sessionId)
+    this.sessionLogs.delete(sessionId)
   }
 
-  /** 注册工具 */
   registerTool(tool: ToolDefinition): () => void {
     return this.toolRegistry.register(tool)
   }
 
-  /** 批量注册工具 */
   registerTools(tools: ToolDefinition[]): () => void {
     return this.toolRegistry.registerAll(tools)
   }
 
-  /** 激活会话工具 */
   activateTools(sessionId: string, toolNames: string[]): void {
     this.toolRegistry.activateForSession(sessionId, toolNames)
   }
 
-  /** 停用会话工具 */
   deactivateTools(sessionId: string, toolNames: string[]): void {
     this.toolRegistry.deactivateForSession(sessionId, toolNames)
   }
 
-  /** 激活技能 */
   async activateSkill(sessionId: string, skillName: string): Promise<void> {
     const session = await this.sessionManager.resume(sessionId)
     if (!session) {
@@ -236,17 +270,14 @@ export class AutobiographyAgent {
     await this.skillRegistry.activate(sessionId, skillName, context)
   }
 
-  /** 停用技能 */
   async deactivateSkill(sessionId: string, skillName: string): Promise<void> {
     await this.skillRegistry.deactivate(sessionId, skillName)
   }
 
-  /** 获取会话激活的技能 */
   getActiveSkills(sessionId: string): string[] {
     return this.skillRegistry.getActiveSkills(sessionId).map(as => as.skill.name)
   }
 
-  /** 执行工具 */
   async executeTool(
     sessionId: string,
     toolName: string,
@@ -306,7 +337,6 @@ export class AutobiographyAgent {
     }
   }
 
-  /** 处理用户消息（完整对话流程）- 带并发控制 */
   async handleMessage(
     sessionId: string,
     userMessage: string,
@@ -337,7 +367,6 @@ export class AutobiographyAgent {
     }
   }
 
-  /** 内部消息处理方法 */
   private async _handleMessageInternal(
     sessionId: string,
     userMessage: string,
@@ -379,6 +408,7 @@ export class AutobiographyAgent {
 
     await this.checkAndCompressContext(sessionId)
 
+    this.turnController.startTurn()
     this.events.emit('turn/start', { sessionId, userMessage })
 
     const result: {
@@ -393,6 +423,7 @@ export class AutobiographyAgent {
 
     if (autoExtract) {
       try {
+        this.turnController.startStep()
         const extractedResult = await this.executeTool(sessionId, 'extract_content', {
           conversationSegments: [userMessage],
           extractOptions: {
@@ -402,6 +433,7 @@ export class AutobiographyAgent {
             includePeople: true
           }
         })
+        this.turnController.endStep('tool_complete')
         result.extractedContent = extractedResult
 
         this.events.emit('content/extracted', {
@@ -427,6 +459,8 @@ export class AutobiographyAgent {
           recoverable: false
         })
       }
+
+      this.turnController.startStep()
 
       const session = this.sessionManager.get(sessionId)
       const chapterTitle = session?.context?.existingContent?.title || ''
@@ -463,6 +497,7 @@ export class AutobiographyAgent {
         timestamp: Date.now()
       }
       await this.sessionManager.addTurn(sessionId, assistantTurn)
+      this.turnController.endStep('model_done')
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error))
       const agentError = new AgentError(ErrorCode.AI_GENERATION_FAILED, 'AI生成回复失败', {
@@ -473,6 +508,14 @@ export class AutobiographyAgent {
       logger.error('Agent', 'AI generation failed', agentError, { sessionId })
       this.events.emit('turn/error', { sessionId, error: agentError })
       result.response = '抱歉，AI服务暂时不可用，请检查AI配置后重试。'
+      this.turnController.endStep('interrupted')
+    }
+
+    this.turnController.endTurn('completed')
+
+    const handle = this.agentHandles.get(sessionId)
+    if (handle) {
+      handle.setLastResponse(result.response)
     }
 
     this.events.emit('turn/complete', {
@@ -484,28 +527,26 @@ export class AutobiographyAgent {
     return result
   }
 
-  /** 添加对话轮次 */
   async addConversationTurn(sessionId: string, turn: ConversationTurn): Promise<void> {
     await this.sessionManager.addTurn(sessionId, turn)
   }
 
-  /** 获取会话 */
   getSession(sessionId: string): AutobiographySession | undefined {
     return this.sessionManager.get(sessionId)
   }
 
-  /** 获取活跃会话 */
   getActiveSessions(): AutobiographySession[] {
     return this.sessionManager.getActiveSessions()
   }
 
-  /** 清理过期会话 */
   async cleanupSessions(maxAgeMs?: number): Promise<number> {
     return this.sessionManager.cleanup(maxAgeMs)
   }
 
-  /** 销毁 */
   dispose(): void {
     this.events.removeAllListeners()
+    this.subagentManager.cleanupAll()
+    this.agentHandles.clear()
+    this.sessionLogs.clear()
   }
 }

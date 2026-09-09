@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Phase 1 Agent 框架 - 逻辑验证脚本
  * 运行方式: npx tsx src/agent/__tests__/phase1-logic-test.ts
  */
@@ -7,10 +7,14 @@ declare const process: { exit(code?: number): never }
 
 import { SessionManager, MemoryStorageAdapter } from '../session'
 import { ToolRegistry } from '../tools'
-import { EventEmitter } from '../events'
+import { EventEmitter, SessionLog, MemoryEventStore } from '../events'
 import { AutobiographyAgent } from '../AutobiographyAgent'
 import type { SessionContext } from '../session/types'
 import type { ToolDefinition } from '../tools/ToolTypes'
+
+function createEventEmitter(): EventEmitter {
+  return new EventEmitter(new SessionLog(), new MemoryEventStore())
+}
 
 let passed = 0
 let failed = 0
@@ -327,7 +331,7 @@ async function testToolRegistry(): Promise<void> {
 // ============================================================
 async function testEventEmitter(): Promise<void> {
   await runAsync('EventEmitter - 基本发布订阅', async () => {
-    const emitter = new EventEmitter()
+    const emitter = createEventEmitter()
     let received: any = null
 
     emitter.on('session/created', (payload) => {
@@ -339,7 +343,7 @@ async function testEventEmitter(): Promise<void> {
   })
 
   await runAsync('EventEmitter - 取消订阅', async () => {
-    const emitter = new EventEmitter()
+    const emitter = createEventEmitter()
     let count = 0
 
     const unsubscribe = emitter.on('session/created', () => {
@@ -354,7 +358,7 @@ async function testEventEmitter(): Promise<void> {
   })
 
   await runAsync('EventEmitter - 异步事件', async () => {
-    const emitter = new EventEmitter()
+    const emitter = createEventEmitter()
     let received = false
 
     emitter.onAsync('turn/complete', async () => {
@@ -371,7 +375,7 @@ async function testEventEmitter(): Promise<void> {
   })
 
   await runAsync('EventEmitter - 一次性订阅', async () => {
-    const emitter = new EventEmitter()
+    const emitter = createEventEmitter()
     let count = 0
 
     emitter.once('session/created', () => {
@@ -385,7 +389,7 @@ async function testEventEmitter(): Promise<void> {
   })
 
   await runAsync('EventEmitter - 事件过滤', async () => {
-    const emitter = new EventEmitter()
+    const emitter = createEventEmitter()
     let received: any = null
 
     emitter.on('session/created', (payload) => {
@@ -400,7 +404,7 @@ async function testEventEmitter(): Promise<void> {
   })
 
   await runAsync('EventEmitter - 监听器数量统计', async () => {
-    const emitter = new EventEmitter()
+    const emitter = createEventEmitter()
     emitter.on('session/created', () => {})
     emitter.on('session/created', () => {})
     emitter.onAsync('session/created', async () => {})
@@ -409,7 +413,7 @@ async function testEventEmitter(): Promise<void> {
   })
 
   await runAsync('EventEmitter - 移除所有监听器', async () => {
-    const emitter = new EventEmitter()
+    const emitter = createEventEmitter()
     emitter.on('session/created', () => {})
     emitter.on('turn/start', () => {})
 
@@ -422,7 +426,7 @@ async function testEventEmitter(): Promise<void> {
   })
 
   await runAsync('EventEmitter - 错误隔离', async () => {
-    const emitter = new EventEmitter()
+    const emitter = createEventEmitter()
     let secondCalled = false
 
     emitter.on('session/created', () => {
