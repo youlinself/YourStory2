@@ -310,7 +310,7 @@ const SettingsPage: React.FC = () => {
 
         <div className="space-y-8">
           <section>
-            <h2 className="section-title mb-4">AI 配置</h2>
+            <h2 className="section-title mb-4">默认AI配置</h2>
             <div className="card p-5 space-y-4">
               <div>
                 <label className="text-sm font-medium text-ink mb-2 block">AI 供应商</label>

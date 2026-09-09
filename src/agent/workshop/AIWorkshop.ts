@@ -159,6 +159,10 @@ export class AIWorkshop {
         throw new Error('未找到对应的AI成员');
       }
 
+      if (!member.config.apiKey) {
+        throw new Error(`AI成员「${member.name}」未配置API Key，请在智囊团设置中配置`);
+      }
+
       const aiService = new AIService({
         apiKey: member.config.apiKey,
         model: member.config.model,

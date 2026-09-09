@@ -5,6 +5,8 @@ import { MemoryStorageAdapter } from '@/agent/session/SessionManager'
 import type { AutobiographySession, SessionContext } from '@/agent/session/types'
 import type { Chapter } from '@/types'
 import type { AutobiographyEventMap } from '@/agent/events/types'
+import AIService from '@/services/ai/AIService'
+import useAIStore from './aiStore'
 
 let sharedStorage: MemoryStorageAdapter | null = null
 
@@ -70,7 +72,23 @@ export const useAgentStore = create<AgentState & AgentActions>()(
 
     initialize: async () => {
       const storage = getSharedStorage()
-      const agent = new AutobiographyAgent({ storage })
+
+      const aiStoreState = useAIStore.getState()
+      const { apiKey, model, baseUrl, vendor, temperature, customModelName } = aiStoreState
+
+      const aiService = new AIService({
+        apiKey,
+        model,
+        baseUrl,
+        vendor,
+        temperature,
+        customModelName,
+      })
+
+      const agent = new AutobiographyAgent({
+        storage,
+        aiService,
+      })
 
       const { registerAutobiographyTools } = await import('@/agent/tools/autobiography')
       registerAutobiographyTools(agent.toolRegistry)

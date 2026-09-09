@@ -9,7 +9,7 @@ export class TaskDispatcher {
   }
 
   syncMembers(members: ThinkTankMember[]): void {
-    const enabledMembers = members.filter((m) => m.isEnabled);
+    const enabledMembers = members.filter((m) => m.isEnabled && m.config.apiKey);
     this.members.clear();
     enabledMembers.forEach((m) => {
       this.members.set(m.id, {

@@ -32,6 +32,7 @@ import { useToast } from '../../components/common';
 import { SkillSwitcher } from '../../components/dialogue/SkillSwitcher';
 import { CommandPanel } from '../../components/dialogue/CommandPanel';
 import { EventLogPanel } from '../../components/debug/EventLogPanel';
+import MDEditor from '@uiw/react-md-editor';
 import '../../styles/dialogue.css';
 
 const DialogueAgent: React.FC = () => {
@@ -291,7 +292,13 @@ const DialogueAgent: React.FC = () => {
                   </div>
                 )}
                 <div className={`chat-bubble ${msg.isUser ? 'chat-bubble-user' : 'chat-bubble-ai'}`}>
-                  <p>{msg.content}</p>
+                  {msg.isUser ? (
+                    <p>{msg.content}</p>
+                  ) : (
+                    <div className="markdown-content">
+                      <MDEditor.Markdown source={msg.content} />
+                    </div>
+                  )}
                   <span className="message-time">
                     {new Date(msg.timestamp).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}
                   </span>

@@ -10,11 +10,14 @@ import type { LLMAdapter } from './llm/LLMAdapter'
 import type { SkillContext } from './skills/SkillTypes'
 import type { AutobiographySession, SessionContext, ConversationTurn } from './session/types'
 import type { ToolDefinition, ToolResult, ToolExecutionContext } from './tools/ToolTypes'
+import type AIService from '@/services/ai/AIService'
+import { PromptComposer } from '@/ai_config'
 
 const logger = getLogger()
 
 export interface AutobiographyAgentConfig {
   storage: StorageAdapter
+  aiService?: AIService
   tokenBudget?: {
     limit: number
     warningThreshold: number
@@ -35,6 +38,7 @@ export class AutobiographyAgent {
   readonly skillRegistry: SkillRegistry
   readonly tokenBudgetManager: TokenBudgetManager
   readonly contextCompressor: ContextCompressor | null
+  private aiService: AIService | null = null
   private compressionConfig: CompressionOptions
   private sessionQueues: Map<string, Promise<void>> = new Map()
 
@@ -44,6 +48,7 @@ export class AutobiographyAgent {
     this.events = new EventEmitter()
     this.skillRegistry = new SkillRegistry(this.toolRegistry, this.events)
     this.tokenBudgetManager = new TokenBudgetManager()
+    this.aiService = config.aiService || null
     this.compressionConfig = {
       keepRecent: config.contextCompression?.keepRecent ?? 5,
       maxTurns: config.contextCompression?.maxTurns ?? 20,
@@ -281,26 +286,10 @@ export class AutobiographyAgent {
 
     this.events.emit('tool/called', { sessionId, tool: toolName, args })
 
-    const startTime = Date.now()
     try {
       const result = await tool.execute(args, context)
-      const duration = Date.now() - startTime
 
       this.events.emit('tool/completed', { sessionId, tool: toolName, result })
-
-      const turn: ConversationTurn = {
-        role: 'assistant',
-        content: result.messages?.join('\n') || '',
-        timestamp: Date.now(),
-        toolCalls: [{
-          toolName,
-          args,
-          result,
-          timestamp: startTime,
-          duration
-        }]
-      }
-      await this.sessionManager.addTurn(sessionId, turn)
 
       return result
     } catch (error) {
@@ -431,28 +420,59 @@ export class AutobiographyAgent {
       }
     }
 
-    if (options.generateFollowUpQuestions) {
-      try {
-        const questionsResult = await this.executeTool(sessionId, 'generate_questions', {
-          chapterContent: userMessage,
-          count: 3,
-          difficulty: 'medium'
-        })
-        result.followUpQuestions = questionsResult
-        result.response = '已为你生成了一些引导性问题，可以帮助你更深入地回忆。'
-      } catch (error) {
-        const err = error instanceof Error ? error : new Error(String(error))
-        const questionError = new AgentError(ErrorCode.QUESTION_GENERATION_FAILED, 'Question generation failed', {
+    try {
+      if (!this.aiService) {
+        throw new AgentError(ErrorCode.AI_SERVICE_NOT_CONFIGURED, 'AI服务未配置，请在设置页面配置AI参数', {
           sessionId,
-          recoverable: true,
-          cause: err
+          recoverable: false
         })
-        logger.error('Agent', 'Question generation failed', questionError, { sessionId })
-        this.events.emit('turn/error', { sessionId, error: questionError })
-        result.response = '我已经记录了你的分享，想继续聊聊吗？'
       }
-    } else {
-      result.response = '我已经记录了你的分享，想继续聊聊吗？'
+
+      const session = this.sessionManager.get(sessionId)
+      const chapterTitle = session?.context?.existingContent?.title || ''
+
+      const conversationHistory = session?.history
+        .slice(-10)
+        .map((turn) => ({
+          role: (turn.role === 'user' ? 'user' : 'assistant') as 'user' | 'assistant',
+          content: turn.content,
+        })) || []
+
+      const chapterContext = chapterTitle ? {
+        chapterId: session?.chapterId || '',
+        chapterTitle,
+        existingContent: session?.context?.existingContent?.content || '',
+        timeRange: session?.context?.existingContent?.timeRange,
+      } : undefined
+
+      const messages = PromptComposer.buildMessages(
+        userMessage,
+        conversationHistory,
+        chapterContext
+      )
+
+      const aiResponse = await this.aiService.sendCustomMessages(messages)
+      result.response = aiResponse
+
+      const responseTokens = this.tokenBudgetManager.estimateTokens(aiResponse)
+      this.recordTokenUsage(sessionId, responseTokens)
+
+      const assistantTurn: ConversationTurn = {
+        role: 'assistant',
+        content: aiResponse,
+        timestamp: Date.now()
+      }
+      await this.sessionManager.addTurn(sessionId, assistantTurn)
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error))
+      const agentError = new AgentError(ErrorCode.AI_GENERATION_FAILED, 'AI生成回复失败', {
+        sessionId,
+        recoverable: true,
+        cause: err
+      })
+      logger.error('Agent', 'AI generation failed', agentError, { sessionId })
+      this.events.emit('turn/error', { sessionId, error: agentError })
+      result.response = '抱歉，AI服务暂时不可用，请检查AI配置后重试。'
     }
 
     this.events.emit('turn/complete', {
