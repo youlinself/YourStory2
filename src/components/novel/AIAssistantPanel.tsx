@@ -18,7 +18,7 @@ interface AIAssistantPanelProps {
   selectedText?: string;
 }
 
-type AssistantTab = 'write' | 'inspire' | 'name' | 'history';
+type AssistantTab = 'write' | 'name' | 'history';
 
 const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
   onAssist,
@@ -95,39 +95,6 @@ const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
 
       const names = await aiService.generateNameSuggestions(nameType, nameDescription);
       setSuggestions(names);
-    } catch {
-      setResult('生成失败，请重试');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleInspire = async (type: 'plot' | 'character' | 'scene' | 'dialogue' | 'theme') => {
-    setIsLoading(true);
-    setResult('');
-
-    try {
-      const NovelAIService = (await import('../../services/ai/NovelAIService')).default;
-      const { default: useAIStore } = await import('../../stores/aiStore');
-      const { apiKey, model, baseUrl, vendor, temperature, customModelName } = useAIStore.getState();
-
-      if (!apiKey) {
-        setResult('请先在设置页面配置AI API Key');
-        setIsLoading(false);
-        return;
-      }
-
-      const aiService = new NovelAIService({
-        apiKey,
-        model,
-        baseUrl,
-        vendor,
-        temperature,
-        customModelName,
-      });
-
-      const inspiration = await aiService.generateInspiration(type);
-      setResult(inspiration);
     } catch {
       setResult('生成失败，请重试');
     } finally {
@@ -359,70 +326,6 @@ const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
     </div>
   );
 
-  const renderInspireTab = () => (
-    <div className="space-y-3">
-      <p className="text-xs text-ink-muted">点击获取灵感：</p>
-
-      <div className="grid grid-cols-2 gap-2">
-        {[
-          { type: 'plot', label: '情节', icon: '🎭' },
-          { type: 'character', label: '角色', icon: '👤' },
-          { type: 'scene', label: '场景', icon: '🌄' },
-          { type: 'dialogue', label: '对话', icon: '💬' },
-          { type: 'theme', label: '主题', icon: '💡' },
-        ].map(({ type, label, icon }) => (
-          <button
-            key={type}
-            className="p-3 rounded-lg bg-bg-subtle hover:bg-brand/10 hover:border-brand border border-transparent transition-all text-center"
-            onClick={() => handleInspire(type as any)}
-            disabled={isLoading}
-          >
-            <span className="text-lg mb-1 block">{icon}</span>
-            <span className="text-xs text-ink-muted">{label}</span>
-          </button>
-        ))}
-      </div>
-
-      {isLoading && (
-        <div className="flex items-center justify-center py-4">
-          <div className="flex items-center gap-2 text-xs text-ink-faint">
-            <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-            </svg>
-            <span>生成中...</span>
-          </div>
-        </div>
-      )}
-
-      {result && (
-        <div className="p-4 rounded-lg bg-gradient-to-br from-brand/5 to-brand/10 border border-brand/20">
-          <div className="flex items-start gap-2 mb-3">
-            <span className="text-lg">💡</span>
-            <p className="text-xs text-ink leading-relaxed whitespace-pre-wrap flex-1">{result}</p>
-          </div>
-          <div className="flex gap-2">
-            <button
-              className="btn btn-primary btn-sm text-xs flex-1"
-              onClick={() => {
-                onInsertText(result);
-                setResult('');
-              }}
-            >
-              使用这个灵感
-            </button>
-            <button
-              className="btn btn-ghost btn-sm text-xs"
-              onClick={() => setResult('')}
-            >
-              换一个
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-
   const renderNameTab = () => (
     <div className="space-y-3">
       <div>
@@ -595,16 +498,6 @@ const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
           </button>
           <button
             className={`flex-1 px-3 py-2 text-xs font-medium transition-colors ${
-              activeTab === 'inspire'
-                ? 'text-brand border-b-2 border-brand'
-                : 'text-ink-muted hover:text-ink'
-            }`}
-            onClick={() => setActiveTab('inspire')}
-          >
-            灵感
-          </button>
-          <button
-            className={`flex-1 px-3 py-2 text-xs font-medium transition-colors ${
               activeTab === 'name'
                 ? 'text-brand border-b-2 border-brand'
                 : 'text-ink-muted hover:text-ink'
@@ -636,7 +529,6 @@ const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
 
       <div className="flex-1 overflow-y-auto p-3">
         {activeTab === 'write' && renderWriteTab()}
-        {activeTab === 'inspire' && renderInspireTab()}
         {activeTab === 'name' && renderNameTab()}
         {activeTab === 'history' && renderHistoryTab()}
       </div>

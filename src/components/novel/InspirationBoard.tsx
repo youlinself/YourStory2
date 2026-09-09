@@ -1,6 +1,8 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import type { SavedInspiration } from '../../types';
 import InspirationImportModal from './InspirationImportModal';
+import useAIStore from '../../stores/aiStore';
+import NovelAIService from '../../services/ai/NovelAIService';
 
 interface InspirationBoardProps {
   inspirations: SavedInspiration[];
@@ -47,6 +49,7 @@ const InspirationBoard: React.FC<InspirationBoardProps> = ({
 }) => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showAIModal, setShowAIModal] = useState(false);
   const [filterType, setFilterType] = useState<SavedInspiration['type'] | 'all'>('all');
   const [filterStatus, setFilterStatus] = useState<'all' | 'unused' | 'used'>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -61,6 +64,9 @@ const InspirationBoard: React.FC<InspirationBoardProps> = ({
     chapterId: '',
   });
   const [tagInput, setTagInput] = useState('');
+  const [aiGenerating, setAiGenerating] = useState(false);
+  const [aiSelectedType, setAiSelectedType] = useState<SavedInspiration['type']>('plot');
+  const [aiResult, setAiResult] = useState('');
 
   const filteredInspirations = useMemo(() => {
     let filtered = inspirations;
@@ -123,6 +129,49 @@ const InspirationBoard: React.FC<InspirationBoardProps> = ({
     }
   }, [tagInput, newInspiration]);
 
+  const handleAIGenerate = useCallback(async () => {
+    setAiGenerating(true);
+    setAiResult('');
+
+    try {
+      const { apiKey, model, baseUrl, vendor, temperature, customModelName } = useAIStore.getState();
+
+      if (!apiKey) {
+        setAiResult('请先在设置页面配置AI API Key');
+        setAiGenerating(false);
+        return;
+      }
+
+      const aiService = new NovelAIService({
+        apiKey,
+        model,
+        baseUrl,
+        vendor,
+        temperature,
+        customModelName,
+      });
+
+      const inspiration = await aiService.generateInspiration(aiSelectedType);
+      setAiResult(inspiration);
+    } catch {
+      setAiResult('生成失败，请重试');
+    } finally {
+      setAiGenerating(false);
+    }
+  }, [aiSelectedType]);
+
+  const handleAISave = useCallback(() => {
+    if (!aiResult.trim()) return;
+    onInspirationAdd({
+      type: aiSelectedType,
+      content: aiResult.trim(),
+      tags: [],
+      isUsed: false,
+    });
+    setAiResult('');
+    setShowAIModal(false);
+  }, [aiResult, aiSelectedType, onInspirationAdd]);
+
   const stats = useMemo(() => {
     return {
       total: inspirations.length,
@@ -180,6 +229,13 @@ const InspirationBoard: React.FC<InspirationBoardProps> = ({
             onClick={handleRandomInspiration}
           >
             🎲 随机
+          </button>
+          <button
+            className="btn btn-ghost btn-sm text-xs"
+            onClick={() => setShowAIModal(true)}
+            title="AI 生成灵感"
+          >
+            🤖 AI生成
           </button>
           <button
             className="btn btn-primary btn-sm text-xs"
@@ -419,6 +475,87 @@ const InspirationBoard: React.FC<InspirationBoardProps> = ({
           onImport={handleImportInspirations}
           onClose={() => setShowImportModal(false)}
         />
+      )}
+
+      {showAIModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-bg-base rounded-xl p-6 w-[500px] shadow-xl">
+            <h3 className="text-base font-semibold text-ink mb-4">🤖 AI 灵感生成</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="text-xs text-ink-muted block mb-1">灵感类型</label>
+                <div className="flex gap-2">
+                  {Object.entries(INSPIRATION_TYPE_LABELS).map(([key, label]) => (
+                    <button
+                      key={key}
+                      className={`px-3 py-1.5 rounded text-xs transition-all ${
+                        aiSelectedType === key
+                          ? 'text-white'
+                          : 'bg-bg-subtle text-ink-muted hover:text-ink'
+                      }`}
+                      style={aiSelectedType === key ? { backgroundColor: INSPIRATION_TYPE_COLORS[key as SavedInspiration['type']] } : {}}
+                      onClick={() => setAiSelectedType(key as SavedInspiration['type'])}
+                    >
+                      {INSPIRATION_TYPE_ICONS[key as SavedInspiration['type']]} {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <button
+                className="btn btn-primary btn-sm w-full"
+                onClick={handleAIGenerate}
+                disabled={aiGenerating}
+              >
+                {aiGenerating ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    生成中...
+                  </span>
+                ) : (
+                  '生成灵感'
+                )}
+              </button>
+
+              {aiResult && (
+                <div className="p-4 rounded-lg bg-gradient-to-br from-brand/5 to-brand/10 border border-brand/20">
+                  <div className="flex items-start gap-2 mb-3">
+                    <span className="text-lg">💡</span>
+                    <p className="text-sm text-ink leading-relaxed whitespace-pre-wrap flex-1">{aiResult}</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      className="btn btn-primary btn-sm text-xs flex-1"
+                      onClick={handleAISave}
+                    >
+                      保存到灵感库
+                    </button>
+                    <button
+                      className="btn btn-ghost btn-sm text-xs"
+                      onClick={handleAIGenerate}
+                    >
+                      换一个
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="flex justify-end gap-2 mt-4">
+              <button
+                className="btn btn-ghost btn-sm"
+                onClick={() => {
+                  setShowAIModal(false);
+                  setAiResult('');
+                }}
+              >
+                关闭
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
