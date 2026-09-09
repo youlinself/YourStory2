@@ -38,6 +38,283 @@ const PRESET_TAGS = [
 
 const CATEGORIES = ['全部', '情节', '情感', '场景', '节奏', '自定义'];
 
+interface QuickTagPanelProps {
+  chapter: NovelChapter;
+  onAddTag: (tag: string) => void;
+  onClose: () => void;
+}
+
+const QuickTagPanel: React.FC<QuickTagPanelProps> = ({ chapter, onAddTag, onClose }) => {
+  const [inputValue, setInputValue] = useState('');
+  const [activeCategory, setActiveCategory] = useState('全部');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  const chapterTagNames = useMemo(() => new Set(chapter.tags || []), [chapter.tags]);
+
+  const availablePresets = useMemo(() => {
+    return PRESET_TAGS.filter(p => !chapterTagNames.has(p.name));
+  }, [chapterTagNames]);
+
+  const categorizedPresets = useMemo(() => {
+    const result: Record<string, typeof PRESET_TAGS> = {};
+    for (const cat of CATEGORIES) {
+      if (cat === '全部') {
+        result[cat] = availablePresets;
+      } else {
+        result[cat] = availablePresets.filter(p => p.category === cat);
+      }
+    }
+    return result;
+  }, [availablePresets]);
+
+  const handleAddCustomTag = useCallback(() => {
+    const tag = inputValue.trim();
+    if (tag && !chapterTagNames.has(tag)) {
+      onAddTag(tag);
+    }
+    setInputValue('');
+  }, [inputValue, chapterTagNames, onAddTag]);
+
+  return (
+    <div className="mt-2 p-3 bg-bg-base border border-border rounded-lg shadow-sm">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-[10px] font-medium text-ink-muted">为「{chapter.title}」添加标签</span>
+        <button
+          className="text-ink-faint hover:text-ink"
+          onClick={onClose}
+        >
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <div className="flex items-center gap-1 mb-2 flex-wrap">
+        {CATEGORIES.filter(cat => cat !== '自定义').map(cat => (
+          <button
+            key={cat}
+            className={`px-2 py-0.5 rounded text-[10px] transition-colors ${
+              activeCategory === cat
+                ? 'bg-brand text-white'
+                : 'bg-bg-subtle text-ink-muted hover:text-ink'
+            }`}
+            onClick={() => setActiveCategory(cat)}
+          >
+            {cat}
+          </button>
+        ))}
+      </div>
+
+      <div className="flex flex-wrap gap-1 mb-2">
+        {categorizedPresets[activeCategory]?.map(preset => (
+          <button
+            key={preset.name}
+            className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs border border-border-subtle hover:border-brand hover:bg-brand/5 transition-colors"
+            onClick={() => onAddTag(preset.name)}
+          >
+            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: TAG_COLORS[PRESET_TAGS.indexOf(preset) % TAG_COLORS.length] }} />
+            <span>{preset.name}</span>
+          </button>
+        ))}
+        {(!categorizedPresets[activeCategory] || categorizedPresets[activeCategory].length === 0) && (
+          <span className="text-[10px] text-ink-faint">该分类下暂无可用标签</span>
+        )}
+      </div>
+
+      <div className="flex items-center gap-1 pt-2 border-t border-border-subtle">
+        <input
+          ref={inputRef}
+          className="flex-1 px-2 py-1 text-xs bg-bg-subtle border border-border-subtle rounded focus:outline-none focus:border-brand"
+          placeholder="输入自定义标签..."
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') handleAddCustomTag();
+            if (e.key === 'Escape') onClose();
+          }}
+        />
+        <button
+          className="px-2 py-1 text-xs bg-brand text-white rounded hover:bg-brand/90 disabled:opacity-50 disabled:cursor-not-allowed"
+          onClick={handleAddCustomTag}
+          disabled={!inputValue.trim()}
+        >
+          添加
+        </button>
+      </div>
+    </div>
+  );
+};
+
+interface TagManageModalProps {
+  chapters: NovelChapter[];
+  onClose: () => void;
+}
+
+const TagManageModal: React.FC<TagManageModalProps> = ({ chapters, onClose }) => {
+  const [activeCategory, setActiveCategory] = useState('全部');
+
+  const tagCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const chapter of chapters) {
+      for (const tag of chapter.tags || []) {
+        counts.set(tag, (counts.get(tag) || 0) + 1);
+      }
+    }
+    return counts;
+  }, [chapters]);
+
+  const allTagNames = useMemo(() => {
+    const names = new Set<string>();
+    for (const preset of PRESET_TAGS) {
+      names.add(preset.name);
+    }
+    for (const chapter of chapters) {
+      for (const tag of chapter.tags || []) {
+        names.add(tag);
+      }
+    }
+    return Array.from(names);
+  }, [chapters]);
+
+  const presetTagNames = useMemo(() => new Set(PRESET_TAGS.map(p => p.name)), []);
+
+  const getTagColor = useCallback((tagName: string) => {
+    const presetIndex = PRESET_TAGS.findIndex(p => p.name === tagName);
+    if (presetIndex >= 0) {
+      return TAG_COLORS[presetIndex % TAG_COLORS.length];
+    }
+    let hash = 0;
+    for (let i = 0; i < tagName.length; i++) {
+      hash = tagName.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return TAG_COLORS[Math.abs(hash) % TAG_COLORS.length];
+  }, []);
+
+  const getTagCategory = useCallback((tagName: string) => {
+    const preset = PRESET_TAGS.find(p => p.name === tagName);
+    return preset?.category || '自定义';
+  }, []);
+
+  const categorizedTags = useMemo(() => {
+    const result: Record<string, Array<{ name: string; count: number }>> = {};
+    for (const cat of CATEGORIES) {
+      if (cat === '全部') {
+        result[cat] = allTagNames.map(name => ({ name, count: tagCounts.get(name) || 0 }));
+      } else if (cat === '自定义') {
+        result[cat] = allTagNames
+          .filter(name => !presetTagNames.has(name))
+          .map(name => ({ name, count: tagCounts.get(name) || 0 }));
+      } else {
+        result[cat] = allTagNames
+          .filter(name => getTagCategory(name) === cat)
+          .map(name => ({ name, count: tagCounts.get(name) || 0 }));
+      }
+    }
+    return result;
+  }, [allTagNames, tagCounts, presetTagNames, getTagCategory]);
+
+  const totalTags = allTagNames.length;
+  const usedTags = Array.from(tagCounts.keys()).length;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onClose}>
+      <div className="bg-bg-base rounded-lg shadow-xl w-[480px] max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border-subtle">
+          <h3 className="text-sm font-medium text-ink">标签管理</h3>
+          <button
+            className="text-ink-faint hover:text-ink"
+            onClick={onClose}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="p-4 border-b border-border-subtle">
+          <div className="flex items-start gap-3">
+            <div className="flex-1 p-3 bg-bg-subtle rounded-lg">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs text-ink-muted">预设标签</span>
+                <span className="text-xs text-ink-faint">{PRESET_TAGS.length} 个</span>
+              </div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs text-ink-muted">已使用标签</span>
+                <span className="text-xs text-ink-faint">{usedTags} 个</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-ink-muted">自定义标签</span>
+                <span className="text-xs text-ink-faint">{totalTags - PRESET_TAGS.length} 个</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-4 overflow-y-auto flex-1">
+          <div className="flex items-center gap-1 mb-3 flex-wrap">
+            {CATEGORIES.map(cat => (
+              <button
+                key={cat}
+                className={`px-2 py-1 rounded text-xs transition-colors ${
+                  activeCategory === cat
+                    ? 'bg-brand text-white'
+                    : 'bg-bg-subtle text-ink-muted hover:text-ink'
+                }`}
+                onClick={() => setActiveCategory(cat)}
+              >
+                {cat}
+                <span className="ml-1 opacity-60">
+                  ({categorizedTags[cat]?.length || 0})
+                </span>
+              </button>
+            ))}
+          </div>
+
+          <div className="space-y-1">
+            {categorizedTags[activeCategory]?.map(tag => {
+              const isPreset = presetTagNames.has(tag.name);
+              return (
+                <div
+                  key={tag.name}
+                  className="flex items-center justify-between p-2 rounded hover:bg-bg-subtle"
+                >
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: getTagColor(tag.name) }}
+                    />
+                    <span className="text-sm text-ink">{tag.name}</span>
+                    {isPreset && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-bg-subtle text-ink-faint">
+                        预设
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-ink-faint">
+                      {tag.count > 0 ? `${tag.count} 章` : '未使用'}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="p-4 border-t border-border-subtle">
+          <p className="text-[10px] text-ink-faint mb-2">
+            提示：标签通过点击章节的「+ 标签」按钮添加到对应章节。预设标签可直接选用，自定义标签会自动保存。
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const TagManager: React.FC<TagManagerProps> = ({
   chapters,
   onChapterTagAdd,
@@ -45,25 +322,11 @@ const TagManager: React.FC<TagManagerProps> = ({
   onBatchTagAdd,
   onBatchTagRemove,
 }) => {
-  const [newTagName, setNewTagName] = useState('');
   const [selectedChapters, setSelectedChapters] = useState<Set<string>>(new Set());
   const [filterTag, setFilterTag] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeCategory, setActiveCategory] = useState('全部');
-  const [showPresets, setShowPresets] = useState(false);
   const [quickTagChapterId, setQuickTagChapterId] = useState<string | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const presetRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (presetRef.current && !presetRef.current.contains(e.target as Node)) {
-        setShowPresets(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  const [showManageModal, setShowManageModal] = useState(false);
 
   const allTags = useMemo(() => {
     const tagMap = new Map<string, number>();
@@ -81,27 +344,6 @@ const TagManager: React.FC<TagManagerProps> = ({
     return tags.sort((a, b) => b.count - a.count);
   }, [chapters]);
 
-  const presetTagNames = useMemo(() => new Set(PRESET_TAGS.map(t => t.name)), []);
-
-  const customTags = useMemo(() => {
-    return allTags.filter(t => !presetTagNames.has(t.name));
-  }, [allTags, presetTagNames]);
-
-  const categorizedTags = useMemo(() => {
-    const result: Record<string, TagInfo[]> = {};
-    for (const cat of CATEGORIES) {
-      if (cat === '全部') {
-        result[cat] = allTags;
-      } else if (cat === '自定义') {
-        result[cat] = customTags;
-      } else {
-        const presetNames = new Set(PRESET_TAGS.filter(t => t.category === cat).map(t => t.name));
-        result[cat] = allTags.filter(t => presetNames.has(t.name));
-      }
-    }
-    return result;
-  }, [allTags, customTags]);
-
   const filteredChapters = useMemo(() => {
     let filtered = chapters;
     if (filterTag) {
@@ -116,16 +358,6 @@ const TagManager: React.FC<TagManagerProps> = ({
     }
     return filtered;
   }, [chapters, filterTag, searchQuery]);
-
-  const handleAddTag = useCallback(() => {
-    const name = newTagName.trim();
-    if (!name) return;
-    if (selectedChapters.size > 0) {
-      onBatchTagAdd(Array.from(selectedChapters), name);
-    }
-    setNewTagName('');
-    setShowPresets(false);
-  }, [newTagName, selectedChapters, onBatchTagAdd]);
 
   const handleTagColor = useCallback((tagName: string) => {
     const tag = allTags.find((t) => t.name === tagName);
@@ -152,15 +384,6 @@ const TagManager: React.FC<TagManagerProps> = ({
     setSelectedChapters(new Set());
   }, []);
 
-  const handlePresetClick = useCallback((tagName: string) => {
-    if (selectedChapters.size > 0) {
-      onBatchTagAdd(Array.from(selectedChapters), tagName);
-    } else if (quickTagChapterId) {
-      onChapterTagAdd(quickTagChapterId, tagName);
-    }
-    setNewTagName('');
-  }, [selectedChapters, quickTagChapterId, onBatchTagAdd, onChapterTagAdd]);
-
   const handleQuickTag = useCallback((chapterId: string, tag: string, isAdding: boolean) => {
     if (isAdding) {
       onChapterTagAdd(chapterId, tag);
@@ -176,99 +399,30 @@ const TagManager: React.FC<TagManagerProps> = ({
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <div className="px-4 py-3 border-b border-border-subtle space-y-3">
-        <div className="flex items-center gap-2">
-          <div className="flex-1 relative" ref={presetRef}>
-            <input
-              ref={inputRef}
-              className="input text-sm w-full pr-8"
-              placeholder={selectedChapters.size > 0 ? `为选中的 ${selectedChapters.size} 章添加标签...` : "输入标签名或选择预设..."}
-              value={newTagName}
-              onChange={(e) => {
-                setNewTagName(e.target.value);
-                setShowPresets(e.target.value.length === 0);
-              }}
-              onFocus={() => setShowPresets(newTagName.length === 0)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleAddTag();
-                if (e.key === 'Escape') {
-                  setShowPresets(false);
-                  inputRef.current?.blur();
-                }
-              }}
-            />
-            <button
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-ink-faint hover:text-ink"
-              onClick={() => setShowPresets(!showPresets)}
-            >
-              <svg className={`w-4 h-4 transition-transform ${showPresets ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
-              </svg>
-            </button>
-
-            {showPresets && (
-              <div className="absolute top-full left-0 right-0 mt-1 bg-bg-base border border-border rounded-lg shadow-lg z-10 max-h-64 overflow-y-auto">
-                <div className="p-2">
-                  <div className="flex items-center gap-1 mb-2 flex-wrap">
-                    {CATEGORIES.map(cat => (
-                      <button
-                        key={cat}
-                        className={`px-2 py-0.5 rounded text-[10px] transition-colors ${
-                          activeCategory === cat
-                            ? 'bg-brand text-white'
-                            : 'bg-bg-subtle text-ink-muted hover:text-ink'
-                        }`}
-                        onClick={() => setActiveCategory(cat)}
-                      >
-                        {cat}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="flex flex-wrap gap-1">
-                    {(categorizedTags[activeCategory] || []).map(tag => (
-                      <button
-                        key={tag.name}
-                        className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs border border-border-subtle hover:border-brand hover:bg-brand/5 transition-colors"
-                        onClick={() => handlePresetClick(tag.name)}
-                      >
-                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: tag.color }} />
-                        <span>{tag.name}</span>
-                        <span className="text-[10px] text-ink-faint">×{tag.count}</span>
-                      </button>
-                    ))}
-                    {activeCategory === '全部' && PRESET_TAGS.filter(p => !allTags.some(t => t.name === p.name)).map(preset => (
-                      <button
-                        key={preset.name}
-                        className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs border border-dashed border-border-subtle hover:border-brand hover:bg-brand/5 transition-colors text-ink-muted"
-                        onClick={() => handlePresetClick(preset.name)}
-                      >
-                        <span className="w-2 h-2 rounded-full bg-ink-faint" />
-                        <span>{preset.name}</span>
-                        <span className="text-[10px]">+</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-          <button
-            className="btn btn-primary btn-sm"
-            onClick={handleAddTag}
-            disabled={!newTagName.trim() || (selectedChapters.size === 0 && !quickTagChapterId)}
-          >
-            添加
-          </button>
-        </div>
-
+      <div className="px-4 py-3 border-b border-border-subtle space-y-2">
         <div className="flex items-center gap-2">
           <input
             className="input text-xs flex-1"
-            placeholder="搜索章节..."
+            placeholder="搜索章节或标签..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
-          {filterTag && (
+          <button
+            className="btn btn-ghost btn-xs inline-flex items-center gap-1"
+            onClick={() => setShowManageModal(true)}
+            title="管理所有标签"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 6h.008v.008H6V6z" />
+            </svg>
+            标签管理
+          </button>
+        </div>
+
+        {filterTag && (
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-ink-faint">筛选:</span>
             <button
               className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs bg-brand/10 text-brand hover:bg-brand/20"
               onClick={() => setFilterTag(null)}
@@ -277,8 +431,8 @@ const TagManager: React.FC<TagManagerProps> = ({
               {filterTag}
               <span>×</span>
             </button>
-          )}
-        </div>
+          </div>
+        )}
 
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -385,32 +539,14 @@ const TagManager: React.FC<TagManagerProps> = ({
                         </button>
                       </div>
                       {quickTagChapterId === chapter.id && (
-                        <div className="mt-2 p-2 bg-bg-subtle rounded-lg">
-                          <div className="flex flex-wrap gap-1">
-                            {allTags
-                              .filter((t) => !(chapter.tags || []).includes(t.name))
-                              .slice(0, 10)
-                              .map((t) => (
-                                <button
-                                  key={t.name}
-                                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] border border-border-subtle hover:border-brand hover:bg-brand/5 transition-colors"
-                                  onClick={() => {
-                                    handleQuickTag(chapter.id, t.name, true);
-                                    setQuickTagChapterId(null);
-                                  }}
-                                >
-                                  <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: t.color }} />
-                                  {t.name}
-                                </button>
-                              ))}
-                            <button
-                              className="text-[10px] text-brand hover:underline"
-                              onClick={() => setQuickTagChapterId(null)}
-                            >
-                              关闭
-                            </button>
-                          </div>
-                        </div>
+                        <QuickTagPanel
+                          chapter={chapter}
+                          onAddTag={(tag) => {
+                            handleQuickTag(chapter.id, tag, true);
+                            setQuickTagChapterId(null);
+                          }}
+                          onClose={() => setQuickTagChapterId(null)}
+                        />
                       )}
                     </div>
                   </div>
@@ -436,8 +572,16 @@ const TagManager: React.FC<TagManagerProps> = ({
           </div>
         </div>
 
-        <div className="w-60 border-l border-border-subtle p-4 overflow-y-auto">
-          <h4 className="text-xs font-medium text-ink mb-3">标签概览</h4>
+        <div className="w-56 border-l border-border-subtle p-4 overflow-y-auto">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-xs font-medium text-ink">标签概览</h4>
+            <button
+              className="text-[10px] text-brand hover:underline"
+              onClick={() => setShowManageModal(true)}
+            >
+              管理
+            </button>
+          </div>
           <div className="space-y-1">
             {allTags.length > 0 ? (
               allTags.map((tag) => (
@@ -453,25 +597,34 @@ const TagManager: React.FC<TagManagerProps> = ({
                       className="w-3 h-3 rounded-full"
                       style={{ backgroundColor: tag.color }}
                     />
-                    <span className="text-xs text-ink">{tag.name}</span>
-                    <span className="text-[9px] text-ink-faint px-1 py-0.5 rounded bg-bg-subtle">
-                      {getTagCategory(tag.name)}
-                    </span>
+                    <span className="text-xs text-ink truncate max-w-[80px]">{tag.name}</span>
                   </div>
                   <span className="text-[10px] text-ink-faint">{tag.count}</span>
                 </div>
               ))
             ) : (
-              <p className="text-xs text-ink-faint text-center py-4">暂无标签</p>
+              <div className="text-center py-6">
+                <svg className="w-8 h-8 text-ink-faint mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 6h.008v.008H6V6z" />
+                </svg>
+                <p className="text-xs text-ink-faint mb-2">暂无标签</p>
+                <button
+                  className="text-xs text-brand hover:underline"
+                  onClick={() => setShowManageModal(true)}
+                >
+                  查看预设
+                </button>
+              </div>
             )}
           </div>
 
           {allTags.length > 0 && (
             <div className="mt-4 pt-4 border-t border-border-subtle">
-              <h4 className="text-xs font-medium text-ink mb-2">标签统计</h4>
+              <h4 className="text-xs font-medium text-ink mb-2">统计</h4>
               <div className="text-[10px] text-ink-faint space-y-1">
                 <p>共 {allTags.length} 个标签</p>
-                <p>覆盖 {new Set(allTags.flatMap(t => 
+                <p>覆盖 {new Set(allTags.flatMap(t =>
                   chapters.filter(ch => (ch.tags || []).includes(t.name)).map(ch => ch.id)
                 )).size} 个章节</p>
               </div>
@@ -479,6 +632,13 @@ const TagManager: React.FC<TagManagerProps> = ({
           )}
         </div>
       </div>
+
+      {showManageModal && (
+        <TagManageModal
+          chapters={chapters}
+          onClose={() => setShowManageModal(false)}
+        />
+      )}
     </div>
   );
 };
