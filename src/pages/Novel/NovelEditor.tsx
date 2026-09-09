@@ -287,6 +287,21 @@ const NovelEditor: React.FC = () => {
     [currentChapterId, scheduleAutoSave, scheduleHistoryUpdate]
   );
 
+  const syncToStoreImmediate = useCallback(
+    (content: string) => {
+      if (!novelId || !currentChapterId) return;
+      if (content === lastSavedContentRef.current) return;
+
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = null;
+      }
+
+      syncToStore(content);
+    },
+    [novelId, currentChapterId, syncToStore]
+  );
+
   const handleUndo = useCallback(() => {
     if (historyIndex > 0) {
       const newIndex = historyIndex - 1;
@@ -294,10 +309,10 @@ const NovelEditor: React.FC = () => {
       const content = contentHistory[newIndex];
       if (currentChapterId && content !== undefined) {
         localContentRef.current = content;
-        scheduleAutoSave(content);
+        syncToStoreImmediate(content);
       }
     }
-  }, [historyIndex, contentHistory, currentChapterId, scheduleAutoSave]);
+  }, [historyIndex, contentHistory, currentChapterId, syncToStoreImmediate]);
 
   const handleRedo = useCallback(() => {
     if (historyIndex < contentHistory.length - 1) {
@@ -306,10 +321,10 @@ const NovelEditor: React.FC = () => {
       const content = contentHistory[newIndex];
       if (currentChapterId && content !== undefined) {
         localContentRef.current = content;
-        scheduleAutoSave(content);
+        syncToStoreImmediate(content);
       }
     }
-  }, [historyIndex, contentHistory, currentChapterId, scheduleAutoSave]);
+  }, [historyIndex, contentHistory, currentChapterId, syncToStoreImmediate]);
 
   const getCurrentVolumeInfo = useCallback(() => {
     if (!currentChapter || !novel?.volumes) return null;
