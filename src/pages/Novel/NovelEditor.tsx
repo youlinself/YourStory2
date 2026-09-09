@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom';
 import useNovelStore from '../../stores/novelStore';
 import useAIStore from '../../stores/aiStore';
+import useWritingSkillStore from '../../stores/writingSkillStore';
 import NovelAIService from '../../services/ai/NovelAIService';
 import { useToast } from '../../components';
 import {
@@ -34,11 +35,12 @@ import InspirationBoard from '../../components/novel/InspirationBoard';
 import VolumeManager from '../../components/novel/VolumeManager';
 import WritingAnalytics from '../../components/novel/WritingAnalytics';
 import ImportModal from '../../components/novel/ImportModal';
+import WritingSkillsPanel from '../../components/novel/WritingSkillsPanel';
 import type { PlotThread } from '../../components/novel/PlotThreadTracker';
 import type { SavedInspiration } from '../../types';
 import type { Volume } from '../../types/novel';
 
-type ViewMode = 'write' | 'outline' | 'characters' | 'world' | 'novelInfo' | 'stats' | 'tags' | 'inspirations' | 'volumes' | 'analytics';
+type ViewMode = 'write' | 'outline' | 'characters' | 'world' | 'novelInfo' | 'stats' | 'tags' | 'inspirations' | 'volumes' | 'analytics' | 'skills';
 
 const MAX_HISTORY = 50;
 const HISTORY_DEBOUNCE_MS = 500;
@@ -60,6 +62,7 @@ const NovelEditor: React.FC = () => {
     reorderChapters,
   } = useNovelStore();
   const { apiKey, model, baseUrl, vendor, temperature, customModelName } = useAIStore();
+  const { loadSettings: loadSkillSettings } = useWritingSkillStore();
 
   const [viewMode, setViewMode] = useState<ViewMode>('write');
   const [editorMode, setEditorMode] = useState<EditorMode>('plaintext');
@@ -136,6 +139,10 @@ const NovelEditor: React.FC = () => {
       setCurrentNovel(novelId);
     }
   }, [novelId, setCurrentNovel]);
+
+  useEffect(() => {
+    loadSkillSettings();
+  }, [loadSkillSettings]);
 
   useEffect(() => {
     if (novel && !currentChapterId && novel.chapters.length > 0) {
@@ -913,6 +920,16 @@ const NovelEditor: React.FC = () => {
           >
             统计
           </button>
+          <button
+            className={`text-sm pb-1 border-b-2 transition-all ${
+              viewMode === 'skills'
+                ? 'border-brand text-brand font-medium'
+                : 'border-transparent text-ink-muted hover:text-ink'
+            }`}
+            onClick={() => setViewMode('skills')}
+          >
+            AI技能
+          </button>
 
           <div className="flex-1" />
 
@@ -1167,6 +1184,20 @@ const NovelEditor: React.FC = () => {
               totalWords={novel.currentWordCount}
               streakDays={writingStats.streak.current}
             />
+          )}
+
+          {viewMode === 'skills' && (
+            <div className="flex-1 overflow-y-auto p-6">
+              <div className="max-w-4xl mx-auto">
+                <div className="mb-6">
+                  <h2 className="text-lg font-semibold text-ink mb-1">AI 写作技能</h2>
+                  <p className="text-sm text-ink-muted">
+                    管理自定义写作技能、风格预设和AI扩展配置
+                  </p>
+                </div>
+                <WritingSkillsPanel />
+              </div>
+            </div>
           )}
         </div>
 

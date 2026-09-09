@@ -216,3 +216,52 @@ export interface EditorState {
   cursorPosition: number;
   selection: { start: number; end: number };
 }
+
+/** 自定义写作技能类型 */
+export type SkillCategory = 'writing' | 'analysis' | 'generation' | 'organization' | 'custom';
+
+/** 自定义写作技能 */
+export interface CustomWritingSkill {
+  id: string;
+  name: string;
+  description: string;
+  category: SkillCategory;
+  /** 技能提示词模板 */
+  promptTemplate: string;
+  /** 快捷触发词 */
+  triggerWords: string[];
+  /** 关联的AI参数覆盖 */
+  paramsOverride?: Partial<AIParams>;
+  /** 是否启用 */
+  isEnabled: boolean;
+  /** 创建时间 */
+  createdAt: string;
+  /** 更新时间 */
+  updatedAt: string;
+}
+
+/** AI 扩展配置 */
+export interface AIExtensionConfig {
+  /** 自定义系统提示词 */
+  customSystemPrompt: string;
+  /** 写作风格预设 */
+  writingStylePresets: WritingStylePreset[];
+  /** 自动触发技能 */
+  autoTriggerSkills: boolean;
+  /** 技能建议阈值 */
+  skillSuggestionThreshold: number;
+}
+
+/** 写作风格预设 */
+export interface WritingStylePreset {
+  id: string;
+  name: string;
+  description: string;
+  /** 风格提示词 */
+  stylePrompt: string;
+  /** 示例文本 */
+  exampleText: string;
+  /** 关联参数 */
+  params: Partial<AIParams>;
+  isDefault: boolean;
+}

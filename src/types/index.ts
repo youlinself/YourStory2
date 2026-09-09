@@ -164,6 +164,10 @@ export type {
   AutoSaveConfig,
   SaveStatus,
   EditorState,
+  CustomWritingSkill,
+  SkillCategory,
+  AIExtensionConfig,
+  WritingStylePreset,
 } from './writing';
 
 export { ACHIEVEMENTS, DEFAULT_AI_PARAMS } from './writing';
