@@ -206,7 +206,7 @@ const NovelListPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-4">
+        <div className="flex flex-wrap gap-4">
           {filteredNovels.length > 0 ? (
             filteredNovels.map((novel) => (
               <NovelCard
@@ -219,7 +219,7 @@ const NovelListPage: React.FC = () => {
               />
             ))
           ) : (
-            <div className="col-span-3">
+            <div className="w-full">
               {searchValue || filterGenre !== 'all' || filterStatus !== 'all' ? (
                 <EmptyState
                   illustration="magnifying-glass"
@@ -238,7 +238,7 @@ const NovelListPage: React.FC = () => {
 
           {filteredNovels.length > 0 && (
             <div
-              className="border-2 border-dashed border-border-subtle rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer hover:border-brand hover:bg-brand-surface/30 transition-all min-h-[200px]"
+              className="border-2 border-dashed border-border-subtle rounded-xl flex flex-col items-center justify-center cursor-pointer hover:border-brand hover:bg-brand-surface/30 transition-all w-[235px] h-[360px]"
               onClick={() => setIsCreateModalOpen(true)}
             >
               <svg

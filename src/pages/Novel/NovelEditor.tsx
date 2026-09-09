@@ -1018,13 +1018,6 @@ const NovelEditor: React.FC = () => {
             </div>
           )}
 
-          {viewMode === 'characters' && (
-            <CharacterPanel
-              novelId={novel.id}
-              characters={novel.characters}
-            />
-          )}
-
           {viewMode === 'world' && (
             <WorldBuildingPanel
               novelId={novel.id}

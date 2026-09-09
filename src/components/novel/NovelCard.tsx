@@ -42,12 +42,12 @@ const NovelCard: React.FC<NovelCardProps> = ({
   };
 
   return (
-    <div className="card group relative">
+    <div className="card group relative w-[235px] h-[360px] flex flex-col">
       <div
-        className="cursor-pointer"
+        className="cursor-pointer flex flex-col flex-1 min-h-0"
         onClick={onClick}
       >
-        <div className="aspect-[3/4] rounded-lg bg-gradient-to-br from-brand/10 to-brand/5 flex items-center justify-center mb-3 overflow-hidden relative">
+        <div className="w-full h-[180px] rounded-lg bg-gradient-to-br from-brand/10 to-brand/5 flex items-center justify-center mb-3 overflow-hidden relative shrink-0">
           {novel.coverImage ? (
             <img
               src={novel.coverImage}
@@ -89,11 +89,11 @@ const NovelCard: React.FC<NovelCardProps> = ({
           </span>
         </div>
 
-        <p className="text-xs text-ink-muted line-clamp-2 mb-3 min-h-[2.5em]">
+        <p className="text-xs text-ink-muted line-clamp-2 mb-2 min-h-[2.5em]">
           {novel.synopsis || '暂无简介'}
         </p>
 
-        <div className="flex items-center justify-between text-xs text-ink-faint">
+        <div className="flex items-center justify-between text-xs text-ink-faint mt-auto">
           <span>
             {novel.currentWordCount > 0
               ? novel.currentWordCount > 10000
