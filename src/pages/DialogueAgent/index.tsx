@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Sparkles,
@@ -33,7 +33,29 @@ import { SkillSwitcher } from '../../components/dialogue/SkillSwitcher';
 import { CommandPanel } from '../../components/dialogue/CommandPanel';
 import { EventLogPanel } from '../../components/debug/EventLogPanel';
 import MDEditor from '@uiw/react-md-editor';
+import Modal from '../../components/ui/Modal';
 import '../../styles/dialogue.css';
+
+const SESSION_MAP_KEY = 'dialogue-session-map';
+
+function getSessionMap(): Record<string, string> {
+  try {
+    const raw = localStorage.getItem(SESSION_MAP_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function setSessionMapEntry(chapterId: string, sessionId: string) {
+  const map = getSessionMap();
+  map[chapterId] = sessionId;
+  localStorage.setItem(SESSION_MAP_KEY, JSON.stringify(map));
+}
+
+function getSessionIdForChapter(chapterId: string): string | null {
+  return getSessionMap()[chapterId] || null;
+}
 
 const DialogueAgent: React.FC = () => {
   const { chapterId } = useParams<{ chapterId?: string }>();
@@ -43,6 +65,11 @@ const DialogueAgent: React.FC = () => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false);
   const [showDebugPanel, setShowDebugPanel] = useState(false);
+  const [showCreateChapterModal, setShowCreateChapterModal] = useState(false);
+  const [newChapterTitle, setNewChapterTitle] = useState('');
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+  const [pendingNavigationPath, setPendingNavigationPath] = useState<string | null>(null);
 
   const { loadSettings } = useAIStore();
 
@@ -55,6 +82,7 @@ const DialogueAgent: React.FC = () => {
     pendingToolCalls,
     initialize,
     createSession,
+    resumeSession,
     handleMessage,
     approveContent,
   } = useAgentStore();
@@ -111,10 +139,64 @@ const DialogueAgent: React.FC = () => {
   }, [loadSettings, loadAutobiography, agent, initialize]);
 
   useEffect(() => {
-    if (agent && chapterId) {
+    if (!agent || !chapterId) return;
+
+    const existingSessionId = getSessionIdForChapter(chapterId);
+    if (existingSessionId) {
+      resumeSession(existingSessionId).catch(() => {
+        createSession(chapterId);
+      });
+    } else {
       createSession(chapterId);
     }
-  }, [agent, chapterId, createSession]);
+  }, [agent, chapterId, createSession, resumeSession]);
+
+  useEffect(() => {
+    if (currentSession && chapterId) {
+      setSessionMapEntry(chapterId, currentSession.id);
+    }
+  }, [currentSession, chapterId]);
+
+  useEffect(() => {
+    if (currentSession && currentSession.history.length > 0) {
+      setHasUnsavedChanges(true);
+    }
+  }, [currentSession?.history.length]);
+
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges && currentSession && currentSession.history.length > 0) {
+        e.preventDefault();
+        e.returnValue = '您有未保存的对话内容，确定要离开吗？';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges, currentSession]);
+
+  const handleNavigateWithCheck = useCallback((path: string) => {
+    if (hasUnsavedChanges && currentSession && currentSession.history.length > 0) {
+      setPendingNavigationPath(path);
+      setShowLeaveConfirm(true);
+    } else {
+      navigate(path);
+    }
+  }, [hasUnsavedChanges, currentSession, navigate]);
+
+  const handleConfirmLeave = useCallback(async (save: boolean) => {
+    if (save && chapterId && currentSession) {
+      const conversationText = currentSession.history
+        .map((turn) => `${turn.role === 'user' ? '我' : 'AI'}: ${turn.content}`)
+        .join('\n\n');
+      await updateChapterDraft(chapterId, conversationText);
+    }
+    setShowLeaveConfirm(false);
+    if (pendingNavigationPath) {
+      navigate(pendingNavigationPath);
+      setPendingNavigationPath(null);
+    }
+  }, [chapterId, currentSession, updateChapterDraft, navigate, pendingNavigationPath]);
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -151,17 +233,22 @@ const DialogueAgent: React.FC = () => {
 
   const handleSaveDraft = async () => {
     try {
-      if (chapterId && currentSession) {
-        const extractedContent = currentSession.context.extractedCache;
-        if (extractedContent && extractedContent.length > 0) {
-          const draftContent = extractedContent.map((e: any) => e.paragraphs?.join('\n')).join('\n\n');
-          await updateChapterDraft(chapterId, draftContent);
-        }
+      if (chapterId && currentSession && currentSession.history.length > 0) {
+        const conversationText = currentSession.history
+          .map((turn) => `${turn.role === 'user' ? '我' : 'AI'}: ${turn.content}`)
+          .join('\n\n');
+        await updateChapterDraft(chapterId, conversationText);
+        setHasUnsavedChanges(false);
+        addToast({
+          type: 'success',
+          message: '草稿已保存',
+        });
+      } else {
+        addToast({
+          type: 'warning',
+          message: '暂无可保存的内容',
+        });
       }
-      addToast({
-        type: 'success',
-        message: '草稿已保存',
-      });
     } catch (err) {
       console.error('保存草稿失败:', err);
       addToast({ type: 'error', message: '保存失败，请重试' });
@@ -181,17 +268,48 @@ const DialogueAgent: React.FC = () => {
   };
 
   const handleDialogueSettings = () => {
-    navigate('/settings');
+    handleNavigateWithCheck('/settings');
+  };
+
+  const handleStartChapter = () => {
+    setNewChapterTitle('');
+    setShowCreateChapterModal(true);
+  };
+
+  const handleConfirmCreateChapter = async () => {
+    if (!newChapterTitle.trim()) return;
+    let autobiographyData = autobiography;
+    if (!autobiographyData) {
+      await useAutobiographyStore.getState().create();
+      autobiographyData = useAutobiographyStore.getState().autobiography;
+    }
+    const newChapterId = await useAutobiographyStore.getState().createChapter(newChapterTitle.trim());
+    if (newChapterId) {
+      setShowCreateChapterModal(false);
+      setNewChapterTitle('');
+      handleNavigateWithCheck(`/dialogue/${newChapterId}`);
+    }
+  };
+
+  const handleOutlineItemClick = (chapterId: string) => {
+    handleNavigateWithCheck(`/dialogue/${chapterId}`);
   };
 
   const handleApproveContent = async () => {
-    if (chapterId) {
+    if (chapterId && currentSession && currentSession.history.length > 0) {
       try {
+        const conversationText = currentSession.history
+          .map((turn) => `${turn.role === 'user' ? '我' : 'AI'}: ${turn.content}`)
+          .join('\n\n');
+        await updateChapterDraft(chapterId, conversationText);
         await approveContent(chapterId);
+        setHasUnsavedChanges(false);
         addToast({ type: 'success', message: '内容已确认写入章节' });
       } catch (error) {
         addToast({ type: 'error', message: '确认失败，请重试' });
       }
+    } else {
+      addToast({ type: 'warning', message: '暂无可确认的内容' });
     }
   };
 
@@ -272,7 +390,7 @@ const DialogueAgent: React.FC = () => {
                 </div>
 
                 <div className="hero-cta">
-                  <button className="btn btn-primary btn-lg">
+                  <button className="btn btn-primary btn-lg" onClick={handleStartChapter}>
                     <PenLine size={18} strokeWidth={2} />
                     开始第一章 · 童年记忆
                   </button>
@@ -415,6 +533,8 @@ const DialogueAgent: React.FC = () => {
                   <div
                     key={item.id || index}
                     className={`outline-item ${item.status === '进行中' ? 'outline-item-active' : ''}`}
+                    onClick={() => item.id && handleOutlineItemClick(item.id)}
+                    style={{ cursor: item.id ? 'pointer' : 'default' }}
                   >
                     <div className={`timeline-dot bg-${item.color}`} />
                     <div className="outline-item-content">
@@ -502,6 +622,84 @@ const DialogueAgent: React.FC = () => {
           </section>
         </aside>
       )}
+
+      <Modal
+        isOpen={showCreateChapterModal}
+        onClose={() => setShowCreateChapterModal(false)}
+        title="新建章节"
+        size="sm"
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="text-sm font-medium text-ink mb-2 block">
+              章节标题 <span className="text-danger">*</span>
+            </label>
+            <input
+              className="input"
+              placeholder="例如：童年记忆、学生时代、职场生涯..."
+              value={newChapterTitle}
+              onChange={(e) => setNewChapterTitle(e.target.value)}
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && newChapterTitle.trim()) {
+                  handleConfirmCreateChapter();
+                }
+              }}
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-3 border-t border-border-subtle">
+            <button
+              className="btn btn-ghost"
+              onClick={() => setShowCreateChapterModal(false)}
+            >
+              取消
+            </button>
+            <button
+              className="btn btn-primary"
+              onClick={handleConfirmCreateChapter}
+              disabled={!newChapterTitle.trim()}
+            >
+              创建章节
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={showLeaveConfirm}
+        onClose={() => setShowLeaveConfirm(false)}
+        title="离开确认"
+        size="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-ink-muted">
+            您有未保存的对话内容，离开后将会丢失。是否保存当前对话内容？
+          </p>
+          <div className="flex justify-end gap-2 pt-3 border-t border-border-subtle">
+            <button
+              className="btn btn-ghost"
+              onClick={() => {
+                setShowLeaveConfirm(false);
+                setPendingNavigationPath(null);
+              }}
+            >
+              取消
+            </button>
+            <button
+              className="btn btn-ghost"
+              onClick={() => handleConfirmLeave(false)}
+            >
+              不保存
+            </button>
+            <button
+              className="btn btn-primary"
+              onClick={() => handleConfirmLeave(true)}
+            >
+              保存并离开
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };
