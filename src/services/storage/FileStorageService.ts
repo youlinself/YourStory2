@@ -1,6 +1,5 @@
 import { open as dialogOpen } from '@tauri-apps/plugin-dialog';
 import { mkdir, writeTextFile, readTextFile, exists, remove, readDir, stat } from '@tauri-apps/plugin-fs';
-import * as path from '@tauri-apps/api/path';
 
 export type StorageType = 'localStorage' | 'file';
 

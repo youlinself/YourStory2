@@ -7,6 +7,7 @@ import { AppLayout } from "./components/layout";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import AchievementNotification from "./components/achievement/AchievementNotification";
 import FileStorageService from "./services/storage/FileStorageService";
+import ContextMenu from "./components/ContextMenu";
 import "./App.css";
 
 function App() {
@@ -22,6 +23,7 @@ function App() {
       <Router>
         <ToastProvider>
           <AchievementNotification />
+          <ContextMenu />
           <Routes>
             <Route element={<AppLayout />}>
               <Route path="/" element={<Home />} />

@@ -70,7 +70,7 @@ class NovelAIContextService {
     return NovelAIContextService.instance;
   }
 
-  async getFullContextForAI(novelId: string, chapterId?: string): Promise<AIContextPrompt> {
+  async getFullContextForAI(novelId: string, _chapterId?: string): Promise<AIContextPrompt> {
     const context = await this.fileLibrary.getNovelContextForAI(novelId, {
       includeChapters: true,
       includeCharacters: true,
@@ -101,7 +101,6 @@ class NovelAIContextService {
       characterDetailLevel: 'brief',
     });
 
-    const searchIndex = await this.fileLibrary.loadSearchIndex(novelId);
     const recentChapters = await this.getRecentChaptersContent(novelId, 3);
 
     const mainCharacters = context.characters.slice(0, 10).map((c) => ({
@@ -219,8 +218,6 @@ class NovelAIContextService {
     const dialogueRatio = dialogueCount / sample.length;
 
     const avgSentenceLength = this.calculateAvgSentenceLength(sample);
-    const paragraphCount = (sample.match(/\n\n/g) || []).length;
-    const avgParagraphLength = sample.length / Math.max(paragraphCount, 1);
 
     const descriptiveWords = (sample.match(/[美丽明净清幽繁华萧瑟磅礴婉约]/g) || []).length;
     const descriptiveRatio = descriptiveWords / sample.length;
@@ -257,7 +254,6 @@ class NovelAIContextService {
     involvedCharacters: string[];
   }>> {
     const context = await this.getNovelSummary(novelId);
-    const lastChapters = context.previousChapters.slice(-3);
 
     const outline: Array<{
       title: string;
@@ -342,12 +338,6 @@ class NovelAIContextService {
     }>;
   }> {
     const searchIndex = await this.fileLibrary.loadSearchIndex(novelId);
-    const context = await this.fileLibrary.getNovelContextForAI(novelId, {
-      includeChapters: true,
-      includeCharacters: false,
-      includeWorldBuilding: false,
-      chapterLimit: 100,
-    });
 
     const chapters = (searchIndex?.chapters || []).map((ch) => ({
       title: ch.title,
@@ -379,12 +369,6 @@ class NovelAIContextService {
   }
 
   private async getRecentChaptersContent(novelId: string, count: number): Promise<Array<{ title: string; content: string }>> {
-    const context = await this.fileLibrary.getNovelContextForAI(novelId, {
-      includeChapters: false,
-      includeCharacters: false,
-      includeWorldBuilding: false,
-    });
-
     const searchIndex = await this.fileLibrary.loadSearchIndex(novelId);
     if (!searchIndex) return [];
 

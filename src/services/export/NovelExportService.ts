@@ -211,29 +211,6 @@ class NovelExportService {
   private exportEpub(novel: Novel, options: ExportOptions): ExportResult {
     const chapters = this.getChaptersToExport(novel, options);
 
-    const htmlChapters = chapters
-      .map(
-        (ch) => `
-    <html xmlns="http://www.w3.org/1999/xhtml">
-    <head>
-      <title>${this.escapeHtml(ch.title)}</title>
-      <style>
-        body { font-family: "Noto Serif SC", serif; line-height: 1.8; padding: 2em; }
-        h1 { text-align: center; margin-bottom: 1em; }
-        p { text-indent: 2em; margin: 0.5em 0; }
-      </style>
-    </head>
-    <body>
-      <h1>${this.escapeHtml(ch.title)}</h1>
-      ${ch.content
-        .split('\n\n')
-        .map((p) => `<p>${this.escapeHtml(p)}</p>`)
-        .join('\n      ')}
-    </body>
-    </html>`
-      )
-      .join('\n');
-
     const toc = chapters.map((ch, idx) => `<li><a href="chapter_${idx}.xhtml">${this.escapeHtml(ch.title)}</a></li>`).join('\n    ');
 
     const opfContent = `<?xml version="1.0" encoding="UTF-8"?>

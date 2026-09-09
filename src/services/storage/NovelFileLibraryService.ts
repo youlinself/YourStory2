@@ -362,7 +362,6 @@ class NovelFileLibraryService {
 
   async getLibraryStats(): Promise<FileLibraryStats> {
     const index = await this.getLibraryIndex();
-    const novels = await this.fileStorage.listDirectories(NOVEL_ROOT_PREFIX);
 
     let totalWords = 0;
     let totalChapters = 0;
