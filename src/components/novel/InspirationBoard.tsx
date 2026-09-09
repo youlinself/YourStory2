@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import type { SavedInspiration } from '../../types';
+import InspirationImportModal from './InspirationImportModal';
 
 interface InspirationBoardProps {
   inspirations: SavedInspiration[];
@@ -7,6 +8,12 @@ interface InspirationBoardProps {
   onInspirationDelete: (id: string) => void;
   onInspirationUse: (id: string) => void;
 }
+
+const getRandomInspiration = (inspirations: SavedInspiration[]): SavedInspiration | null => {
+  const unused = inspirations.filter((i) => !i.isUsed);
+  if (unused.length === 0) return null;
+  return unused[Math.floor(Math.random() * unused.length)];
+};
 
 const INSPIRATION_TYPE_LABELS: Record<SavedInspiration['type'], string> = {
   plot: '情节',
@@ -39,10 +46,13 @@ const InspirationBoard: React.FC<InspirationBoardProps> = ({
   onInspirationUse,
 }) => {
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
   const [filterType, setFilterType] = useState<SavedInspiration['type'] | 'all'>('all');
   const [filterStatus, setFilterStatus] = useState<'all' | 'unused' | 'used'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [showRandom, setShowRandom] = useState(false);
+  const [showEmptyPrompt, setShowEmptyPrompt] = useState(false);
+  const [randomInspiration, setRandomInspiration] = useState<SavedInspiration | null>(null);
   const [newInspiration, setNewInspiration] = useState({
     type: 'plot' as SavedInspiration['type'],
     content: '',
@@ -73,11 +83,22 @@ const InspirationBoard: React.FC<InspirationBoardProps> = ({
     return filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }, [inspirations, filterType, filterStatus, searchQuery]);
 
-  const randomInspiration = useMemo(() => {
-    const unused = inspirations.filter((i) => !i.isUsed);
-    if (unused.length === 0) return null;
-    return unused[Math.floor(Math.random() * unused.length)];
+  const handleRandomInspiration = useCallback(() => {
+    if (inspirations.length === 0) {
+      setShowEmptyPrompt(true);
+      return;
+    }
+    const newRandom = getRandomInspiration(inspirations);
+    setRandomInspiration(newRandom);
+    setShowRandom(true);
   }, [inspirations]);
+
+  const handleImportInspirations = useCallback((newInspirations: Omit<SavedInspiration, 'id' | 'createdAt'>[]) => {
+    newInspirations.forEach(inspiration => {
+      onInspirationAdd(inspiration);
+    });
+    setShowImportModal(false);
+  }, [onInspirationAdd]);
 
   const handleAddInspiration = useCallback(() => {
     if (!newInspiration.content.trim()) return;
@@ -146,8 +167,17 @@ const InspirationBoard: React.FC<InspirationBoardProps> = ({
         <div className="flex items-center gap-2">
           <button
             className="btn btn-ghost btn-sm text-xs"
-            onClick={() => setShowRandom(true)}
-            disabled={stats.unused === 0}
+            onClick={() => setShowImportModal(true)}
+            title="从 Excel 导入灵感"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+            </svg>
+            <span>导入</span>
+          </button>
+          <button
+            className="btn btn-ghost btn-sm text-xs"
+            onClick={handleRandomInspiration}
           >
             🎲 随机
           </button>
@@ -355,6 +385,40 @@ const InspirationBoard: React.FC<InspirationBoardProps> = ({
             </div>
           </div>
         </div>
+      )}
+
+      {showEmptyPrompt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-bg-base rounded-xl p-6 w-96 shadow-xl text-center">
+            <span className="text-4xl mb-4 block">💡</span>
+            <h3 className="text-base font-semibold text-ink mb-2">灵感库为空</h3>
+            <p className="text-sm text-ink-muted mb-4">还没有任何灵感记录，先去收集一些创意吧！</p>
+            <div className="flex justify-center gap-2">
+              <button
+                className="btn btn-ghost btn-sm"
+                onClick={() => setShowEmptyPrompt(false)}
+              >
+                稍后再说
+              </button>
+              <button
+                className="btn btn-primary btn-sm"
+                onClick={() => {
+                  setShowEmptyPrompt(false);
+                  setShowAddModal(true);
+                }}
+              >
+                去记录灵感
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showImportModal && (
+        <InspirationImportModal
+          onImport={handleImportInspirations}
+          onClose={() => setShowImportModal(false)}
+        />
       )}
     </div>
   );

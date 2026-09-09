@@ -592,10 +592,12 @@ const NovelEditor: React.FC = () => {
     useNovelStore.getState().updateNovel(novelId, { volumes: reordered });
   }, [novelId, novel?.volumes]);
 
+  const inspirationIdCounter = useRef(0);
+
   const handleInspirationAdd = useCallback((inspiration: Omit<SavedInspiration, 'id' | 'createdAt'>) => {
     const newInspiration: SavedInspiration = {
       ...inspiration,
-      id: `insp_${Date.now()}`,
+      id: `insp_${Date.now()}_${++inspirationIdCounter.current}`,
       createdAt: new Date().toISOString(),
     };
     setInspirations((prev) => [...prev, newInspiration]);
