@@ -168,6 +168,9 @@ export type {
   SkillCategory,
   AIExtensionConfig,
   WritingStylePreset,
+  ThinkTankMember,
+  ThinkTankRole,
+  ThinkTankRolePreset,
 } from './writing';
 
 export { ACHIEVEMENTS, DEFAULT_AI_PARAMS } from './writing';

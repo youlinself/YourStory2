@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom';
 import useNovelStore from '../../stores/novelStore';
 import useAIStore from '../../stores/aiStore';
+import useThinkTankStore from '../../stores/thinkTankStore';
 import useWritingSkillStore from '../../stores/writingSkillStore';
 import NovelAIService from '../../services/ai/NovelAIService';
 import { useToast } from '../../components';
@@ -62,6 +63,7 @@ const NovelEditor: React.FC = () => {
     reorderChapters,
   } = useNovelStore();
   const { apiKey, model, baseUrl, vendor, temperature, customModelName } = useAIStore();
+  const { members: thinkTankMembers } = useThinkTankStore();
   const { loadSettings: loadSkillSettings } = useWritingSkillStore();
 
   const [viewMode, setViewMode] = useState<ViewMode>('write');
@@ -69,6 +71,7 @@ const NovelEditor: React.FC = () => {
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved');
   const [showStats, setShowStats] = useState(false);
+  const [selectedThinkTankMemberId, setSelectedThinkTankMemberId] = useState<string | null>(null);
 
   const [contentHistory, setContentHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
@@ -422,9 +425,26 @@ const NovelEditor: React.FC = () => {
   const handleAIAssist = async (
     type: 'continue' | 'polish' | 'expand' | 'suggest',
     selectedText?: string,
-    params?: AIParams
+    params?: AIParams,
+    memberId?: string | null
   ) => {
-    if (!apiKey) {
+    let memberConfig = { apiKey, model, baseUrl, vendor, temperature, customModelName };
+
+    if (memberId) {
+      const member = thinkTankMembers.find((m) => m.id === memberId);
+      if (member && member.isEnabled) {
+        memberConfig = {
+          apiKey: member.config.apiKey,
+          model: member.config.model,
+          baseUrl: member.config.baseUrl,
+          vendor: member.config.vendor,
+          temperature: member.config.temperature,
+          customModelName: member.config.customModelName,
+        };
+      }
+    }
+
+    if (!memberConfig.apiKey) {
       toast.addToast({ type: 'error', message: '请先在设置页面配置AI API Key' });
       return null;
     }
@@ -435,12 +455,12 @@ const NovelEditor: React.FC = () => {
     }
 
     const aiService = new NovelAIService({
-      apiKey,
-      model,
-      baseUrl,
-      vendor,
-      temperature: params?.continue?.temperature ?? temperature,
-      customModelName,
+      apiKey: memberConfig.apiKey,
+      model: memberConfig.model,
+      baseUrl: memberConfig.baseUrl,
+      vendor: memberConfig.vendor,
+      temperature: params?.continue?.temperature ?? memberConfig.temperature,
+      customModelName: memberConfig.customModelName,
     });
 
     try {
@@ -1211,6 +1231,8 @@ const NovelEditor: React.FC = () => {
             history={aiHistory}
             onClearHistory={handleClearHistory}
             onToggleFavorite={handleToggleFavorite}
+            selectedMemberId={selectedThinkTankMemberId}
+            onSelectedMemberChange={setSelectedThinkTankMemberId}
           />
         )}
 

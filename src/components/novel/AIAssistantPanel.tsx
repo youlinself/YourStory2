@@ -1,17 +1,21 @@
 import React, { useState, useCallback } from 'react';
 import type { AIParams, AIHistoryItem } from '../../types';
 import { DEFAULT_AI_PARAMS } from '../../types';
+import ThinkTankSelector from './ThinkTankSelector';
 
 interface AIAssistantPanelProps {
   onAssist: (
     type: 'continue' | 'polish' | 'expand' | 'suggest',
     selectedText?: string,
-    params?: AIParams
+    params?: AIParams,
+    memberId?: string | null
   ) => Promise<string | string[] | null>;
   onInsertText: (text: string) => void;
   history: AIHistoryItem[];
   onClearHistory: () => void;
   onToggleFavorite: (id: string) => void;
+  selectedMemberId?: string | null;
+  onSelectedMemberChange?: (memberId: string | null) => void;
 }
 
 type AssistantTab = 'write' | 'inspire' | 'name' | 'history';
@@ -22,6 +26,8 @@ const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
   history,
   onClearHistory,
   onToggleFavorite,
+  selectedMemberId = null,
+  onSelectedMemberChange,
 }) => {
   const [activeTab, setActiveTab] = useState<AssistantTab>('write');
   const [isLoading, setIsLoading] = useState(false);
@@ -39,7 +45,7 @@ const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
       setSuggestions([]);
 
       try {
-        const response = await onAssist(type, undefined, params);
+        const response = await onAssist(type, undefined, params, selectedMemberId);
         if (Array.isArray(response)) {
           setSuggestions(response);
         } else if (typeof response === 'string') {
@@ -51,7 +57,7 @@ const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
         setIsLoading(false);
       }
     },
-    [onAssist, params]
+    [onAssist, params, selectedMemberId]
   );
 
   const handleRegenerate = useCallback(async () => {
@@ -591,47 +597,57 @@ const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
 
   return (
     <div className="w-72 border-l border-border-subtle flex flex-col bg-bg-base">
-      <div className="flex border-b border-border-subtle">
-        <button
-          className={`flex-1 px-3 py-2 text-xs font-medium transition-colors ${
-            activeTab === 'write'
-              ? 'text-brand border-b-2 border-brand'
-              : 'text-ink-muted hover:text-ink'
-          }`}
-          onClick={() => setActiveTab('write')}
-        >
-          写作助手
-        </button>
-        <button
-          className={`flex-1 px-3 py-2 text-xs font-medium transition-colors ${
-            activeTab === 'inspire'
-              ? 'text-brand border-b-2 border-brand'
-              : 'text-ink-muted hover:text-ink'
-          }`}
-          onClick={() => setActiveTab('inspire')}
-        >
-          灵感
-        </button>
-        <button
-          className={`flex-1 px-3 py-2 text-xs font-medium transition-colors ${
-            activeTab === 'name'
-              ? 'text-brand border-b-2 border-brand'
-              : 'text-ink-muted hover:text-ink'
-          }`}
-          onClick={() => setActiveTab('name')}
-        >
-          命名
-        </button>
-        <button
-          className={`flex-1 px-3 py-2 text-xs font-medium transition-colors ${
-            activeTab === 'history'
-              ? 'text-brand border-b-2 border-brand'
-              : 'text-ink-muted hover:text-ink'
-          }`}
-          onClick={() => setActiveTab('history')}
-        >
-          历史
-        </button>
+      <div className="border-b border-border-subtle">
+        <div className="flex">
+          <button
+            className={`flex-1 px-3 py-2 text-xs font-medium transition-colors ${
+              activeTab === 'write'
+                ? 'text-brand border-b-2 border-brand'
+                : 'text-ink-muted hover:text-ink'
+            }`}
+            onClick={() => setActiveTab('write')}
+          >
+            写作助手
+          </button>
+          <button
+            className={`flex-1 px-3 py-2 text-xs font-medium transition-colors ${
+              activeTab === 'inspire'
+                ? 'text-brand border-b-2 border-brand'
+                : 'text-ink-muted hover:text-ink'
+            }`}
+            onClick={() => setActiveTab('inspire')}
+          >
+            灵感
+          </button>
+          <button
+            className={`flex-1 px-3 py-2 text-xs font-medium transition-colors ${
+              activeTab === 'name'
+                ? 'text-brand border-b-2 border-brand'
+                : 'text-ink-muted hover:text-ink'
+            }`}
+            onClick={() => setActiveTab('name')}
+          >
+            命名
+          </button>
+          <button
+            className={`flex-1 px-3 py-2 text-xs font-medium transition-colors ${
+              activeTab === 'history'
+                ? 'text-brand border-b-2 border-brand'
+                : 'text-ink-muted hover:text-ink'
+            }`}
+            onClick={() => setActiveTab('history')}
+          >
+            历史
+          </button>
+        </div>
+        {onSelectedMemberChange && (
+          <div className="px-3 py-2 border-t border-border-subtle/50">
+            <ThinkTankSelector
+              selectedMemberId={selectedMemberId}
+              onSelect={onSelectedMemberChange}
+            />
+          </div>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto p-3">

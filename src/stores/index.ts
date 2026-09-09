@@ -7,3 +7,4 @@ export { default as useSimulationStore } from './simulationStore';
 export { default as useBondStore } from './bondStore';
 export { default as useGameRecordStore } from './gameRecordStore';
 export { useAgentStore } from './agentStore';
+export { default as useThinkTankStore } from './thinkTankStore';

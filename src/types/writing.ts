@@ -265,3 +265,44 @@ export interface WritingStylePreset {
   params: Partial<AIParams>;
   isDefault: boolean;
 }
+
+/** AI智囊团成员角色类型 */
+export type ThinkTankRole = 'plot_writer' | 'character_designer' | 'world_builder' | 'dialogue_specialist' | 'style_polisher' | 'creative_consultant' | 'custom';
+
+/** AI智囊团成员 */
+export interface ThinkTankMember {
+  id: string;
+  /** 成员名称（用户自定义） */
+  name: string;
+  /** 成员角色 */
+  role: ThinkTankRole;
+  /** 成员描述 */
+  description: string;
+  /** AI配置 */
+  config: {
+    apiKey: string;
+    model: string;
+    baseUrl: string;
+    vendor: string;
+    temperature: number;
+    maxInputTokens: number;
+    maxOutputTokens: number;
+    customModelName: string;
+    testUrl: string;
+  };
+  /** 是否启用 */
+  isEnabled: boolean;
+  /** 创建时间 */
+  createdAt: string;
+  /** 更新时间 */
+  updatedAt: string;
+}
+
+/** AI智囊团预设角色配置 */
+export interface ThinkTankRolePreset {
+  role: ThinkTankRole;
+  name: string;
+  description: string;
+  icon: string;
+  defaultPrompt: string;
+}

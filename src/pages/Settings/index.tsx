@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import useAIStore from '../../stores/aiStore';
 import useSettingsStore from '../../stores/settingsStore';
 import useAutobiographyStore from '../../stores/autobiographyStore';
+import useThinkTankStore, { defaultConfig } from '../../stores/thinkTankStore';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useNotification } from '../../hooks/useNotification';
 import ExportService from '../../services/export/ExportService';
@@ -11,6 +12,7 @@ import FileStorageService from '../../services/storage/FileStorageService';
 import { useToast } from '../../components';
 import { AI_VENDORS, getVendorById, getVendorModels } from '../../ai_config/vendors';
 import AIService from '../../services/ai/AIService';
+import type { ThinkTankMember, ThinkTankRole } from '../../types';
 
 const SettingsPage: React.FC = () => {
   const {
@@ -47,6 +49,16 @@ const SettingsPage: React.FC = () => {
 
   const { autobiography } = useAutobiographyStore();
 
+  const {
+    members,
+    rolePresets,
+    addMember,
+    updateMember,
+    removeMember,
+    toggleMemberEnabled,
+    loadMembers,
+  } = useThinkTankStore();
+
   const { isDark, setTheme } = useTheme();
   const { permission: notificationPermission, requestPermission, isSupported: notificationSupported } = useNotification();
   const toast = useToast();
@@ -56,10 +68,14 @@ const SettingsPage: React.FC = () => {
   const [validationMessage, setValidationMessage] = useState('');
   const [availableModels, setAvailableModels] = useState<string[]>([]);
 
+  const [showAddMemberModal, setShowAddMemberModal] = useState(false);
+  const [editingMember, setEditingMember] = useState<ThinkTankMember | null>(null);
+
   useEffect(() => {
     loadSettings();
     loadAppSettings();
-  }, [loadSettings, loadAppSettings]);
+    loadMembers();
+  }, [loadSettings, loadAppSettings, loadMembers]);
 
   useEffect(() => {
     const models = getVendorModels(vendor);
@@ -276,6 +292,15 @@ const SettingsPage: React.FC = () => {
     }
   };
 
+  const getRolePreset = (role: ThinkTankRole) => {
+    return rolePresets.find((p) => p.role === role);
+  };
+
+  const getVendorName = (vendorId: string) => {
+    const v = getVendorById(vendorId);
+    return v?.name || vendorId;
+  };
+
   return (
     <div className="content-panel">
       <div className="animate-fade-in">
@@ -433,6 +458,109 @@ const SettingsPage: React.FC = () => {
                   <p className="text-xs text-ink-faint mt-1">
                     自定义测试端点，留空则使用 Base URL + /models 进行测试
                   </p>
+                </div>
+              )}
+            </div>
+          </section>
+
+          <section>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="section-title">AI 智囊团</h2>
+              <button
+                className="btn btn-primary btn-sm"
+                onClick={() => setShowAddMemberModal(true)}
+              >
+                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                </svg>
+                添加AI成员
+              </button>
+            </div>
+            <div className="card p-5">
+              {members.length === 0 ? (
+                <div className="text-center py-8">
+                  <span className="text-4xl mb-3 block">🤖</span>
+                  <p className="text-ink-muted mb-2">还没有AI成员</p>
+                  <p className="text-xs text-ink-faint mb-4">添加AI成员来组建你的智囊团，每个AI可以配置不同的模型和参数</p>
+                  <button
+                    className="btn btn-primary"
+                    onClick={() => setShowAddMemberModal(true)}
+                  >
+                    添加第一个AI成员
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {members.map((member) => {
+                    const rolePreset = getRolePreset(member.role);
+                    return (
+                      <div
+                        key={member.id}
+                        className={`p-4 rounded-lg border transition-all ${
+                          member.isEnabled
+                            ? 'border-border-subtle bg-white'
+                            : 'border-border-subtle/50 bg-gray-50 opacity-60'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-start gap-3">
+                            <span className="text-2xl">{rolePreset?.icon || '⚙️'}</span>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium text-ink">{member.name}</span>
+                                <span className="text-xs px-2 py-0.5 rounded bg-brand/10 text-brand">
+                                  {rolePreset?.name || member.role}
+                                </span>
+                                {!member.isEnabled && (
+                                  <span className="text-xs px-2 py-0.5 rounded bg-gray-200 text-gray-500">
+                                    已禁用
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-xs text-ink-faint mt-1">{member.description}</p>
+                              <div className="flex items-center gap-3 mt-2 text-xs text-ink-muted">
+                                <span>模型: {member.config.customModelName || member.config.model}</span>
+                                <span>供应商: {getVendorName(member.config.vendor)}</span>
+                                <span>温度: {member.config.temperature.toFixed(1)}</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <label className="toggle-switch">
+                              <input
+                                type="checkbox"
+                                checked={member.isEnabled}
+                                onChange={() => toggleMemberEnabled(member.id)}
+                              />
+                              <span className="toggle-slider" />
+                            </label>
+                            <button
+                              className="p-1.5 rounded hover:bg-gray-100 text-ink-muted hover:text-ink transition-colors"
+                              onClick={() => setEditingMember(member)}
+                              title="编辑"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                              </svg>
+                            </button>
+                            <button
+                              className="p-1.5 rounded hover:bg-red-50 text-ink-muted hover:text-danger transition-colors"
+                              onClick={() => {
+                                if (confirm('确定要删除这个AI成员吗？')) {
+                                  removeMember(member.id);
+                                }
+                              }}
+                              title="删除"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                              </svg>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -623,6 +751,427 @@ const SettingsPage: React.FC = () => {
             </div>
           </section>
         </div>
+      </div>
+
+      {showAddMemberModal && (
+        <AddMemberModal
+          onClose={() => setShowAddMemberModal(false)}
+          onAdd={(member) => {
+            addMember(member);
+            setShowAddMemberModal(false);
+          }}
+        />
+      )}
+
+      {editingMember && (
+        <EditMemberModal
+          member={editingMember}
+          onClose={() => setEditingMember(null)}
+          onSave={(updates) => {
+            updateMember(editingMember.id, updates);
+            setEditingMember(null);
+          }}
+        />
+      )}
+    </div>
+  );
+};
+
+interface AddMemberModalProps {
+  onClose: () => void;
+  onAdd: (member: Omit<ThinkTankMember, 'id' | 'createdAt' | 'updatedAt'>) => void;
+}
+
+const AddMemberModal: React.FC<AddMemberModalProps> = ({ onClose, onAdd }) => {
+  const { rolePresets } = useThinkTankStore();
+  const [name, setName] = useState('');
+  const [role, setRole] = useState<ThinkTankRole>('plot_writer');
+  const [description, setDescription] = useState('');
+  const [config, setConfig] = useState(defaultConfig);
+  const [isEnabled, setIsEnabled] = useState(true);
+
+  const selectedRolePreset = rolePresets.find((p) => p.role === role);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) {
+      alert('请输入AI成员名称');
+      return;
+    }
+    onAdd({
+      name: name.trim(),
+      role,
+      description: description.trim() || selectedRolePreset?.description || '',
+      config,
+      isEnabled,
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div
+        className="bg-white rounded-xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-ink">添加AI成员</h3>
+          <button onClick={onClose} className="text-ink-muted hover:text-ink text-2xl leading-none">&times;</button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="text-sm font-medium text-ink mb-2 block">成员名称 *</label>
+            <input
+              className="input w-full"
+              placeholder="例如：情节大师、角色顾问..."
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+            />
+          </div>
+
+          <div>
+            <label className="text-sm font-medium text-ink mb-2 block">角色类型</label>
+            <div className="grid grid-cols-2 gap-2">
+              {rolePresets.map((preset) => (
+                <div
+                  key={preset.role}
+                  className={`p-3 rounded-lg border cursor-pointer transition-all ${
+                    role === preset.role
+                      ? 'border-brand bg-brand/5'
+                      : 'border-border-subtle hover:border-brand/50'
+                  }`}
+                  onClick={() => setRole(preset.role)}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <span>{preset.icon}</span>
+                    <span className="text-sm font-medium text-ink">{preset.name}</span>
+                  </div>
+                  <p className="text-xs text-ink-faint">{preset.description}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium text-ink mb-2 block">描述</label>
+            <textarea
+              className="input w-full min-h-[60px]"
+              placeholder={selectedRolePreset?.description || '描述这个AI成员的用途...'}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
+          </div>
+
+          <div className="border-t border-border-subtle pt-4">
+            <h4 className="text-sm font-medium text-ink mb-3">AI 配置</h4>
+
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs text-ink-muted mb-1 block">AI 供应商</label>
+                <select
+                  className="input w-full"
+                  value={config.vendor}
+                  onChange={(e) => {
+                    const newVendor = e.target.value;
+                    const vendorInfo = getVendorById(newVendor);
+                    setConfig({
+                      ...config,
+                      vendor: newVendor,
+                      baseUrl: vendorInfo?.baseUrl || config.baseUrl,
+                      model: vendorInfo?.defaultModel || config.model,
+                    });
+                  }}
+                >
+                  {AI_VENDORS.map((v) => (
+                    <option key={v.id} value={v.id}>{v.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs text-ink-muted mb-1 block">模型</label>
+                <input
+                  className="input w-full"
+                  placeholder="输入模型名称"
+                  value={config.customModelName || config.model}
+                  onChange={(e) => {
+                    const vendorInfo = getVendorById(config.vendor);
+                    if (e.target.value === vendorInfo?.defaultModel) {
+                      setConfig({ ...config, model: e.target.value, customModelName: '' });
+                    } else {
+                      setConfig({ ...config, customModelName: e.target.value });
+                    }
+                  }}
+                />
+              </div>
+
+              <div>
+                <label className="text-xs text-ink-muted mb-1 block">API Key</label>
+                <input
+                  className="input w-full"
+                  type="password"
+                  placeholder="输入 API Key"
+                  value={config.apiKey}
+                  onChange={(e) => setConfig({ ...config, apiKey: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs text-ink-muted">温度参数</label>
+                  <span className="text-xs text-ink">{config.temperature.toFixed(1)}</span>
+                </div>
+                <input
+                  type="range"
+                  className="range-slider w-full"
+                  min="0"
+                  max="1"
+                  step="0.1"
+                  value={config.temperature}
+                  onChange={(e) => setConfig({ ...config, temperature: parseFloat(e.target.value) })}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-ink">启用此AI成员</span>
+            <label className="toggle-switch">
+              <input
+                type="checkbox"
+                checked={isEnabled}
+                onChange={(e) => setIsEnabled(e.target.checked)}
+              />
+              <span className="toggle-slider" />
+            </label>
+          </div>
+
+          <div className="flex gap-3 pt-2">
+            <button type="button" className="btn btn-outline flex-1" onClick={onClose}>
+              取消
+            </button>
+            <button type="submit" className="btn btn-primary flex-1">
+              添加
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+interface EditMemberModalProps {
+  member: ThinkTankMember;
+  onClose: () => void;
+  onSave: (updates: Partial<ThinkTankMember>) => void;
+}
+
+const EditMemberModal: React.FC<EditMemberModalProps> = ({ member, onClose, onSave }) => {
+  const { rolePresets } = useThinkTankStore();
+  const [name, setName] = useState(member.name);
+  const [role, setRole] = useState<ThinkTankRole>(member.role);
+  const [description, setDescription] = useState(member.description);
+  const [config, setConfig] = useState(member.config);
+  const [isEnabled, setIsEnabled] = useState(member.isEnabled);
+
+  const selectedRolePreset = rolePresets.find((p) => p.role === role);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) {
+      alert('请输入AI成员名称');
+      return;
+    }
+    onSave({
+      name: name.trim(),
+      role,
+      description: description.trim() || selectedRolePreset?.description || '',
+      config,
+      isEnabled,
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div
+        className="bg-white rounded-xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-ink">编辑AI成员</h3>
+          <button onClick={onClose} className="text-ink-muted hover:text-ink text-2xl leading-none">&times;</button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="text-sm font-medium text-ink mb-2 block">成员名称 *</label>
+            <input
+              className="input w-full"
+              placeholder="例如：情节大师、角色顾问..."
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+            />
+          </div>
+
+          <div>
+            <label className="text-sm font-medium text-ink mb-2 block">角色类型</label>
+            <div className="grid grid-cols-2 gap-2">
+              {rolePresets.map((preset) => (
+                <div
+                  key={preset.role}
+                  className={`p-3 rounded-lg border cursor-pointer transition-all ${
+                    role === preset.role
+                      ? 'border-brand bg-brand/5'
+                      : 'border-border-subtle hover:border-brand/50'
+                  }`}
+                  onClick={() => setRole(preset.role)}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <span>{preset.icon}</span>
+                    <span className="text-sm font-medium text-ink">{preset.name}</span>
+                  </div>
+                  <p className="text-xs text-ink-faint">{preset.description}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium text-ink mb-2 block">描述</label>
+            <textarea
+              className="input w-full min-h-[60px]"
+              placeholder={selectedRolePreset?.description || '描述这个AI成员的用途...'}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
+          </div>
+
+          <div className="border-t border-border-subtle pt-4">
+            <h4 className="text-sm font-medium text-ink mb-3">AI 配置</h4>
+
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs text-ink-muted mb-1 block">AI 供应商</label>
+                <select
+                  className="input w-full"
+                  value={config.vendor}
+                  onChange={(e) => {
+                    const newVendor = e.target.value;
+                    const vendorInfo = getVendorById(newVendor);
+                    setConfig({
+                      ...config,
+                      vendor: newVendor,
+                      baseUrl: vendorInfo?.baseUrl || config.baseUrl,
+                      model: vendorInfo?.defaultModel || config.model,
+                    });
+                  }}
+                >
+                  {AI_VENDORS.map((v) => (
+                    <option key={v.id} value={v.id}>{v.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs text-ink-muted mb-1 block">模型</label>
+                <input
+                  className="input w-full"
+                  placeholder="输入模型名称"
+                  value={config.customModelName || config.model}
+                  onChange={(e) => {
+                    const vendorInfo = getVendorById(config.vendor);
+                    if (e.target.value === vendorInfo?.defaultModel) {
+                      setConfig({ ...config, model: e.target.value, customModelName: '' });
+                    } else {
+                      setConfig({ ...config, customModelName: e.target.value });
+                    }
+                  }}
+                />
+              </div>
+
+              <div>
+                <label className="text-xs text-ink-muted mb-1 block">API Key</label>
+                <input
+                  className="input w-full"
+                  type="password"
+                  placeholder="输入 API Key"
+                  value={config.apiKey}
+                  onChange={(e) => setConfig({ ...config, apiKey: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <label className="text-xs text-ink-muted mb-1 block">Base URL</label>
+                <input
+                  className="input w-full"
+                  placeholder="https://api.example.com/v1"
+                  value={config.baseUrl}
+                  onChange={(e) => setConfig({ ...config, baseUrl: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs text-ink-muted">温度参数</label>
+                  <span className="text-xs text-ink">{config.temperature.toFixed(1)}</span>
+                </div>
+                <input
+                  type="range"
+                  className="range-slider w-full"
+                  min="0"
+                  max="1"
+                  step="0.1"
+                  value={config.temperature}
+                  onChange={(e) => setConfig({ ...config, temperature: parseFloat(e.target.value) })}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-ink-muted mb-1 block">最大输入 Token</label>
+                  <input
+                    className="input w-full"
+                    type="number"
+                    value={config.maxInputTokens}
+                    onChange={(e) => setConfig({ ...config, maxInputTokens: parseInt(e.target.value) || 4000 })}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-ink-muted mb-1 block">最大输出 Token</label>
+                  <input
+                    className="input w-full"
+                    type="number"
+                    value={config.maxOutputTokens}
+                    onChange={(e) => setConfig({ ...config, maxOutputTokens: parseInt(e.target.value) || 2000 })}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-ink">启用此AI成员</span>
+            <label className="toggle-switch">
+              <input
+                type="checkbox"
+                checked={isEnabled}
+                onChange={(e) => setIsEnabled(e.target.checked)}
+              />
+              <span className="toggle-slider" />
+            </label>
+          </div>
+
+          <div className="flex gap-3 pt-2">
+            <button type="button" className="btn btn-outline flex-1" onClick={onClose}>
+              取消
+            </button>
+            <button type="submit" className="btn btn-primary flex-1">
+              保存
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
