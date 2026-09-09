@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { ToastProvider } from "./components";
-import { Home, DialogueAgent, Settings, Autobiography, Novel, NovelEditor, Simulation, ThinkTank, AchievementWall, GameRecords, RecordDetail } from "./pages";
+import { Home, DialogueAgent, Settings, Autobiography, Novel, NovelEditor, AIWorkshop, Simulation, ThinkTank, AchievementWall, GameRecords, RecordDetail } from "./pages";
 import { useAIStore } from "./stores";
 import { AppLayout } from "./components/layout";
 import { ThemeProvider } from "./contexts/ThemeContext";
@@ -30,6 +30,7 @@ function App() {
               <Route path="/autobiography" element={<Autobiography />} />
               <Route path="/novel" element={<Novel />} />
               <Route path="/novel/:novelId" element={<NovelEditor />} />
+              <Route path="/workshop" element={<AIWorkshop />} />
               <Route path="/simulation" element={<Simulation />} />
               <Route path="/achievements" element={<AchievementWall />} />
               <Route path="/thinktank" element={<ThinkTank />} />

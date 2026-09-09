@@ -4,6 +4,7 @@ export { default as Settings } from './Settings';
 export { default as Autobiography } from './Autobiography';
 export { default as Novel } from './Novel';
 export { default as NovelEditor } from './Novel/NovelEditor';
+export { default as AIWorkshop } from './AIWorkshop';
 export { default as Simulation } from './Simulation';
 export { default as ThinkTank } from './ThinkTank';
 export { default as AchievementWall } from './AchievementWall';
