@@ -136,7 +136,7 @@ const OfficeCanvas: React.FC = () => {
   const { members } = useThinkTankStore();
   const { currentTask, isRunning, subtasks } = useAIWorkshopStore();
 
-  const enabledMembers = members.filter((m) => m.isEnabled);
+  const enabledMembers = members.filter((m) => m.isEnabled && m.config.apiKey);
 
   const activeMemberIds = useMemo(() => {
     if (!isRunning) return new Set<string>();

@@ -16,13 +16,18 @@ const TaskSubmissionPanel: React.FC = () => {
   const { submitTask, isRunning, initialize, isInitialized } = useAIWorkshopStore();
 
   useEffect(() => {
-    loadMembers();
-    if (!isInitialized) {
-      initialize();
-    }
+    const initWorkshop = async () => {
+      await loadMembers();
+      if (!isInitialized) {
+        initialize();
+      }
+      // 确保 workshop 的 dispatcher 同步最新的成员列表
+      useAIWorkshopStore.getState().refreshMembers();
+    };
+    initWorkshop();
   }, [loadMembers, initialize, isInitialized]);
 
-  const enabledMembers = members.filter((m) => m.isEnabled);
+  const enabledMembers = members.filter((m) => m.isEnabled && m.config.apiKey);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

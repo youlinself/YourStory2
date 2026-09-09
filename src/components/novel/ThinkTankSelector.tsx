@@ -21,7 +21,7 @@ const ThinkTankSelector: React.FC<ThinkTankSelectorProps> = ({
     loadMembers();
   }, [loadMembers]);
 
-  const enabledMembers = members.filter((m) => m.isEnabled);
+  const enabledMembers = members.filter((m) => m.isEnabled && m.config.apiKey);
 
   const getRolePreset = (role: string) => {
     return rolePresets.find((p) => p.role === role);

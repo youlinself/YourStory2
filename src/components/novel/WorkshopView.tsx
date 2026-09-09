@@ -203,7 +203,7 @@ const WorkshopView: React.FC = () => {
   } = useAIWorkshopStore();
 
   const { members } = useThinkTankStore();
-  const enabledMembers = members.filter((m) => m.isEnabled);
+  const enabledMembers = members.filter((m) => m.isEnabled && m.config.apiKey);
 
   return (
     <div className="space-y-6">
