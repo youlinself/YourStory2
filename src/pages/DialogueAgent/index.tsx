@@ -3,24 +3,28 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   Sparkles,
   Send,
+  Users,
+  TreePine,
+  Cake,
+  School,
   Lightbulb,
   Save,
   Download,
   Settings,
+  PanelRightOpen,
+  PanelRightClose,
   BookOpen,
   PenLine,
   CheckCircle,
-  PanelRightOpen,
-  PanelRightClose,
 } from 'lucide-react';
 import { useAIStore, useAutobiographyStore } from '../../stores';
 import { useAgentStore } from '../../stores/agentStore';
 import ExportService from '../../services/export/ExportService';
 import { generateId } from '../../utils';
+import { useChatScroll } from '../../hooks/useChatScroll';
 import { useToast } from '../../components/common';
-import ChatPanel from '../../components/dialogue/ChatPanel';
-import SuggestionBar from '../../components/dialogue/SuggestionBar';
 import SidePanel from '../../components/dialogue/SidePanel';
+import MDEditor from '@uiw/react-md-editor';
 import Modal from '../../components/ui/Modal';
 import '../../styles/dialogue.css';
 
@@ -58,10 +62,8 @@ const DialogueAgent: React.FC = () => {
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [pendingNavigationPath, setPendingNavigationPath] = useState<string | null>(null);
   const [sidePanelMode, setSidePanelMode] = useState<'outline' | 'draft'>('outline');
-  const [suggestions, setSuggestions] = useState<Array<{ id: string; text: string; type: string }>>([]);
-  const [isGeneratingSuggestions, setIsGeneratingSuggestions] = useState(false);
 
-  const { loadSettings, apiKey, model, baseUrl, vendor, temperature, customModelName } = useAIStore();
+  const { loadSettings } = useAIStore();
 
   const {
     agent,
@@ -96,6 +98,21 @@ const DialogueAgent: React.FC = () => {
     extractedContent: undefined,
   })) || [];
 
+  const { listRef, columnRef, atBottom, scrollToBottom } = useChatScroll(messages);
+
+  const topicItems = [
+    { icon: TreePine, label: '老家的环境', color: 'sage', description: '那条小河，那棵老槐树，那个宁静的小镇' },
+    { icon: Users, label: '童年的玩伴们', color: 'gold', description: '一起长大的朋友，那些无忧无虑的时光' },
+    { icon: Cake, label: '难忘的生日', color: 'brand', description: '那些特别的庆祝时刻，收到过的礼物' },
+    { icon: School, label: '小学的时光', color: 'sage', description: '校园里的记忆，第一份友谊' },
+  ];
+
+  const suggestionChips = [
+    { color: 'sage', text: '聊聊老家的环境', icon: TreePine },
+    { color: 'gold', text: '童年的玩伴们', icon: Users },
+    { color: 'brand', text: '难忘的生日', icon: Cake },
+  ];
+
   useEffect(() => {
     loadSettings();
     loadAutobiography();
@@ -128,31 +145,6 @@ const DialogueAgent: React.FC = () => {
       setHasUnsavedChanges(true);
     }
   }, [currentSession?.history.length]);
-
-  useEffect(() => {
-    if (!currentSession || currentSession.history.length === 0) return;
-    if (currentSession.history.length % 3 !== 0) return;
-
-    const generateSuggestions = async () => {
-      setIsGeneratingSuggestions(true);
-      try {
-        const { default: AIService } = await import('../../services/ai/AIService');
-        const aiService = new AIService({ apiKey, model, baseUrl, vendor, temperature, customModelName });
-        const result = await aiService.generateSuggestions(
-          autobiography || null,
-          chapterId || null,
-          messages,
-        );
-        setSuggestions(result);
-      } catch (err) {
-        console.error('生成建议失败:', err);
-      } finally {
-        setIsGeneratingSuggestions(false);
-      }
-    };
-
-    generateSuggestions();
-  }, [currentSession?.history.length, apiKey, model, baseUrl, vendor, temperature, customModelName, autobiography, chapterId, messages]);
 
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
@@ -208,18 +200,18 @@ const DialogueAgent: React.FC = () => {
 
     try {
       await handleMessage(content, { generateFollowUpQuestions: false });
-      setSuggestions([]);
     } catch (error) {
       console.error('发送消息错误:', error);
       addToast({ type: 'error', message: '发送消息失败，请重试' });
     }
   };
 
-  const handleSuggestionClick = (suggestion: { text: string }) => {
-    setInputValue(suggestion.text);
-    if (textareaRef.current) {
-      textareaRef.current.focus();
-    }
+  const handleTopicClick = (label: string) => {
+    setInputValue(`我想先聊聊${label}`);
+  };
+
+  const handleSuggestionClick = (text: string) => {
+    setInputValue(text);
   };
 
   const handleSaveDraft = async () => {
@@ -312,18 +304,6 @@ const DialogueAgent: React.FC = () => {
     addToast({ type: 'info', message: '摘要生成功能开发中...' });
   };
 
-  const handleApproveExtract = async (_messageId: string) => {
-    addToast({ type: 'success', message: '内容已确认写入' });
-  };
-
-  const handleRejectExtract = async (_messageId: string) => {
-    addToast({ type: 'info', message: '内容已丢弃' });
-  };
-
-  const handleEditExtract = async (_messageId: string, _editedContent: string) => {
-    addToast({ type: 'success', message: '内容已编辑' });
-  };
-
   return (
     <div className="dialogue-page">
       <div className="dialogue-main">
@@ -365,39 +345,111 @@ const DialogueAgent: React.FC = () => {
           </div>
         )}
 
-        {!currentSession?.history?.length && (
-          <div className="welcome-hero">
-            <div className="hero-icon">
-              <BookOpen size={32} strokeWidth={1.5} className="text-brand" />
-            </div>
-            <h1 className="hero-title">开始你的故事创作之旅</h1>
-            <p className="hero-subtitle">
-              Story 助手将引导你通过对话的方式，把珍贵的记忆一一记录下来
-            </p>
+        <div className="message-list" ref={listRef}>
+          <div ref={columnRef}>
+            {!currentSession?.history?.length && !isLoading && (
+              <div className="welcome-hero">
+                <div className="hero-icon">
+                  <BookOpen size={32} strokeWidth={1.5} className="text-brand" />
+                </div>
+                <h1 className="hero-title">开始你的故事创作之旅</h1>
+                <p className="hero-subtitle">
+                  Story 助手将引导你通过对话的方式，把珍贵的记忆一一记录下来
+                </p>
 
-            <div className="hero-cta">
-              <button className="btn btn-primary btn-lg" onClick={handleStartChapter}>
-                <PenLine size={18} strokeWidth={2} />
-                开始第一章 · 童年记忆
-              </button>
-              <p className="cta-hint">或直接输入你想记录的故事</p>
-            </div>
+                <div className="topic-grid">
+                  {topicItems.map((topic, index) => (
+                    <button
+                      key={index}
+                      className={`topic-card topic-card-${topic.color}`}
+                      onClick={() => handleTopicClick(topic.label)}
+                    >
+                      <div className={`topic-icon-wrapper bg-${topic.color}-light`}>
+                        <topic.icon size={20} strokeWidth={1.5} className={`text-${topic.color}`} />
+                      </div>
+                      <span className="topic-label">{topic.label}</span>
+                      <p className="topic-description">{topic.description}</p>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="hero-cta">
+                  <button className="btn btn-primary btn-lg" onClick={handleStartChapter}>
+                    <PenLine size={18} strokeWidth={2} />
+                    开始第一章 · 童年记忆
+                  </button>
+                  <p className="cta-hint">选择一个话题开始，或直接点击按钮开启创作</p>
+                </div>
+              </div>
+            )}
+
+            {messages.map((msg) => (
+              <div
+                key={msg.id}
+                className={`message-row ${msg.isUser ? 'message-row-user' : 'message-row-ai'}`}
+              >
+                {!msg.isUser && (
+                  <div className="avatar brand-gradient text-white">
+                    <Sparkles size={16} strokeWidth={1.5} />
+                  </div>
+                )}
+                <div className={`chat-bubble ${msg.isUser ? 'chat-bubble-user' : 'chat-bubble-ai'}`}>
+                  {msg.isUser ? (
+                    <p>{msg.content}</p>
+                  ) : (
+                    <div className="markdown-content">
+                      <MDEditor.Markdown source={msg.content} />
+                    </div>
+                  )}
+                  <span className="message-time">
+                    {new Date(msg.timestamp).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </div>
+                {msg.isUser && (
+                  <div className="avatar avatar-user">
+                    <Users size={16} strokeWidth={1.5} />
+                  </div>
+                )}
+              </div>
+            ))}
+
+            {isLoading && (
+              <div className="message-row message-row-ai">
+                <div className="avatar brand-gradient text-white">
+                  <Sparkles size={16} strokeWidth={1.5} />
+                </div>
+                <div className="chat-bubble chat-bubble-ai">
+                  <div className="typing-indicator">
+                    <span className="typing-dot" />
+                    <span className="typing-dot" />
+                    <span className="typing-dot" />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
-        )}
 
-        <ChatPanel
-          messages={messages}
-          isLoading={isLoading}
-          onApproveExtract={handleApproveExtract}
-          onRejectExtract={handleRejectExtract}
-          onEditExtract={handleEditExtract}
-        />
+          {!atBottom && (
+            <button className="scroll-to-bottom" onClick={scrollToBottom}>
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 13.5L12 21m0 0l-7.5-7.5M12 21V3" />
+              </svg>
+            </button>
+          )}
+        </div>
 
-        <SuggestionBar
-          suggestions={suggestions as any}
-          onSuggestionClick={handleSuggestionClick}
-          isGenerating={isGeneratingSuggestions}
-        />
+        <div className="suggestion-chips-row">
+          {suggestionChips.map((chip, index) => (
+            <button
+              key={index}
+              className="chip"
+              onClick={() => handleSuggestionClick(chip.text)}
+            >
+              <chip.icon size={14} strokeWidth={1.5} className={`text-${chip.color}`} style={{ marginRight: 6 }} />
+              {chip.text}
+            </button>
+          ))}
+        </div>
 
         <div className="composer-area">
           <div className="composer-input-wrap">
