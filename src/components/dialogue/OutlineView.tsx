@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { Autobiography } from '../../types';
+import { useAutobiographyStore } from '../../stores';
+import { Trash2 } from 'lucide-react';
 
 interface OutlineViewProps {
   autobiography: Autobiography | null;
@@ -24,9 +26,19 @@ const OutlineView: React.FC<OutlineViewProps> = ({
 }) => {
   const navigate = useNavigate();
   const chapters = autobiography?.chapters || [];
+  const { deleteChapter } = useAutobiographyStore();
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   const completedCount = chapters.filter((ch) => ch.status === 'completed').length;
   const progress = chapters.length > 0 ? Math.round((completedCount / chapters.length) * 100) : 0;
+
+  const handleDeleteChapter = async (chapterId: string) => {
+    await deleteChapter(chapterId);
+    if (currentChapterId === chapterId) {
+      onSwitchChapter(null);
+    }
+    setDeleteConfirmId(null);
+  };
 
   return (
     <div className="flex flex-col h-full p-4 min-h-0">
@@ -70,23 +82,60 @@ const OutlineView: React.FC<OutlineViewProps> = ({
         {chapters.map((chapter, index) => {
           const status = statusConfig[chapter.status || 'empty'];
           const isCurrent = chapter.id === currentChapterId;
+          const isConfirmingDelete = deleteConfirmId === chapter.id;
           return (
-            <button
+            <div
               key={chapter.id}
-              onClick={() => onSwitchChapter(chapter.id)}
-              className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
+              className={`group relative w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
                 isCurrent
                   ? 'bg-brand-surface text-brand font-medium'
                   : 'text-ink-secondary hover:bg-bg-secondary'
               }`}
             >
-              <span className="flex items-center gap-2">
-                <span className={`${status.color} text-base leading-none shrink-0`}>{status.icon}</span>
-                <span className="truncate">
-                  {index + 1}. {chapter.title}
-                </span>
-              </span>
-            </button>
+              {isConfirmingDelete ? (
+                <div className="flex flex-col gap-2 py-1">
+                  <span className="text-xs text-danger font-medium">
+                    确定删除「{chapter.title}」？
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleDeleteChapter(chapter.id)}
+                      className="px-2 py-1 text-xs bg-danger text-white rounded hover:bg-danger/80 transition-colors"
+                    >
+                      确认删除
+                    </button>
+                    <button
+                      onClick={() => setDeleteConfirmId(null)}
+                      className="px-2 py-1 text-xs text-ink-muted hover:text-ink-secondary transition-colors"
+                    >
+                      取消
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => onSwitchChapter(chapter.id)}
+                  className="w-full text-left flex items-center gap-2"
+                >
+                  <span className={`${status.color} text-base leading-none shrink-0`}>{status.icon}</span>
+                  <span className="truncate">
+                    {index + 1}. {chapter.title}
+                  </span>
+                </button>
+              )}
+              {!isConfirmingDelete && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setDeleteConfirmId(chapter.id);
+                  }}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded text-ink-faint hover:text-danger hover:bg-danger/10 opacity-0 group-hover:opacity-100 transition-all"
+                  title="删除章节"
+                >
+                  <Trash2 size={14} strokeWidth={1.5} />
+                </button>
+              )}
+            </div>
           );
         })}
       </div>
