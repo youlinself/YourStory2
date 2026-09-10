@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { HashRouter as Router, Routes, Route } from "react-router-dom";
 import { ToastProvider } from "./components";
 import { Home, DialogueAgent, Settings, Autobiography, Novel, NovelEditor, AIWorkshop, Simulation, ThinkTank, AchievementWall, GameRecords, RecordDetail } from "./pages";
 import { useAIStore } from "./stores";

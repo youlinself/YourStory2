@@ -6,8 +6,12 @@ import path from "path";
 // @ts-expect-error process is a nodejs global
 const host = process.env.TAURI_DEV_HOST;
 
+// 用于 GitHub Pages 部署：REPO_NAME 环境变量或手动设置
+const base = process.env.GITHUB_PAGES_BASE || "/";
+
 // https://vite.dev/config/
 export default defineConfig(async () => ({
+  base,
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
