@@ -9,7 +9,11 @@
     "build": "tsc && vite build",
     "build:web": "tsc && vite build",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "version:sync": "node scripts/sync-version.js",
+    "version:patch": "node scripts/bump-version.js patch && npm run version:sync",
+    "version:minor": "node scripts/bump-version.js minor && npm run version:sync",
+    "version:major": "node scripts/bump-version.js major && npm run version:sync"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",

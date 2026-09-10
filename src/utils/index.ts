@@ -3,3 +3,4 @@ export { default as generateId } from './generateId';
 export { parseExtract } from './parseExtract';
 export { createCombatRandomState, selectMonsterGroup, createEnemyFromGroup, generateCombatEnemies, GROUP_CONFIGS } from './combatRandom';
 export type { MonsterGroup, MonsterGroupConfig, CombatRandomState } from './combatRandom';
+export { APP_VERSION, PRODUCT_NAME, RELEASE_DATE, getVersionString, getFullVersionString } from './version';

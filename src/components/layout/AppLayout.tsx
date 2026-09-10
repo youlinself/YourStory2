@@ -5,6 +5,7 @@ import useAutobiographyStore from '../../stores/autobiographyStore';
 import useDialogueStore from '../../stores/dialogueStore';
 import useLocalStorage from '../../hooks/useLocalStorage';
 import type { Chapter } from '../../types';
+import { getVersionString } from '../../utils/version';
 
 const navItems = [
   { path: '/', label: '首页', icon: 'home' },
@@ -146,8 +147,8 @@ const SidebarBottomContent: React.FC<{ collapsed: boolean }> = ({ collapsed }) =
   if (path === '/settings') {
     return (
       <div className="px-5 py-5 border-t border-border-subtle">
-        <p className="text-xs text-ink-faint">版本 v1.0.0</p>
-        <p className="text-[11px] text-ink-faint mt-1">© 2024 YourStory</p>
+        <p className="text-xs text-ink-faint">版本 {getVersionString()}</p>
+        <p className="text-[11px] text-ink-faint mt-1">© 2026 YourStory</p>
       </div>
     );
   }
