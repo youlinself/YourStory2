@@ -20,15 +20,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: Enable Corepack
-        run: |
-          corepack enable
-          corepack prepare yarn@4.9.2 --activate
-
       - name: Setup Node
         uses: actions/setup-node@v5
         with:
           node-version: 22
+          cache: npm
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -40,7 +36,7 @@ jobs:
           sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
 
       - name: Install frontend dependencies
-        run: yarn install --immutable
+        run: npm ci
 
       - name: Build Tauri
         uses: tauri-apps/tauri-action@v0
