@@ -1,5 +1,13 @@
 import type { ThinkTankMember, ThinkTankRole } from '../../types/writing';
 import type { Task, TaskPlan, TaskRequirement, WorkshopMember, TaskDispatchResult } from './types';
+import { ROLE_FALLBACK_MAP } from './types';
+
+interface AssignmentResult {
+  assignment: Map<string, string>;
+  fallbackRoles: Array<{ original: ThinkTankRole; fallback: ThinkTankRole }>;
+  skippedRoles: ThinkTankRole[];
+  warnings: string[];
+}
 
 export class TaskDispatcher {
   private members: Map<string, WorkshopMember> = new Map();
@@ -137,9 +145,12 @@ export class TaskDispatcher {
     return requirements;
   }
 
-  assignMembers(requirements: TaskRequirement[]): Map<string, string> {
+  assignMembers(requirements: TaskRequirement[]): AssignmentResult {
     const assignment = new Map<string, string>();
     const roleCount = new Map<ThinkTankRole, number>();
+    const fallbackRoles: Array<{ original: ThinkTankRole; fallback: ThinkTankRole }> = [];
+    const skippedRoles: ThinkTankRole[] = [];
+    const warnings: string[] = [];
 
     for (const req of requirements) {
       const currentCount = roleCount.get(req.role) || 0;
@@ -147,26 +158,46 @@ export class TaskDispatcher {
 
       const candidate = this.findBestCandidate(req.role, assignment);
       if (candidate) {
-        assignment.set(`${req.role}_${currentCount}`, candidate.id);
+        const key = `${req.role}_${currentCount}`;
+        assignment.set(key, candidate.id);
         const member = this.members.get(candidate.id);
         if (member) {
           member.currentLoad++;
+          if (candidate.role !== req.role) {
+            fallbackRoles.push({ original: req.role, fallback: candidate.role });
+            warnings.push(
+              `角色「${this.getRoleName(req.role)}」缺失，使用「${candidate.name}」（${this.getRoleName(candidate.role)}）替代`
+            );
+          }
         }
+      } else {
+        skippedRoles.push(req.role);
+        warnings.push(
+          `角色「${this.getRoleName(req.role)}」无可用成员，该步骤将被跳过`
+        );
       }
     }
 
-    return assignment;
+    return { assignment, fallbackRoles, skippedRoles, warnings };
   }
 
-  private findBestCandidate(role: ThinkTankRole, currentAssignment: Map<string, string>): WorkshopMember | null {
+  private findBestCandidate(
+    role: ThinkTankRole,
+    currentAssignment: Map<string, string>
+  ): WorkshopMember | null {
     const assignedIds = new Set(currentAssignment.values());
 
-    const candidates = Array.from(this.members.values()).filter((m) => {
-      if (assignedIds.has(m.id)) return false;
-      if (!m.isAvailable) return false;
-      if (m.currentLoad >= m.maxLoad) return false;
-      return this.isRoleCompatible(m.role, role);
-    });
+    let candidates = this.getAvailableCandidates(role, assignedIds);
+
+    if (candidates.length === 0) {
+      const fallbackRoles = ROLE_FALLBACK_MAP[role] || [];
+      for (const fallbackRole of fallbackRoles) {
+        candidates = this.getAvailableCandidates(fallbackRole, assignedIds);
+        if (candidates.length > 0) {
+          break;
+        }
+      }
+    }
 
     if (candidates.length === 0) {
       const anyCandidates = Array.from(this.members.values()).filter((m) => {
@@ -176,7 +207,7 @@ export class TaskDispatcher {
         return m.role === 'custom';
       });
       if (anyCandidates.length > 0) {
-        candidates.push(...anyCandidates);
+        candidates = anyCandidates;
       }
     }
 
@@ -189,36 +220,38 @@ export class TaskDispatcher {
     return candidates[0] || null;
   }
 
-  private isRoleCompatible(memberRole: ThinkTankRole, requiredRole: ThinkTankRole): boolean {
-    if (memberRole === requiredRole) return true;
-    if (memberRole === 'custom') return true;
-    const compatibleRoles: Record<ThinkTankRole, ThinkTankRole[]> = {
-      plot_writer: ['creative_consultant'],
-      character_designer: ['creative_consultant'],
-      world_builder: ['creative_consultant'],
-      dialogue_specialist: ['style_polisher'],
-      style_polisher: ['dialogue_specialist'],
-      creative_consultant: ['plot_writer', 'character_designer', 'world_builder'],
-      custom: [],
-    };
-    return compatibleRoles[memberRole]?.includes(requiredRole) || false;
+  private getAvailableCandidates(role: ThinkTankRole, assignedIds: Set<string>): WorkshopMember[] {
+    return Array.from(this.members.values()).filter((m) => {
+      if (assignedIds.has(m.id)) return false;
+      if (!m.isAvailable) return false;
+      if (m.currentLoad >= m.maxLoad) return false;
+      return m.role === role;
+    });
   }
 
-  createExecutionPlan(requirements: TaskRequirement[], _assignment: Map<string, string>): string[][] {
+  createExecutionPlan(requirements: TaskRequirement[], assignment: Map<string, string>): string[][] {
     const plan: string[][] = [];
     const completed = new Set<string>();
     const remaining = new Set(requirements.map((_, i) => i));
+    const assignedKeys = new Set(assignment.keys());
 
     while (remaining.size > 0) {
       const batch: string[] = [];
 
       for (const idx of remaining) {
         const req = requirements[idx];
+        const key = `${req.role}_${idx}`;
+
+        if (!assignedKeys.has(key)) {
+          remaining.delete(idx);
+          continue;
+        }
+
         const deps = req.dependencies || [];
         const allDepsMet = deps.every((d) => completed.has(d));
 
         if (allDepsMet) {
-          batch.push(`${req.role}_${idx}`);
+          batch.push(key);
           completed.add(req.role);
           remaining.delete(idx);
         }
@@ -228,8 +261,11 @@ export class TaskDispatcher {
         const idx = remaining.values().next().value;
         if (idx !== undefined) {
           const req = requirements[idx];
-          batch.push(`${req.role}_${idx}`);
-          completed.add(req.role);
+          const key = `${req.role}_${idx}`;
+          if (assignedKeys.has(key)) {
+            batch.push(key);
+            completed.add(req.role);
+          }
           remaining.delete(idx);
         }
       }
@@ -255,10 +291,13 @@ export class TaskDispatcher {
           plan: null,
           assignedMembers: [],
           errors: ['无法分析任务需求'],
+          warnings: [],
+          fallbackRoles: [],
+          skippedRoles: [],
         };
       }
 
-      const assignment = this.assignMembers(requirements);
+      const { assignment, fallbackRoles, skippedRoles, warnings } = this.assignMembers(requirements);
 
       if (assignment.size === 0) {
         return {
@@ -266,6 +305,9 @@ export class TaskDispatcher {
           plan: null,
           assignedMembers: [],
           errors: ['没有可用的AI成员来执行此任务，请确保智囊团中有已启用的成员'],
+          warnings: [],
+          fallbackRoles: [],
+          skippedRoles: [],
         };
       }
 
@@ -282,18 +324,21 @@ export class TaskDispatcher {
           assignedMembers.push(memberId!);
         }
 
+        const isFallback = fallbackRoles.some((f) => f.original === req.role);
+
         return {
           role: req.role,
           description: req.description,
           memberId: memberId,
           dependencies: req.dependencies || [],
           estimatedTokens: req.estimatedTokens,
+          isFallback,
         };
       });
 
       const plan: TaskPlan = {
         taskId: task.id,
-        analysis: this.generateTaskAnalysis(task, requirements),
+        analysis: this.generateTaskAnalysis(task, requirements, skippedRoles),
         subtasks,
         executionOrder,
         estimatedTotalTokens: totalTokens,
@@ -304,6 +349,9 @@ export class TaskDispatcher {
         plan,
         assignedMembers: [...new Set(assignedMembers)],
         errors,
+        warnings,
+        fallbackRoles,
+        skippedRoles,
       };
     } catch (error) {
       errors.push(error instanceof Error ? error.message : '任务分配失败');
@@ -312,11 +360,18 @@ export class TaskDispatcher {
         plan: null,
         assignedMembers: [],
         errors,
+        warnings: [],
+        fallbackRoles: [],
+        skippedRoles: [],
       };
     }
   }
 
-  private generateTaskAnalysis(task: Task, requirements: TaskRequirement[]): string {
+  private generateTaskAnalysis(
+    task: Task,
+    requirements: TaskRequirement[],
+    skippedRoles: ThinkTankRole[]
+  ): string {
     const roleNames: Record<ThinkTankRole, string> = {
       plot_writer: '情节写手',
       character_designer: '角色设计师',
@@ -328,7 +383,29 @@ export class TaskDispatcher {
     };
 
     const roleList = requirements.map((r) => roleNames[r.role]).join('、');
-    return `任务「${task.title}」已分析完成，需要 ${requirements.length} 个步骤，涉及角色：${roleList}。预计总Token消耗：${requirements.reduce((sum, r) => sum + r.estimatedTokens, 0)}`;
+    const totalTokens = requirements.reduce((sum, r) => sum + r.estimatedTokens, 0);
+
+    let analysis = `任务「${task.title}」已分析完成，需要 ${requirements.length} 个步骤，涉及角色：${roleList}。预计总Token消耗：${totalTokens}`;
+
+    if (skippedRoles.length > 0) {
+      const skippedNames = skippedRoles.map((r) => roleNames[r]).join('、');
+      analysis += `\n⚠️ 以下角色缺失，对应步骤将被跳过：${skippedNames}`;
+    }
+
+    return analysis;
+  }
+
+  private getRoleName(role: ThinkTankRole): string {
+    const roleNames: Record<ThinkTankRole, string> = {
+      plot_writer: '情节写手',
+      character_designer: '角色设计师',
+      world_builder: '世界观架构师',
+      dialogue_specialist: '对话专家',
+      style_polisher: '文风润色师',
+      creative_consultant: '创意顾问',
+      custom: '自定义角色',
+    };
+    return roleNames[role] || role;
   }
 
   releaseMemberLoad(memberId: string): void {

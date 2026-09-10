@@ -1,6 +1,7 @@
 import type { ThinkTankMember, ThinkTankRole } from '../../types/writing';
 
-export type TaskStatus = 'pending' | 'analyzing' | 'assigning' | 'executing' | 'reviewing' | 'completed' | 'failed';
+export type TaskStatus = 'pending' | 'analyzing' | 'assigning' | 'executing' | 'reviewing' | 'completed' | 'partially_completed' | 'failed';
+export type SubTaskStatus = 'pending' | 'executing' | 'completed' | 'failed' | 'skipped';
 
 export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent';
 
@@ -33,13 +34,16 @@ export interface SubTask {
   memberId: string;
   memberName: string;
   role: ThinkTankRole;
+  originalRole?: ThinkTankRole;
   description: string;
-  status: TaskStatus;
+  status: SubTaskStatus;
   result?: string;
   tokensUsed: number;
   startedAt?: string;
   completedAt?: string;
   error?: string;
+  isFallback?: boolean;
+  skipReason?: string;
 }
 
 export interface TaskPlan {
@@ -51,6 +55,7 @@ export interface TaskPlan {
     memberId?: string;
     dependencies: string[];
     estimatedTokens: number;
+    isFallback?: boolean;
   }>;
   executionOrder: string[][];
   estimatedTotalTokens: number;
@@ -88,6 +93,9 @@ export interface TaskDispatchResult {
   plan: TaskPlan | null;
   assignedMembers: string[];
   errors: string[];
+  warnings: string[];
+  fallbackRoles: Array<{ original: ThinkTankRole; fallback: ThinkTankRole }>;
+  skippedRoles: ThinkTankRole[];
 }
 
 export interface ExecutionResult {
@@ -122,7 +130,16 @@ export const TASK_STATUS_LABELS: Record<TaskStatus, string> = {
   executing: '执行中',
   reviewing: '审核中',
   completed: '已完成',
+  partially_completed: '部分完成',
   failed: '失败',
+};
+
+export const SUBTASK_STATUS_LABELS: Record<SubTaskStatus, string> = {
+  pending: '待处理',
+  executing: '执行中',
+  completed: '已完成',
+  failed: '失败',
+  skipped: '已跳过',
 };
 
 export const ROLE_TASK_COMPATIBILITY: Record<ThinkTankRole, TaskCategory[]> = {
@@ -133,4 +150,14 @@ export const ROLE_TASK_COMPATIBILITY: Record<ThinkTankRole, TaskCategory[]> = {
   style_polisher: ['polish', 'full_project'],
   creative_consultant: ['brainstorm', 'plot', 'character', 'worldbuilding', 'full_project'],
   custom: ['plot', 'character', 'worldbuilding', 'dialogue', 'polish', 'brainstorm', 'full_project'],
+};
+
+export const ROLE_FALLBACK_MAP: Record<ThinkTankRole, ThinkTankRole[]> = {
+  plot_writer: ['creative_consultant', 'custom'],
+  character_designer: ['creative_consultant', 'custom'],
+  world_builder: ['creative_consultant', 'custom'],
+  dialogue_specialist: ['style_polisher', 'creative_consultant', 'custom'],
+  style_polisher: ['dialogue_specialist', 'creative_consultant', 'custom'],
+  creative_consultant: ['plot_writer', 'character_designer', 'world_builder', 'custom'],
+  custom: [],
 };

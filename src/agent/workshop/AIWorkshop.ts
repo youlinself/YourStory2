@@ -38,7 +38,7 @@ export class AIWorkshop {
 
   async submitTask(task: Task): Promise<boolean> {
     this.taskQueue.push(task);
-    this.log(task.id, 'info', `任务「${task.title}》已提交到队列`);
+    this.log(task.id, 'info', `任务「${task.title}」已提交到队列`);
 
     if (!this.isProcessing) {
       this.processQueue();
@@ -78,6 +78,18 @@ export class AIWorkshop {
       return;
     }
 
+    if (dispatchResult.warnings.length > 0) {
+      for (const warning of dispatchResult.warnings) {
+        this.log(task.id, 'warn', warning);
+      }
+    }
+
+    if (dispatchResult.fallbackRoles.length > 0) {
+      for (const fb of dispatchResult.fallbackRoles) {
+        this.log(task.id, 'info', `将使用${this.getRoleName(fb.fallback)}替代${this.getRoleName(fb.original)}`);
+      }
+    }
+
     task.status = 'assigning';
     this.config.onTaskUpdate?.(task);
     this.log(task.id, 'success', dispatchResult.plan.analysis);
@@ -97,8 +109,18 @@ export class AIWorkshop {
       }
 
       const batchPromises = batch.map(async (key) => {
-        const subtask = subtasks.find((st) => `${st.role}_${subtasks.indexOf(st)}` === key);
+        const subtaskIndex = this.parseSubtaskIndex(key);
+        const subtask = subtasks[subtaskIndex];
         if (!subtask) return null;
+
+        if (subtask.status === 'skipped') {
+          return {
+            subtaskId: subtask.id,
+            success: true,
+            result: `[跳过] ${subtask.skipReason || '无可用成员'}`,
+            tokensUsed: 0,
+          };
+        }
 
         return this.executeSubtask(task, subtask);
       });
@@ -111,15 +133,23 @@ export class AIWorkshop {
     this.config.onTaskUpdate?.(task);
     this.log(task.id, 'info', '所有子任务执行完成，正在整合结果...');
 
-    const allSuccessful = results.every((r) => r.success);
-    if (allSuccessful) {
+    const successfulCount = results.filter((r) => r.success).length;
+    const totalCount = results.length;
+    const successRate = totalCount > 0 ? successfulCount / totalCount : 0;
+
+    if (successfulCount === totalCount) {
       task.status = 'completed';
       task.completedAt = new Date().toISOString();
       this.log(task.id, 'success', `任务「${task.title}」已完成！`);
+    } else if (successRate >= 0.5) {
+      task.status = 'partially_completed';
+      task.completedAt = new Date().toISOString();
+      const failedCount = totalCount - successfulCount;
+      this.log(task.id, 'warn', `任务「${task.title}」部分完成（${successfulCount}/${totalCount}），${failedCount} 个子任务失败或跳过`);
     } else {
       task.status = 'failed';
-      const failedCount = results.filter((r) => !r.success).length;
-      this.log(task.id, 'error', `${failedCount} 个子任务执行失败`);
+      const failedCount = totalCount - successfulCount;
+      this.log(task.id, 'error', `任务「${task.title}」失败，${failedCount}/${totalCount} 个子任务执行失败`);
     }
 
     task.updatedAt = new Date().toISOString();
@@ -129,9 +159,12 @@ export class AIWorkshop {
 
   private createSubtasks(task: Task, plan: TaskPlan): SubTask[] {
     return plan.subtasks.map((sub) => {
-      const member = this.members.find((m) => m.id === sub.memberId);
+      const member = sub.memberId ? this.members.find((m) => m.id === sub.memberId) : null;
       const memberName = member?.name || '未分配';
       const role = sub.role;
+
+      const isSkipped = !sub.memberId;
+      const isFallback = sub.isFallback;
 
       return {
         id: generateId(),
@@ -140,10 +173,17 @@ export class AIWorkshop {
         memberName,
         role,
         description: sub.description,
-        status: 'pending',
+        status: isSkipped ? 'skipped' : 'pending',
         tokensUsed: 0,
+        isFallback,
+        skipReason: isSkipped ? `无${this.getRoleName(role)}可用` : undefined,
       };
     });
+  }
+
+  private parseSubtaskIndex(key: string): number {
+    const parts = key.split('_');
+    return parseInt(parts[parts.length - 1], 10);
   }
 
   private async executeSubtask(task: Task, subtask: SubTask): Promise<ExecutionResult> {
@@ -151,7 +191,8 @@ export class AIWorkshop {
     subtask.startedAt = new Date().toISOString();
     this.config.onSubtaskUpdate?.(subtask);
 
-    this.log(task.id, 'info', `「${subtask.memberName}」开始执行：${subtask.description}`, subtask.memberId);
+    const fallbackTag = subtask.isFallback ? '（替代执行）' : '';
+    this.log(task.id, 'info', `「${subtask.memberName}」开始执行${fallbackTag}：${subtask.description}`, subtask.memberId);
 
     try {
       const member = this.members.find((m) => m.id === subtask.memberId);
@@ -173,7 +214,7 @@ export class AIWorkshop {
         customModelName: member.config.customModelName,
       });
 
-      const systemPrompt = this.buildSystemPrompt(subtask.role, member.name);
+      const systemPrompt = this.buildSystemPrompt(subtask.role, member.name, subtask.isFallback);
       const userPrompt = this.buildUserPrompt(task, subtask);
 
       const messages = [
@@ -218,9 +259,13 @@ export class AIWorkshop {
     }
   }
 
-  private buildSystemPrompt(role: ThinkTankMember['role'], memberName: string): string {
+  private buildSystemPrompt(role: ThinkTankMember['role'], memberName: string, isFallback?: boolean): string {
     const preset = this.rolePresets.find((p) => p.role === role);
     const basePrompt = preset?.defaultPrompt || '你是一位专业的创作助手。';
+
+    const fallbackInstruction = isFallback
+      ? '\n\n注意：你正在替代执行其他角色的任务，请尽力发挥你的专业能力完成。'
+      : '';
 
     return `${basePrompt}
 
@@ -231,10 +276,14 @@ export class AIWorkshop {
 输出要求：
 1. 使用中文回复
 2. 内容要有创意和专业性
-3. 结构清晰，便于后续整合`;
+3. 结构清晰，便于后续整合${fallbackInstruction}`;
   }
 
   private buildUserPrompt(task: Task, subtask: SubTask): string {
+    const fallbackNote = subtask.isFallback
+      ? '\n\n[系统提示：你正在替代执行此角色的任务，请根据你的专业能力尽力完成]'
+      : '';
+
     return `## 主任务：${task.title}
 
 ${task.description}
@@ -244,7 +293,7 @@ ${subtask.description}
 
 ## 上下文
 - 任务类型：${task.category}
-- 你的角色：${subtask.role}
+- 你的角色：${subtask.role}${fallbackNote}
 
 请根据以上信息完成你的专业任务，输出高质量的内容。`;
   }
@@ -259,6 +308,19 @@ ${subtask.description}
       memberId,
     };
     this.config.onLog?.(log);
+  }
+
+  private getRoleName(role: string): string {
+    const roleNames: Record<string, string> = {
+      plot_writer: '情节写手',
+      character_designer: '角色设计师',
+      world_builder: '世界观架构师',
+      dialogue_specialist: '对话专家',
+      style_polisher: '文风润色师',
+      creative_consultant: '创意顾问',
+      custom: '自定义角色',
+    };
+    return roleNames[role] || role;
   }
 
   cancelCurrentTask(): void {
