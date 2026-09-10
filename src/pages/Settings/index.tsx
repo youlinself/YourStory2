@@ -21,6 +21,8 @@ const SettingsPage: React.FC = () => {
     baseUrl,
     vendor,
     temperature,
+    maxInputTokens,
+    maxOutputTokens,
     customModelName,
     testUrl,
     setApiKey,
@@ -28,6 +30,8 @@ const SettingsPage: React.FC = () => {
     setBaseUrl,
     setVendor,
     setTemperature,
+    setMaxInputTokens,
+    setMaxOutputTokens,
     setCustomModelName,
     setTestUrl,
     loadSettings,
@@ -116,6 +120,16 @@ const SettingsPage: React.FC = () => {
 
   const handleTemperatureChange = async (value: number) => {
     setTemperature(value);
+    await saveSettings();
+  };
+
+  const handleMaxInputTokensChange = async (value: number) => {
+    setMaxInputTokens(value);
+    await saveSettings();
+  };
+
+  const handleMaxOutputTokensChange = async (value: number) => {
+    setMaxOutputTokens(value);
     await saveSettings();
   };
 
@@ -428,6 +442,59 @@ const SettingsPage: React.FC = () => {
                 </div>
               </div>
 
+              <div className="border-t border-border-subtle pt-4 mt-4">
+                <button
+                  type="button"
+                  className="flex items-center justify-between w-full text-left"
+                  onClick={() => {
+                    const section = document.getElementById('advanced-settings-section');
+                    const arrow = document.getElementById('advanced-settings-arrow');
+                    if (section && arrow) {
+                      section.classList.toggle('hidden');
+                      arrow.classList.toggle('rotate-180');
+                    }
+                  }}
+                >
+                  <span className="text-sm font-medium text-ink">高级设置</span>
+                  <svg
+                    id="advanced-settings-arrow"
+                    className="w-4 h-4 text-ink-muted transition-transform"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    strokeWidth={2}
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                  </svg>
+                </button>
+                <div id="advanced-settings-section" className="hidden mt-4 space-y-4">
+                  <div>
+                    <label className="text-sm font-medium text-ink mb-2 block">最大上下文 Token</label>
+                    <input
+                      className="input w-full"
+                      type="number"
+                      value={maxInputTokens}
+                      onChange={(e) => handleMaxInputTokensChange(parseInt(e.target.value) || 4000)}
+                    />
+                    <p className="text-xs text-ink-faint mt-1">
+                      控制发送给AI的最大输入长度
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-ink mb-2 block">最大输出 Token</label>
+                    <input
+                      className="input w-full"
+                      type="number"
+                      value={maxOutputTokens}
+                      onChange={(e) => handleMaxOutputTokensChange(parseInt(e.target.value) || 2000)}
+                    />
+                    <p className="text-xs text-ink-faint mt-1">
+                      控制AI回复的最大长度
+                    </p>
+                  </div>
+                </div>
+              </div>
+
               {(vendor === 'custom' || vendor === 'ollama') && (
                 <div>
                   <label className="text-sm font-medium text-ink mb-2 block">
@@ -520,10 +587,12 @@ const SettingsPage: React.FC = () => {
                                 )}
                               </div>
                               <p className="text-xs text-ink-faint mt-1">{member.description}</p>
-                              <div className="flex items-center gap-3 mt-2 text-xs text-ink-muted">
+                              <div className="flex items-center gap-3 mt-2 text-xs text-ink-muted flex-wrap">
                                 <span>模型: {member.config.customModelName || member.config.model}</span>
                                 <span>供应商: {getVendorName(member.config.vendor)}</span>
                                 <span>温度: {member.config.temperature.toFixed(1)}</span>
+                                <span>上下文: {(member.config.maxInputTokens / 1000).toFixed(0)}K</span>
+                                <span>输出: {(member.config.maxOutputTokens / 1000).toFixed(1)}K</span>
                               </div>
                             </div>
                           </div>
@@ -944,6 +1013,53 @@ const AddMemberModal: React.FC<AddMemberModalProps> = ({ onClose, onAdd }) => {
                   onChange={(e) => setConfig({ ...config, temperature: parseFloat(e.target.value) })}
                 />
               </div>
+
+              <div className="border-t border-border-subtle pt-3 mt-3">
+                <button
+                  type="button"
+                  className="flex items-center justify-between w-full text-left"
+                  onClick={() => {
+                    const section = document.getElementById('add-member-advanced-settings');
+                    const arrow = document.getElementById('add-member-advanced-arrow');
+                    if (section && arrow) {
+                      section.classList.toggle('hidden');
+                      arrow.classList.toggle('rotate-180');
+                    }
+                  }}
+                >
+                  <span className="text-xs font-medium text-ink">高级设置</span>
+                  <svg
+                    id="add-member-advanced-arrow"
+                    className="w-3 h-3 text-ink-muted transition-transform"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    strokeWidth={2}
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                  </svg>
+                </button>
+                <div id="add-member-advanced-settings" className="hidden mt-3 space-y-3">
+                  <div>
+                    <label className="text-xs text-ink-muted mb-1 block">最大上下文 Token</label>
+                    <input
+                      className="input w-full"
+                      type="number"
+                      value={config.maxInputTokens}
+                      onChange={(e) => setConfig({ ...config, maxInputTokens: parseInt(e.target.value) || 4000})}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-ink-muted mb-1 block">最大输出 Token</label>
+                    <input
+                      className="input w-full"
+                      type="number"
+                      value={config.maxOutputTokens}
+                      onChange={(e) => setConfig({ ...config, maxOutputTokens: parseInt(e.target.value) || 2000})}
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -1140,24 +1256,50 @@ const EditMemberModal: React.FC<EditMemberModalProps> = ({ member, onClose, onSa
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs text-ink-muted mb-1 block">最大输入 Token</label>
-                  <input
-                    className="input w-full"
-                    type="number"
-                    value={config.maxInputTokens}
-                    onChange={(e) => setConfig({ ...config, maxInputTokens: parseInt(e.target.value) || 4000 })}
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-ink-muted mb-1 block">最大输出 Token</label>
-                  <input
-                    className="input w-full"
-                    type="number"
-                    value={config.maxOutputTokens}
-                    onChange={(e) => setConfig({ ...config, maxOutputTokens: parseInt(e.target.value) || 2000 })}
-                  />
+              <div className="border-t border-border-subtle pt-3 mt-3">
+                <button
+                  type="button"
+                  className="flex items-center justify-between w-full text-left"
+                  onClick={() => {
+                    const section = document.getElementById('edit-member-advanced-settings');
+                    const arrow = document.getElementById('edit-member-advanced-arrow');
+                    if (section && arrow) {
+                      section.classList.toggle('hidden');
+                      arrow.classList.toggle('rotate-180');
+                    }
+                  }}
+                >
+                  <span className="text-xs font-medium text-ink">高级设置</span>
+                  <svg
+                    id="edit-member-advanced-arrow"
+                    className="w-3 h-3 text-ink-muted transition-transform"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    strokeWidth={2}
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                  </svg>
+                </button>
+                <div id="edit-member-advanced-settings" className="hidden mt-3 space-y-3">
+                  <div>
+                    <label className="text-xs text-ink-muted mb-1 block">最大上下文 Token</label>
+                    <input
+                      className="input w-full"
+                      type="number"
+                      value={config.maxInputTokens}
+                      onChange={(e) => setConfig({ ...config, maxInputTokens: parseInt(e.target.value) || 4000})}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-ink-muted mb-1 block">最大输出 Token</label>
+                    <input
+                      className="input w-full"
+                      type="number"
+                      value={config.maxOutputTokens}
+                      onChange={(e) => setConfig({ ...config, maxOutputTokens: parseInt(e.target.value) || 2000})}
+                    />
+                  </div>
                 </div>
               </div>
             </div>
