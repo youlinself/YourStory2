@@ -500,6 +500,7 @@ const AutobiographyPage: React.FC = () => {
             <input
               className="input pl-9 text-xs py-1.5"
               placeholder="搜索章节..."
+              style={{paddingLeft: '30px'}}
               value={searchValue}
               onChange={(e) => setSearchValue(e.target.value)}
             />
