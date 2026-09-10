@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Modal from '../ui/Modal';
 import useNovelStore from '../../stores/novelStore';
 import useAIStore from '../../stores/aiStore';
-import NovelAIService from '../../services/ai/NovelAIService';
+import { UnifiedLLMService } from '../../agent/llm/UnifiedLLMService';
 import { useToast } from '../common/Toast';
 import {
   GENRE_LABELS,
@@ -113,17 +113,18 @@ const CreateNovelModal: React.FC<CreateNovelModalProps> = ({
           return;
         }
 
-        const aiService = new NovelAIService({
+        const llmService = new UnifiedLLMService({
           apiKey,
           model,
           baseUrl,
           vendor,
           temperature,
           customModelName,
+          maxOutputTokens: 16000,
         });
 
         setCreateProgress({ current: 1, total: 4, message: '正在生成小说蓝图（大纲、角色、世界观）...' });
-        const blueprint = await aiService.generateNovelBlueprint(aiInput);
+        const blueprint = await generateNovelBlueprint(llmService, aiInput);
 
         if (blueprint) {
           finalTitle = blueprint.title || title;
@@ -444,3 +445,123 @@ const CreateNovelModal: React.FC<CreateNovelModalProps> = ({
 };
 
 export default CreateNovelModal;
+
+async function generateNovelBlueprint(
+  llmService: UnifiedLLMService,
+  idea: string
+): Promise<{
+  title: string;
+  genre: string;
+  synopsis: string;
+  outline: Array<{ title: string; summary: string }>;
+  characters: Array<{
+    name: string;
+    role: string;
+    gender: string;
+    age: number;
+    appearance: string;
+    personality: string;
+    background: string;
+    goals: string;
+  }>;
+  worldBuilding: {
+    setting: string;
+    era: string;
+    location: string;
+    magicSystem: string;
+    factions: string[];
+    rules: string[];
+  };
+} | null> {
+  const messages = [
+    {
+      role: 'system' as const,
+      content: `你是一位专业的小说策划大师。用户会提供一个想法，你需要根据这个想法生成完整的小说蓝图。
+
+【输出格式】
+请输出JSON格式，不要包含任何其他文字：
+{
+  "title": "小说标题",
+  "genre": "fantasy/romance/sci-fi/mystery/historical/modern/wuxia/urban/horror/other",
+  "synopsis": "小说简介（100-200字，包含核心冲突和看点）",
+  "outline": [
+    { "title": "第一章标题", "summary": "本章内容概要（50-100字）" },
+    { "title": "第二章标题", "summary": "本章内容概要（50-100字）" }
+  ],
+  "characters": [
+    {
+      "name": "角色名",
+      "role": "protagonist/supporting/antagonist/extra",
+      "gender": "male/female/unknown",
+      "age": 年龄数字,
+      "appearance": "外貌描写",
+      "personality": "性格特点",
+      "background": "背景故事",
+      "goals": "目标/动机"
+    }
+  ],
+  "worldBuilding": {
+    "setting": "世界设定概述",
+    "era": "时代背景",
+    "location": "主要地点",
+    "magicSystem": "力量体系",
+    "factions": ["势力1", "势力2"],
+    "rules": ["世界规则1", "世界规则2"]
+  }
+}
+
+【创作要求】
+1. 标题：简洁有力，有吸引力，符合题材风格
+2. 简介：包含主角、核心冲突、故事卖点，引人入胜
+3. 大纲：5-8章，每章有明确的标题和概要，情节递进合理
+4. 角色：3-5个主要角色，包含主角、配角、反派，性格鲜明
+5. 世界观：与题材匹配，设定合理，有独特之处
+
+【题材说明】
+- fantasy: 玄幻/修仙
+- romance: 言情/爱情
+- sci-fi: 科幻/未来
+- mystery: 悬疑/推理
+- historical: 历史/古代
+- modern: 现代/现实
+- wuxia: 武侠/江湖
+- urban: 都市/职场
+- horror: 恐怖/惊悚
+- other: 其他`,
+    },
+    {
+      role: 'user' as const,
+      content: `【用户想法】
+${idea}
+
+请根据以上想法生成完整的小说蓝图：`,
+    },
+  ];
+
+  try {
+    const response = await llmService.sendRequest(messages);
+    const jsonMatch = response.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      return {
+        title: parsed.title || '未命名小说',
+        genre: parsed.genre || 'fantasy',
+        synopsis: parsed.synopsis || '',
+        outline: parsed.outline || [],
+        characters: parsed.characters || [],
+        worldBuilding: {
+          setting: parsed.worldBuilding?.setting || '',
+          era: parsed.worldBuilding?.era || '',
+          location: parsed.worldBuilding?.location || '',
+          magicSystem: parsed.worldBuilding?.magicSystem || '',
+          factions: parsed.worldBuilding?.factions || [],
+          rules: parsed.worldBuilding?.rules || [],
+        },
+      };
+    }
+    return null;
+  } catch (error) {
+    console.error('生成小说蓝图失败:', error);
+    return null;
+  }
+}

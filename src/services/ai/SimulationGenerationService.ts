@@ -6,7 +6,7 @@ import { COMMON_ATTACK_CARDS, COMMON_SKILL_CARDS, RARE_CARDS, LEGENDARY_CARDS } 
 import { BOND_CARDS, registerAIGeneratedBondCards } from '../../data/bondCards';
 import { generateId } from '../../utils';
 import { safeParseJSON, validateGameEvent } from './ContentValidator';
-import AIService from './AIService';
+import { UnifiedLLMService } from '../../agent/llm/UnifiedLLMService';
 import useAIStore from '../../stores/aiStore';
 import { getMonsterTemplate, buildMonsterTemplatePrompt, buildMonsterExample } from './MonsterTemplateService';
 
@@ -147,17 +147,17 @@ export function analyzeMapForContentRequirements(eraMap: EraMap, baseAge: number
   return requirements;
 }
 
-async function getAIService(): Promise<AIService | null> {
+async function getLLMService(): Promise<UnifiedLLMService | null> {
   const aiSettings = useAIStore.getState();
   if (!aiSettings.apiKey) return null;
 
-  return new AIService({
+  return new UnifiedLLMService({
     apiKey: aiSettings.apiKey,
     model: aiSettings.model,
     baseUrl: aiSettings.baseUrl,
     vendor: aiSettings.vendor,
     temperature: aiSettings.temperature,
-    maxOutputTokens: aiSettings.maxOutputTokens,
+    maxOutputTokens: aiSettings.maxOutputTokens ?? 4000,
     customModelName: aiSettings.customModelName,
     testUrl: aiSettings.testUrl,
   });
@@ -312,10 +312,10 @@ export async function generateEraContent(ctx: GenerationContext): Promise<EraPre
     return getDefaultEraContent(ctx.targetEra, ctx);
   }
 
-  const aiService = await getAIService();
+  const llmService = await getLLMService();
   const requirements = analyzeMapForContentRequirements(ctx.eraMap, ctx.targetAgeStart);
 
-  if (!aiService) {
+  if (!llmService) {
     return getDefaultEraContent(ctx.targetEra, ctx);
   }
 
@@ -328,7 +328,7 @@ export async function generateEraContent(ctx: GenerationContext): Promise<EraPre
       { role: 'user', content: userPrompt },
     ];
 
-    const response = await aiService.sendCustomMessages(messages);
+    const response = await llmService.sendCustomMessages(messages);
     const parsed = safeParseJSON<{
       events: Array<{ id?: string; title: string; baseText: string; age?: number; options: unknown[] }>;
       enemies: Array<{ id?: string; name: string; icon: string; description: string; maxHealth: number; block: number; intents: unknown[]; goldReward: [number, number]; age: number; cardRewards: Array<{ id?: string; name: string; icon: string; description: string; rarity: string; type: string; cost: number; effects: unknown[] }>; mechanics?: string[] }>;

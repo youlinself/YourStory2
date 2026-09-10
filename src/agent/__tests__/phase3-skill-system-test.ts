@@ -8,7 +8,7 @@ declare const process: { exit(code?: number): never }
 import { SkillRegistry } from '../skills/SkillRegistry'
 import { ToolRegistry } from '../tools/ToolRegistry'
 import { EventEmitter, SessionLog, MemoryEventStore } from '../events'
-import { AutobiographyAgent } from '../AutobiographyAgent'
+import { Agent } from '../Agent'
 import { MemoryStorageAdapter } from '../session'
 import {
   deepInterviewSkill,
@@ -77,7 +77,7 @@ const mockContext: SessionContext = {
 }
 
 function createMockSkillContext(sessionId: string): SkillContext {
-  const agent = new AutobiographyAgent({ storage: new MemoryStorageAdapter() })
+  const agent = new Agent({ storage: new MemoryStorageAdapter() })
   return {
     sessionId,
     chapterId: 'ch-001',
@@ -366,7 +366,7 @@ async function testSkillRegistration(): Promise<void> {
 // ============================================================
 async function testIntegration(): Promise<void> {
   await runAsync('集成测试 - Agent 技能激活', async () => {
-    const agent = new AutobiographyAgent({ storage: new MemoryStorageAdapter() })
+    const agent = new Agent({ storage: new MemoryStorageAdapter() })
 
     const toolRegistry = new ToolRegistry()
     toolRegistry.register(extractContentTool)

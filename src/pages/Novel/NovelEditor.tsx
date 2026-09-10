@@ -4,7 +4,7 @@ import useNovelStore from '../../stores/novelStore';
 import useAIStore from '../../stores/aiStore';
 import useThinkTankStore from '../../stores/thinkTankStore';
 import useWritingSkillStore from '../../stores/writingSkillStore';
-import NovelAIService from '../../services/ai/NovelAIService';
+import { UnifiedLLMService } from '../../agent/llm/UnifiedLLMService';
 import { useToast } from '../../components';
 import {
   GENRE_LABELS,
@@ -474,13 +474,14 @@ const NovelEditor: React.FC = () => {
       return null;
     }
 
-    const aiService = new NovelAIService({
+    const llmService = new UnifiedLLMService({
       apiKey: memberConfig.apiKey,
       model: memberConfig.model,
       baseUrl: memberConfig.baseUrl,
       vendor: memberConfig.vendor,
       temperature: params?.continue?.temperature ?? memberConfig.temperature,
       customModelName: memberConfig.customModelName,
+      maxOutputTokens: 16000,
     });
 
     try {
@@ -488,28 +489,24 @@ const NovelEditor: React.FC = () => {
 
       switch (type) {
         case 'continue':
-          result = await aiService.continueWriting(
-            currentChapter,
-            novel.characters,
-            novel.worldBuilding
-          );
+          result = await continueWriting(llmService, currentChapter, novel.characters, novel.worldBuilding);
           break;
         case 'polish':
           if (!selectionRange) {
             toast.addToast({ type: 'warning', message: '请先选择要润色的文本' });
             return null;
           }
-          result = await aiService.polishText(selectionRange.text, params?.continue.style);
+          result = await polishText(llmService, selectionRange.text, params?.continue.style);
           break;
         case 'expand':
           if (!selectionRange) {
             toast.addToast({ type: 'warning', message: '请先选择要扩写的文本' });
             return null;
           }
-          result = await aiService.expandText(selectionRange.text, params?.continue.direction);
+          result = await expandText(llmService, selectionRange.text, params?.continue.direction);
           break;
         case 'suggest':
-          result = await aiService.generatePlotSuggestions(currentChapter, novel.synopsis);
+          result = await generatePlotSuggestions(llmService, currentChapter, novel.synopsis);
           break;
       }
 
@@ -1378,3 +1375,166 @@ const NovelEditor: React.FC = () => {
 };
 
 export default NovelEditor;
+
+async function continueWriting(
+  llmService: UnifiedLLMService,
+  chapter: import('../../types/novel').NovelChapter,
+  characters: import('../../types/novel').Character[],
+  worldBuilding: import('../../types/novel').WorldBuilding | null
+): Promise<string> {
+  const characterInfo = characters
+    .map((c) => `${c.name}（${c.role}）：${c.personality}。背景：${c.background || '无'}`)
+    .join('\n');
+
+  const worldInfo = worldBuilding
+    ? `世界设定：${worldBuilding.setting}\n时代：${worldBuilding.era}\n地点：${worldBuilding.location}\n力量体系：${worldBuilding.magicSystem || '无'}`
+    : '无特殊世界设定';
+
+  const MAX_CONTENT_LENGTH = 6000;
+  let chapterContent = chapter.content || '';
+  if (chapterContent.length > MAX_CONTENT_LENGTH) {
+    chapterContent = chapterContent.slice(0, MAX_CONTENT_LENGTH);
+  }
+
+  const messages = [
+    {
+      role: 'system' as const,
+      content: `你是一位专业的小说创作助手。你的任务是帮助用户续写小说。
+
+【写作原则】
+- 保持与原文风格一致
+- 推动情节自然发展
+- 保持角色性格一致
+- 注重画面感和节奏感
+- 每次续写约300-500字
+
+【角色信息】
+${characterInfo || '暂无角色信息'}
+
+【世界观】
+${worldInfo}
+
+请直接输出续写内容，不要添加任何解释或标记。`,
+    },
+    {
+      role: 'user' as const,
+      content: `【章节标题】${chapter.title}
+
+【前文内容】
+${chapterContent || '（这是章节开头，请开始写作）'}
+
+请续写接下来的内容：`,
+    },
+  ];
+
+  return llmService.sendRequest(messages);
+}
+
+async function polishText(
+  llmService: UnifiedLLMService,
+  originalText: string,
+  style: string = ''
+): Promise<string> {
+  const messages = [
+    {
+      role: 'system' as const,
+      content: `你是一位专业的文学编辑。你的任务是对用户提供的文本进行润色。
+
+【润色原则】
+- 保持原意不变
+- 提升语句流畅度和文学性
+- 增强画面感和表现力
+- 保持原有风格${style ? `，特别注重${style}风格` : ''}
+- 不要添加新的情节或信息
+
+请直接输出润色后的文本，不要添加任何解释。`,
+    },
+    {
+      role: 'user' as const,
+      content: `【原文】
+${originalText}
+
+请对以上文本进行润色：`,
+    },
+  ];
+
+  return llmService.sendRequest(messages);
+}
+
+async function expandText(
+  llmService: UnifiedLLMService,
+  originalText: string,
+  direction: string = ''
+): Promise<string> {
+  const messages = [
+    {
+      role: 'system' as const,
+      content: `你是一位富有想象力的小说创作助手。你的任务是将简短的文本扩展为更丰富的描述。
+
+【扩写原则】
+- 保持原文核心意思
+- 增加细节描写（环境、动作、心理等）
+- 丰富感官体验
+- 保持节奏感，避免冗长
+- 扩写后的长度约为原文的2-3倍`,
+    },
+    {
+      role: 'user' as const,
+      content: `【原文】
+${originalText}
+
+${direction ? `【扩写方向】${direction}` : ''}
+
+请将以上文本扩写：`,
+    },
+  ];
+
+  return llmService.sendRequest(messages);
+}
+
+async function generatePlotSuggestions(
+  llmService: UnifiedLLMService,
+  currentChapter: import('../../types/novel').NovelChapter,
+  synopsis: string
+): Promise<string[]> {
+  const MAX_CONTENT_LENGTH = 6000;
+  let chapterContent = currentChapter.content || '';
+  if (chapterContent.length > MAX_CONTENT_LENGTH) {
+    chapterContent = chapterContent.slice(0, MAX_CONTENT_LENGTH);
+  }
+
+  const chapterSummary = `《${currentChapter.title}》\n${currentChapter.summary || '暂无摘要'}\n\n【章节内容】\n${chapterContent}`;
+
+  const messages = [
+    {
+      role: 'system' as const,
+      content: `你是一位富有创意的小说策划。请根据当前章节内容，提供3-5个合理的后续情节发展方向。
+
+【输出格式】
+请输出JSON格式，包含一个suggestions数组，每个元素是一个情节建议字符串。
+例如：{"suggestions": ["建议1", "建议2", "建议3"]}`,
+    },
+    {
+      role: 'user' as const,
+      content: `【作品简介】
+${synopsis || '暂无简介'}
+
+【当前章节】
+${chapterSummary}
+
+请基于当前章节的情节发展，提供后续情节建议：`,
+    },
+  ];
+
+  try {
+    const response = await llmService.sendRequest(messages);
+    const jsonMatch = response.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      return parsed.suggestions || [];
+    }
+    return [];
+  } catch {
+    return [];
+  }
+}

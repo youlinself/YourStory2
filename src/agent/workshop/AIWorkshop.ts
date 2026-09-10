@@ -2,7 +2,7 @@ import type { ThinkTankMember, ThinkTankRolePreset } from '../../types/writing';
 import type { Task, SubTask, WorkshopLog, WorkshopMember, TaskPlan, ExecutionResult } from './types';
 import { TaskDispatcher } from './TaskDispatcher';
 import { generateId } from '../../utils';
-import AIService from '../../services/ai/AIService';
+import { UnifiedLLMService } from '../llm/UnifiedLLMService';
 
 export interface AIWorkshopConfig {
   onLog?: (log: WorkshopLog) => void;
@@ -163,13 +163,13 @@ export class AIWorkshop {
         throw new Error(`AI成员「${member.name}」未配置API Key，请在智囊团设置中配置`);
       }
 
-      const aiService = new AIService({
+      const llmService = new UnifiedLLMService({
         apiKey: member.config.apiKey,
         model: member.config.model,
         baseUrl: member.config.baseUrl,
         vendor: member.config.vendor,
         temperature: member.config.temperature,
-        maxOutputTokens: member.config.maxOutputTokens,
+        maxOutputTokens: member.config.maxOutputTokens ?? 2000,
         customModelName: member.config.customModelName,
       });
 
@@ -181,7 +181,7 @@ export class AIWorkshop {
         { role: 'user', content: userPrompt },
       ];
 
-      const result = await aiService.sendCustomMessages(messages);
+      const result = await llmService.sendCustomMessages(messages);
 
       subtask.status = 'completed';
       subtask.result = result;

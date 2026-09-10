@@ -8,7 +8,7 @@ declare const process: { exit(code?: number): never }
 import { SessionManager, MemoryStorageAdapter } from '../session'
 import { ToolRegistry } from '../tools'
 import { EventEmitter, SessionLog, MemoryEventStore } from '../events'
-import { AutobiographyAgent } from '../AutobiographyAgent'
+import { Agent } from '../Agent'
 import type { SessionContext } from '../session/types'
 import type { ToolDefinition } from '../tools/ToolTypes'
 
@@ -446,7 +446,7 @@ async function testEventEmitter(): Promise<void> {
 // ============================================================
 async function testAutobiographyAgent(): Promise<void> {
   await runAsync('AutobiographyAgent - 创建和恢复会话', async () => {
-    const agent = new AutobiographyAgent({ storage: new MemoryStorageAdapter() })
+    const agent = new Agent({ storage: new MemoryStorageAdapter() })
     const session = await agent.createSession('ch-001', mockContext)
 
     assert(session.id.length > 0, '会话创建成功')
@@ -457,7 +457,7 @@ async function testAutobiographyAgent(): Promise<void> {
   })
 
   await runAsync('AutobiographyAgent - 工具注册与执行', async () => {
-    const agent = new AutobiographyAgent({ storage: new MemoryStorageAdapter() })
+    const agent = new Agent({ storage: new MemoryStorageAdapter() })
     const session = await agent.createSession('ch-001', mockContext)
 
     agent.registerTool(mockTool)
@@ -469,7 +469,7 @@ async function testAutobiographyAgent(): Promise<void> {
   })
 
   await runAsync('AutobiographyAgent - 工具调用记录到历史', async () => {
-    const agent = new AutobiographyAgent({ storage: new MemoryStorageAdapter() })
+    const agent = new Agent({ storage: new MemoryStorageAdapter() })
     const session = await agent.createSession('ch-001', mockContext)
 
     agent.registerTool(mockTool)
@@ -482,7 +482,7 @@ async function testAutobiographyAgent(): Promise<void> {
   })
 
   await runAsync('AutobiographyAgent - 事件触发', async () => {
-    const agent = new AutobiographyAgent({ storage: new MemoryStorageAdapter() })
+    const agent = new Agent({ storage: new MemoryStorageAdapter() })
     let createdEvent = false
     let toolCalledEvent = false
 
@@ -499,7 +499,7 @@ async function testAutobiographyAgent(): Promise<void> {
   })
 
   await runAsync('AutobiographyAgent - 暂停和关闭会话', async () => {
-    const agent = new AutobiographyAgent({ storage: new MemoryStorageAdapter() })
+    const agent = new Agent({ storage: new MemoryStorageAdapter() })
     const session = await agent.createSession('ch-001', mockContext)
 
     await agent.pauseSession(session.id)
@@ -510,7 +510,7 @@ async function testAutobiographyAgent(): Promise<void> {
   })
 
   await runAsync('AutobiographyAgent - 获取活跃会话', async () => {
-    const agent = new AutobiographyAgent({ storage: new MemoryStorageAdapter() })
+    const agent = new Agent({ storage: new MemoryStorageAdapter() })
     const s1 = await agent.createSession('ch-001', mockContext)
     await agent.createSession('ch-002', mockContext)
     await agent.pauseSession(s1.id)
@@ -520,7 +520,7 @@ async function testAutobiographyAgent(): Promise<void> {
   })
 
   await runAsync('AutobiographyAgent - 销毁清理', async () => {
-    const agent = new AutobiographyAgent({ storage: new MemoryStorageAdapter() })
+    const agent = new Agent({ storage: new MemoryStorageAdapter() })
     await agent.createSession('ch-001', mockContext)
 
     agent.dispose()
@@ -528,7 +528,7 @@ async function testAutobiographyAgent(): Promise<void> {
   })
 
   await runAsync('AutobiographyAgent - 执行未激活工具报错', async () => {
-    const agent = new AutobiographyAgent({ storage: new MemoryStorageAdapter() })
+    const agent = new Agent({ storage: new MemoryStorageAdapter() })
     const session = await agent.createSession('ch-001', mockContext)
 
     agent.registerTool(mockTool)

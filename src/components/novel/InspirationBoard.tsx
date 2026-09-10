@@ -2,7 +2,7 @@ import React, { useState, useCallback, useMemo } from 'react';
 import type { SavedInspiration } from '../../types';
 import InspirationImportModal from './InspirationImportModal';
 import useAIStore from '../../stores/aiStore';
-import NovelAIService from '../../services/ai/NovelAIService';
+import { UnifiedLLMService } from '../../agent/llm/UnifiedLLMService';
 
 interface InspirationBoardProps {
   inspirations: SavedInspiration[];
@@ -142,16 +142,17 @@ const InspirationBoard: React.FC<InspirationBoardProps> = ({
         return;
       }
 
-      const aiService = new NovelAIService({
+      const llmService = new UnifiedLLMService({
         apiKey,
         model,
         baseUrl,
         vendor,
         temperature,
         customModelName,
+        maxOutputTokens: 2000,
       });
 
-      const inspiration = await aiService.generateInspiration(aiSelectedType);
+      const inspiration = await generateInspiration(llmService, aiSelectedType);
       setAiResult(inspiration);
     } catch {
       setAiResult('生成失败，请重试');
@@ -562,3 +563,39 @@ const InspirationBoard: React.FC<InspirationBoardProps> = ({
 };
 
 export default InspirationBoard;
+
+async function generateInspiration(
+  llmService: UnifiedLLMService,
+  type: 'plot' | 'character' | 'scene' | 'dialogue' | 'theme'
+): Promise<string> {
+  const typePrompts = {
+    plot: '生成一个情节灵感，包含一个有趣的转折点、冲突或悬念',
+    character: '生成一个角色灵感，包含独特的性格特点或背景故事',
+    scene: '生成一个场景灵感，包含生动的环境描写或氛围设定',
+    dialogue: '生成一个对话灵感，展现角色性格或推动情节的对话片段',
+    theme: '生成一个主题灵感，关于故事可以探讨的深层主题或意义',
+  };
+
+  const messages = [
+    {
+      role: 'system' as const,
+      content: `你是一位富有创意的小说灵感生成器。请${typePrompts[type]}。
+
+【输出要求】
+- 简洁有力，一两句话
+- 富有画面感和想象力
+- 能激发创作欲望
+- 适合各种题材`,
+    },
+    {
+      role: 'user' as const,
+      content: `请生成一个${type === 'plot' ? '情节' : type === 'character' ? '角色' : type === 'scene' ? '场景' : type === 'dialogue' ? '对话' : '主题'}灵感：`,
+    },
+  ];
+
+  try {
+    return await llmService.sendRequest(messages);
+  } catch {
+    return '';
+  }
+}

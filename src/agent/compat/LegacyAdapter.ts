@@ -1,8 +1,8 @@
-import type { AutobiographyAgent } from '../AutobiographyAgent'
+import type { Agent } from '../Agent'
 import type { ToolResult } from '../tools/ToolTypes'
 
 export class LegacyAdapter {
-  constructor(private agent: AutobiographyAgent) {}
+  constructor(private agent: Agent) {}
 
   async handleMessage(sessionId: string, message: string): Promise<string> {
     const handle = this.agent.getHandle(sessionId)

@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import useWritingSkillStore from '../../stores/writingSkillStore';
 import useAIStore from '../../stores/aiStore';
-import NovelAIService from '../../services/ai/NovelAIService';
+import { UnifiedLLMService } from '../../agent/llm/UnifiedLLMService';
 import type { CustomWritingSkill, SkillCategory, WritingStylePreset } from '../../types/writing';
 
 type SkillsTabType = 'skills' | 'styles' | 'config';
@@ -220,16 +220,17 @@ const WritingSkillsPanel: React.FC<WritingSkillsPanelProps> = ({
     setAiGeneratedSkills([]);
 
     try {
-      const aiService = new NovelAIService({
+      const llmService = new UnifiedLLMService({
         apiKey,
         model,
         baseUrl,
         vendor,
         temperature: 0.8,
         customModelName,
+        maxOutputTokens: 4000,
       });
 
-      const generatedSkills = await aiService.generateWritingSkills(aiSkillDescription, aiSkillGenre);
+      const generatedSkills = await generateWritingSkills(llmService, aiSkillDescription, aiSkillGenre);
       setAiGeneratedSkills(generatedSkills);
     } catch (error) {
       alert(`生成失败: ${error instanceof Error ? error.message : '未知错误'}`);
@@ -249,16 +250,17 @@ const WritingSkillsPanel: React.FC<WritingSkillsPanelProps> = ({
     setAiGeneratedStyle(null);
 
     try {
-      const aiService = new NovelAIService({
+      const llmService = new UnifiedLLMService({
         apiKey,
         model,
         baseUrl,
         vendor,
         temperature: 0.8,
         customModelName,
+        maxOutputTokens: 4000,
       });
 
-      const generatedStyle = await aiService.generateStylePreset(aiStyleDescription, aiStyleExample || undefined);
+      const generatedStyle = await generateStylePreset(llmService, aiStyleDescription, aiStyleExample || undefined);
       setAiGeneratedStyle(generatedStyle);
     } catch (error) {
       alert(`生成失败: ${error instanceof Error ? error.message : '未知错误'}`);
@@ -277,16 +279,17 @@ const WritingSkillsPanel: React.FC<WritingSkillsPanelProps> = ({
     setIsEnhancing(true);
 
     try {
-      const aiService = new NovelAIService({
+      const llmService = new UnifiedLLMService({
         apiKey,
         model,
         baseUrl,
         vendor,
         temperature: 0.7,
         customModelName,
+        maxOutputTokens: 2000,
       });
 
-      const result = await aiService.enhanceSkillPrompt(enhancePromptInput, enhanceRequirement);
+      const result = await enhanceSkillPrompt(llmService, enhancePromptInput, enhanceRequirement);
       setEnhancedPrompt(result);
     } catch (error) {
       alert(`优化失败: ${error instanceof Error ? error.message : '未知错误'}`);
@@ -1190,3 +1193,193 @@ const WritingSkillsPanel: React.FC<WritingSkillsPanelProps> = ({
 };
 
 export default WritingSkillsPanel;
+
+async function generateWritingSkills(
+  llmService: UnifiedLLMService,
+  description: string,
+  genre?: string
+): Promise<Array<{
+  name: string;
+  description: string;
+  category: string;
+  promptTemplate: string;
+  triggerWords: string[];
+}>> {
+  const genreText = genre ? `小说类型：${genre}\n` : '';
+
+  const messages = [
+    {
+      role: 'system' as const,
+      content: `你是一位专业的小说写作教学专家。根据用户的需求和小说类型，生成3-5个实用的自定义写作技能。
+
+【技能分类】
+- writing: 写作辅助（如描写技巧、对话写作、场景构建等）
+- analysis: 内容分析（如节奏分析、情感分析、逻辑检查等）
+- generation: 内容生成（如情节生成、角色生成、世界观生成等）
+- organization: 整理归纳（如大纲整理、伏笔管理、时间线梳理等）
+- custom: 自定义（其他特殊技能）
+
+【输出格式】
+请输出JSON格式，不要包含任何其他文字：
+{
+  "skills": [
+    {
+      "name": "技能名称（简洁明了）",
+      "description": "技能描述（50字以内）",
+      "category": "writing/analysis/generation/organization/custom",
+      "promptTemplate": "提示词模板（可使用 {selection} 表示选中文本，{context} 表示章节上下文）",
+      "triggerWords": ["触发词1", "触发词2", "触发词3"]
+    }
+  ]
+}
+
+【创作要求】
+1. 技能名称：简洁有力，4-8个字为佳
+2. 提示词模板：实用、可操作，包含具体的写作指导
+3. 触发词：简短易记，2-4个字，便于快速调用
+4. 技能应与用户需求高度相关，避免泛泛而谈`,
+    },
+    {
+      role: 'user' as const,
+      content: `${genreText}【用户需求】${description}
+
+请根据以上需求生成适合的写作技能：`,
+    },
+  ];
+
+  try {
+    const response = await llmService.sendRequest(messages);
+    const jsonMatch = response.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      return parsed.skills || [];
+    }
+    return [];
+  } catch (error) {
+    console.error('生成写作技能失败:', error);
+    return [];
+  }
+}
+
+async function generateStylePreset(
+  llmService: UnifiedLLMService,
+  description: string,
+  exampleText?: string
+): Promise<{
+  name: string;
+  description: string;
+  stylePrompt: string;
+  exampleText: string;
+  params: {
+    continue: { length: string; style: string; direction: string; temperature: number };
+  };
+} | null> {
+  const exampleTextPrompt = exampleText ? `\n【参考文本】\n${exampleText}\n请根据这段文本的风格特征生成风格预设。` : '';
+
+  const messages = [
+    {
+      role: 'system' as const,
+      content: `你是一位专业的文学风格分析专家。根据用户的描述，生成一个独特的写作风格预设。
+
+【风格类型参考】
+- 文学性风格：注重意象、修辞，语言优美
+- 简洁明快风格：语言精练，节奏快
+- 口语化风格：自然流畅，贴近生活
+- 古风文言风格：古典雅致，文言韵味
+- 悬疑紧凑风格：节奏紧凑，悬念迭起
+- 抒情散文风格：情感细腻，意境深远
+- 幽默诙谐风格：轻松幽默，妙趣横生
+
+【输出格式】
+请输出JSON格式，不要包含任何其他文字：
+{
+  "name": "风格名称（4-8个字）",
+  "description": "风格描述（50字以内）",
+  "stylePrompt": "风格提示词（描述AI应如何调整写作风格，50-100字）",
+  "exampleText": "示例文本（80-150字，体现该风格的典型段落）",
+  "params": {
+    "continue": {
+      "length": "medium",
+      "style": "original/literary/colloquial/custom",
+      "direction": "",
+      "temperature": 0.7
+    }
+  }
+}
+
+【创作要求】
+1. 风格名称：独特、有吸引力，能准确概括风格特点
+2. 风格提示词：具体可操作，包含语言特点、句式偏好、用词倾向等
+3. 示例文本：原创、精彩，能充分体现该风格
+4. temperature取值：精确风格0.3-0.5，平衡风格0.5-0.7，创意风格0.7-0.9`,
+    },
+    {
+      role: 'user' as const,
+      content: `【风格描述】${description}${exampleTextPrompt}
+
+请生成一个写作风格预设：`,
+    },
+  ];
+
+  try {
+    const response = await llmService.sendRequest(messages);
+    const jsonMatch = response.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      return {
+        name: parsed.name || '自定义风格',
+        description: parsed.description || '',
+        stylePrompt: parsed.stylePrompt || '',
+        exampleText: parsed.exampleText || '',
+        params: {
+          continue: {
+            length: parsed.params?.continue?.length || 'medium',
+            style: parsed.params?.continue?.style || 'custom',
+            direction: parsed.params?.continue?.direction || '',
+            temperature: parsed.params?.continue?.temperature ?? 0.7,
+          },
+        },
+      };
+    }
+    return null;
+  } catch (error) {
+    console.error('生成风格预设失败:', error);
+    return null;
+  }
+}
+
+async function enhanceSkillPrompt(
+  llmService: UnifiedLLMService,
+  currentPrompt: string,
+  requirement: string
+): Promise<string> {
+  const messages = [
+    {
+      role: 'system' as const,
+      content: `你是一位AI提示词优化专家。用户会提供一个当前的提示词模板和优化需求，你需要根据需求优化提示词。
+
+【优化原则】
+1. 保留原有核心意图
+2. 根据需求增强或调整
+3. 使提示词更具体、更有效
+4. 保持格式清晰，便于AI理解
+
+请直接输出优化后的提示词，不要添加任何解释。`,
+    },
+    {
+      role: 'user' as const,
+      content: `【当前提示词】
+${currentPrompt}
+
+【优化需求】${requirement}
+
+请优化以上提示词：`,
+    },
+  ];
+
+  try {
+    return await llmService.sendRequest(messages);
+  } catch {
+    return currentPrompt;
+  }
+}

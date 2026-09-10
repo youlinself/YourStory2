@@ -8,3 +8,5 @@ export { default as useBondStore } from './bondStore';
 export { default as useGameRecordStore } from './gameRecordStore';
 export { useAgentStore } from './agentStore';
 export { default as useThinkTankStore } from './thinkTankStore';
+export { createBusinessAgentStore } from './businessAgentStore';
+export type { BusinessAgentState, BusinessAgentActions, CreateBusinessAgentStoreOptions, ContextLoader } from './businessAgentStore';

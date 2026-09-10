@@ -1,5 +1,5 @@
 import type { SessionContext } from '../session/types'
-import type { AutobiographyAgent } from '../AutobiographyAgent'
+import type { Agent } from '../Agent'
 import type { AutobiographyEventMap } from '../events/types'
 
 /** 技能提示片段 */
@@ -22,7 +22,7 @@ export interface SkillContext {
   sessionId: string
   chapterId: string | null
   sessionContext: SessionContext
-  agent: AutobiographyAgent
+  agent: Agent
 }
 
 /** 技能命令 */

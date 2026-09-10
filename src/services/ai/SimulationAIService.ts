@@ -1,4 +1,4 @@
-import AIService from './AIService';
+import { UnifiedLLMService } from '../../agent/llm/UnifiedLLMService';
 import useAIStore from '../../stores/aiStore';
 import type { GameEvent, PlayerAttributes, ChoiceRecord } from '../../types/simulation';
 
@@ -21,16 +21,20 @@ const ATTR_NAMES: Record<string, string> = {
   fame: '名望',
 };
 
+/**
+ * 模拟人生AI服务（向后兼容层，内部使用 UnifiedLLMService）
+ * @deprecated 建议通过 Agent + SimulationExtension 使用统一的 Prompt 注册中心
+ */
 export class SimulationAIService {
-  private aiService: AIService | null = null;
+  private llmService: UnifiedLLMService | null = null;
 
-  private getAIService(): AIService | null {
-    if (this.aiService) return this.aiService;
+  private getAIService(): UnifiedLLMService | null {
+    if (this.llmService) return this.llmService;
 
     const aiSettings = useAIStore.getState();
     if (!aiSettings.apiKey) return null;
 
-    this.aiService = new AIService({
+    this.llmService = new UnifiedLLMService({
       apiKey: aiSettings.apiKey,
       model: aiSettings.model,
       baseUrl: aiSettings.baseUrl,
@@ -41,7 +45,7 @@ export class SimulationAIService {
       testUrl: aiSettings.testUrl,
     });
 
-    return this.aiService;
+    return this.llmService;
   }
 
   async generateEvent(prompt: AIEventPrompt): Promise<GameEvent | null> {
@@ -56,7 +60,7 @@ export class SimulationAIService {
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },
       ];
-      const response = await service.sendCustomMessages(messages);
+      const response = await service.sendRequest(messages);
       const cleaned = response.replace(/```json\s*|\s*```/g, '').trim();
       const parsed = JSON.parse(cleaned);
 

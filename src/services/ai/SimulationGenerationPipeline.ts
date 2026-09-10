@@ -12,7 +12,7 @@ import type {
 import type { BondCardDefinition } from '../../types/bond';
 import { generateId } from '../../utils';
 import { safeParseJSON, validateGameEvent } from './ContentValidator';
-import AIService from './AIService';
+import { UnifiedLLMService } from '../../agent/llm/UnifiedLLMService';
 import useAIStore from '../../stores/aiStore';
 import {
   COMMON_ATTACK_CARDS,
@@ -88,7 +88,7 @@ const ATTR_NAMES: Record<string, string> = {
 };
 
 export class SimulationGenerationPipeline {
-  private aiService: AIService | null = null;
+  private llmService: UnifiedLLMService | null = null;
   private progressCallback: ProgressCallback | null = null;
   private currentPhase: GenerationPhase = 'idle';
   private currentStep = 0;
@@ -118,24 +118,24 @@ export class SimulationGenerationPipeline {
     this.reportProgress(this.currentPhase, message);
   }
 
-  private async getAIService(): Promise<AIService | null> {
-    if (this.aiService) return this.aiService;
+  private async getLLMService(): Promise<UnifiedLLMService | null> {
+    if (this.llmService) return this.llmService;
 
     const aiSettings = useAIStore.getState();
     if (!aiSettings.apiKey) return null;
 
-    this.aiService = new AIService({
+    this.llmService = new UnifiedLLMService({
       apiKey: aiSettings.apiKey,
       model: aiSettings.model,
       baseUrl: aiSettings.baseUrl,
       vendor: aiSettings.vendor,
       temperature: aiSettings.temperature,
-      maxOutputTokens: aiSettings.maxOutputTokens,
+      maxOutputTokens: aiSettings.maxOutputTokens ?? 4000,
       customModelName: aiSettings.customModelName,
       testUrl: aiSettings.testUrl,
     });
 
-    return this.aiService;
+    return this.llmService;
   }
 
   async generateEraContent(ctx: PipelineContext): Promise<EraPreGeneratedContent | null> {
@@ -144,9 +144,9 @@ export class SimulationGenerationPipeline {
     }
 
     const requirements = this.analyzeMapForContentRequirements(ctx.eraMap, ctx.targetAgeStart);
-    const aiService = await this.getAIService();
+    const llmService = await this.getLLMService();
 
-    if (!aiService) {
+    if (!llmService) {
       return this.getDefaultEraContent(ctx);
     }
 
@@ -161,12 +161,12 @@ export class SimulationGenerationPipeline {
     this.currentStep = 0;
 
     try {
-      const events = await this.generateEventsInBatches(ctx, requirements, aiService);
-      const enemies = await this.generateEnemiesInBatches(ctx, requirements, aiService, 'normal');
-      const elites = await this.generateEnemiesInBatches(ctx, requirements, aiService, 'elite');
-      const shopCards = await this.generateShopCardsInBatches(ctx, requirements, aiService);
-      const bondCards = await this.generateBondCardsOnce(ctx, aiService);
-      const boss = await this.generateBossOnce(ctx, requirements, aiService);
+      const events = await this.generateEventsInBatches(ctx, requirements, llmService);
+      const enemies = await this.generateEnemiesInBatches(ctx, requirements, llmService, 'normal');
+      const elites = await this.generateEnemiesInBatches(ctx, requirements, llmService, 'elite');
+      const shopCards = await this.generateShopCardsInBatches(ctx, requirements, llmService);
+      const bondCards = await this.generateBondCardsOnce(ctx, llmService);
+      const boss = await this.generateBossOnce(ctx, requirements, llmService);
 
       this.reportProgress('assembling', '正在组装内容...');
 
@@ -185,7 +185,7 @@ export class SimulationGenerationPipeline {
   private async generateEventsInBatches(
     ctx: PipelineContext,
     requirements: GenerationRequirements,
-    aiService: AIService,
+    llmService: UnifiedLLMService,
   ): Promise<GameEvent[]> {
     if (requirements.events.length === 0) return [];
 
@@ -205,7 +205,7 @@ export class SimulationGenerationPipeline {
           { role: 'user', content: userPrompt },
         ];
 
-        const response = await aiService.sendCustomMessages(messages);
+        const response = await llmService.sendCustomMessages(messages);
         const parsed = safeParseJSON<Array<{ title: string; baseText: string; options: unknown[] }>>(response);
 
         if (Array.isArray(parsed)) {
@@ -238,7 +238,7 @@ export class SimulationGenerationPipeline {
   private async generateEnemiesInBatches(
     ctx: PipelineContext,
     requirements: GenerationRequirements,
-    aiService: AIService,
+    llmService: UnifiedLLMService,
     type: 'normal' | 'elite',
   ): Promise<Enemy[]> {
     const reqs = type === 'normal' ? requirements.normalEnemies : requirements.eliteEnemies;
@@ -267,7 +267,7 @@ export class SimulationGenerationPipeline {
           { role: 'user', content: userPrompt },
         ];
 
-        const response = await aiService.sendCustomMessages(messages);
+        const response = await llmService.sendCustomMessages(messages);
         const parsed = safeParseJSON<Array<{
           id?: string;
           name: string;
@@ -312,7 +312,7 @@ export class SimulationGenerationPipeline {
   private async generateShopCardsInBatches(
     ctx: PipelineContext,
     requirements: GenerationRequirements,
-    aiService: AIService,
+    llmService: UnifiedLLMService,
   ): Promise<LifeCard[]> {
     if (requirements.shopCards.length === 0) return [];
 
@@ -334,7 +334,7 @@ export class SimulationGenerationPipeline {
           { role: 'user', content: userPrompt },
         ];
 
-        const response = await aiService.sendCustomMessages(messages);
+        const response = await llmService.sendCustomMessages(messages);
         const parsed = safeParseJSON<{
           cards: Array<{ id?: string; name: string; icon: string; description: string; rarity: string; type: string; cost: number; effects: unknown[] }>;
         }>(response);
@@ -373,7 +373,7 @@ export class SimulationGenerationPipeline {
 
   private async generateBondCardsOnce(
     ctx: PipelineContext,
-    aiService: AIService,
+    llmService: UnifiedLLMService,
   ): Promise<BondCardDefinition[]> {
     this.reportProgress('generating_bond_cards', '正在生成羁绊卡片');
 
@@ -387,7 +387,7 @@ export class SimulationGenerationPipeline {
         { role: 'user', content: userPrompt },
       ];
 
-      const response = await aiService.sendCustomMessages(messages);
+      const response = await llmService.sendCustomMessages(messages);
       const parsed = safeParseJSON<{
         bondCards: Array<{ id?: string; name: string; category: string; icon: string; rarity: string; description: string; flavorText: string; minAge: number; maxAge?: number; appearWeight: number }>;
       }>(response);
@@ -410,7 +410,7 @@ export class SimulationGenerationPipeline {
   private async generateBossOnce(
     ctx: PipelineContext,
     requirements: GenerationRequirements,
-    aiService: AIService,
+    llmService: UnifiedLLMService,
   ): Promise<Enemy | null> {
     if (requirements.bossEnemies.length === 0) return null;
 
@@ -431,7 +431,7 @@ export class SimulationGenerationPipeline {
         { role: 'user', content: userPrompt },
       ];
 
-      const response = await aiService.sendCustomMessages(messages);
+      const response = await llmService.sendCustomMessages(messages);
       const parsed = safeParseJSON<{
         id?: string;
         name: string;

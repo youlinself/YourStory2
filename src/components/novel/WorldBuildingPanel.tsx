@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import useNovelStore from '../../stores/novelStore';
 import useAIStore from '../../stores/aiStore';
-import NovelAIService from '../../services/ai/NovelAIService';
+import { UnifiedLLMService } from '../../agent/llm/UnifiedLLMService';
 import { useToast } from '../common/Toast';
 import type { WorldBuilding } from '../../types/novel';
 
@@ -44,13 +44,14 @@ const WorldBuildingPanel: React.FC<WorldBuildingPanelProps> = ({
 
     setIsAIGenerating(true);
     try {
-      const aiService = new NovelAIService({
+      const llmService = new UnifiedLLMService({
         apiKey,
         model,
         baseUrl,
         vendor,
         temperature,
         customModelName,
+        maxOutputTokens: 4000,
       });
 
       const description = [
@@ -62,7 +63,7 @@ const WorldBuildingPanel: React.FC<WorldBuildingPanelProps> = ({
         .filter(Boolean)
         .join('\n');
 
-      const result = await aiService.generateWorldBuilding(description);
+      const result = await generateWorldBuilding(llmService, description);
       if (result) {
         setFormData((prev) => ({
           ...prev,
@@ -333,3 +334,51 @@ const WorldBuildingPanel: React.FC<WorldBuildingPanelProps> = ({
 };
 
 export default WorldBuildingPanel;
+
+async function generateWorldBuilding(
+  llmService: UnifiedLLMService,
+  description: string
+): Promise<Partial<import('../../types/novel').WorldBuilding> | null> {
+  const messages = [
+    {
+      role: 'system' as const,
+      content: `你是一位世界观设计专家。请根据用户的描述，生成详细的世界观设定。
+
+【输出格式】
+请输出JSON格式：
+{
+  "setting": "世界设定概述",
+  "era": "时代背景",
+  "location": "主要地点",
+  "magicSystem": "力量体系",
+  "factions": ["势力1", "势力2"],
+  "rules": ["规则1", "规则2"]
+}`,
+    },
+    {
+      role: 'user' as const,
+      content: `【描述】${description}
+
+请生成世界观设定：`,
+    },
+  ];
+
+  try {
+    const response = await llmService.sendRequest(messages);
+    const jsonMatch = response.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      return {
+        setting: parsed.setting || '',
+        era: parsed.era || '',
+        location: parsed.location || '',
+        magicSystem: parsed.magicSystem || '',
+        factions: parsed.factions || [],
+        rules: parsed.rules || [],
+      };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}

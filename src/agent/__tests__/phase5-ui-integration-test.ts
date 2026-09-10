@@ -6,7 +6,7 @@
 declare const process: { exit(code?: number): never }
 
 import { useAgentStore } from '../../stores/agentStore'
-import { AutobiographyAgent } from '../AutobiographyAgent'
+import { Agent } from '../Agent'
 import { MemoryStorageAdapter } from '../session/SessionManager'
 import {
   autobiographySkills
@@ -97,18 +97,18 @@ async function testAgentStore(): Promise<void> {
     resetStore()
 
     const state = useAgentStore.getState()
-    await state.initialize()
+    await state.initialize('autobiography')
 
     const newState = useAgentStore.getState()
     assert(newState.agent !== null, 'agent 已初始化')
-    assert(newState.agent instanceof AutobiographyAgent, 'agent 类型正确')
+    assert(newState.agent instanceof Agent, 'agent 类型正确')
   })
 
   await runAsync('agentStore - 创建会话', async () => {
     resetStore()
 
     const state = useAgentStore.getState()
-    await state.initialize()
+    await state.initialize('autobiography')
     await state.createSession('ch-test')
 
     const newState = useAgentStore.getState()
@@ -121,7 +121,7 @@ async function testAgentStore(): Promise<void> {
     resetStore()
 
     const state = useAgentStore.getState()
-    await state.initialize()
+    await state.initialize('autobiography')
     await state.createSession('ch-test')
 
     const newState = useAgentStore.getState()
@@ -132,7 +132,7 @@ async function testAgentStore(): Promise<void> {
     resetStore()
 
     const state = useAgentStore.getState()
-    await state.initialize()
+    await state.initialize('autobiography')
     await state.createSession('ch-test')
 
     const sessionId = useAgentStore.getState().currentSession?.id
@@ -140,7 +140,7 @@ async function testAgentStore(): Promise<void> {
 
     resetStore()
     const newState = useAgentStore.getState()
-    await newState.initialize()
+    await newState.initialize('autobiography')
     await newState.resumeSession(sessionId!)
 
     const restoredState = useAgentStore.getState()
@@ -152,7 +152,7 @@ async function testAgentStore(): Promise<void> {
     resetStore()
 
     const state = useAgentStore.getState()
-    await state.initialize()
+    await state.initialize('autobiography')
     await state.createSession('ch-test')
 
     await useAgentStore.getState().activateSkill('timeline_organize')
@@ -166,7 +166,7 @@ async function testAgentStore(): Promise<void> {
     resetStore()
 
     const state = useAgentStore.getState()
-    await state.initialize()
+    await state.initialize('autobiography')
     await state.createSession('ch-test')
 
     await useAgentStore.getState().activateSkill('style_check')
@@ -180,7 +180,7 @@ async function testAgentStore(): Promise<void> {
     resetStore()
 
     const state = useAgentStore.getState()
-    await state.initialize()
+    await state.initialize('autobiography')
     await state.createSession('ch-test')
 
     const response = await useAgentStore.getState().sendMessage('我今天去公园散步了')
@@ -191,7 +191,7 @@ async function testAgentStore(): Promise<void> {
     resetStore()
 
     const state = useAgentStore.getState()
-    await state.initialize()
+    await state.initialize('autobiography')
     await state.createSession('ch-test')
 
     const result = await useAgentStore.getState().handleMessage('童年回忆', {
@@ -206,7 +206,7 @@ async function testAgentStore(): Promise<void> {
     resetStore()
 
     const state = useAgentStore.getState()
-    await state.initialize()
+    await state.initialize('autobiography')
     await state.createSession('ch-test')
 
     const result = await useAgentStore.getState().executeTool('extract_content', {
@@ -220,7 +220,7 @@ async function testAgentStore(): Promise<void> {
     resetStore()
 
     const state = useAgentStore.getState()
-    await state.initialize()
+    await state.initialize('autobiography')
     await state.createSession('ch-test')
 
     await useAgentStore.getState().pauseSession()
@@ -230,7 +230,7 @@ async function testAgentStore(): Promise<void> {
 
   await runAsync('agentStore - 清理', async () => {
     const state = useAgentStore.getState()
-    await state.initialize()
+    await state.initialize('autobiography')
     await state.createSession('ch-test')
 
     useAgentStore.getState().dispose()
@@ -248,7 +248,7 @@ async function testAgentStore(): Promise<void> {
 async function testAgentUIIntegration(): Promise<void> {
   await runAsync('Agent UI 集成 - 工具注册到 UI', async () => {
     const storage = new MemoryStorageAdapter()
-    const agent = new AutobiographyAgent({ storage })
+    const agent = new Agent({ storage })
 
     const unregister = agent.registerTools(autobiographyTools)
 
@@ -262,7 +262,7 @@ async function testAgentUIIntegration(): Promise<void> {
 
   await runAsync('Agent UI 集成 - 技能注册到 UI', async () => {
     const storage = new MemoryStorageAdapter()
-    const agent = new AutobiographyAgent({ storage })
+    const agent = new Agent({ storage })
 
     const unregister = agent.skillRegistry.registerAll(autobiographySkills)
 
@@ -276,7 +276,7 @@ async function testAgentUIIntegration(): Promise<void> {
 
   await runAsync('Agent UI 集成 - 会话技能激活', async () => {
     const storage = new MemoryStorageAdapter()
-    const agent = new AutobiographyAgent({ storage })
+    const agent = new Agent({ storage })
 
     agent.registerTools(autobiographyTools)
     agent.skillRegistry.registerAll(autobiographySkills)
@@ -291,7 +291,7 @@ async function testAgentUIIntegration(): Promise<void> {
 
   await runAsync('Agent UI 集成 - 技能切换', async () => {
     const storage = new MemoryStorageAdapter()
-    const agent = new AutobiographyAgent({ storage })
+    const agent = new Agent({ storage })
 
     agent.registerTools(autobiographyTools)
     agent.skillRegistry.registerAll(autobiographySkills)
@@ -310,7 +310,7 @@ async function testAgentUIIntegration(): Promise<void> {
 
   await runAsync('Agent UI 集成 - handleMessage 完整对话流程', async () => {
     const storage = new MemoryStorageAdapter()
-    const agent = new AutobiographyAgent({ storage })
+    const agent = new Agent({ storage })
 
     agent.registerTools(autobiographyTools)
     agent.skillRegistry.registerAll(autobiographySkills)
@@ -330,7 +330,7 @@ async function testAgentUIIntegration(): Promise<void> {
 
   await runAsync('Agent UI 集成 - 事件日志记录', async () => {
     const storage = new MemoryStorageAdapter()
-    const agent = new AutobiographyAgent({ storage })
+    const agent = new Agent({ storage })
 
     agent.registerTools(autobiographyTools)
 
@@ -370,7 +370,7 @@ async function testCommandPanel(): Promise<void> {
 
   await runAsync('CommandPanel - 命令执行逻辑', async () => {
     const storage = new MemoryStorageAdapter()
-    const agent = new AutobiographyAgent({ storage })
+    const agent = new Agent({ storage })
     agent.registerTools(autobiographyTools)
 
     const session = await agent.createSession('ch-test', createTestContext())
@@ -415,7 +415,7 @@ async function testSkillSwitcher(): Promise<void> {
 
   await runAsync('SkillSwitcher - 技能切换逻辑', async () => {
     const storage = new MemoryStorageAdapter()
-    const agent = new AutobiographyAgent({ storage })
+    const agent = new Agent({ storage })
 
     agent.registerTools(autobiographyTools)
     agent.skillRegistry.registerAll(autobiographySkills)
@@ -446,7 +446,7 @@ async function testSkillSwitcher(): Promise<void> {
 async function testEventLogPanel(): Promise<void> {
   await runAsync('EventLogPanel - 事件日志记录', async () => {
     const storage = new MemoryStorageAdapter()
-    const agent = new AutobiographyAgent({ storage })
+    const agent = new Agent({ storage })
 
     const eventLog: Array<{ event: string; payload: any; timestamp: number }> = []
 
@@ -466,7 +466,7 @@ async function testEventLogPanel(): Promise<void> {
 
   await runAsync('EventLogPanel - 多事件记录', async () => {
     const storage = new MemoryStorageAdapter()
-    const agent = new AutobiographyAgent({ storage })
+    const agent = new Agent({ storage })
 
     const eventLog: Array<{ event: string; payload: any; timestamp: number }> = []
 
@@ -497,7 +497,7 @@ async function testEventLogPanel(): Promise<void> {
     resetStore()
 
     const state = useAgentStore.getState()
-    await state.initialize()
+    await state.initialize('autobiography')
 
     useAgentStore.getState().logEvent('test/event', { data: 'test' })
     useAgentStore.getState().logEvent('test/event2', { data: 'test2' })
@@ -518,7 +518,7 @@ async function testEndToEnd(): Promise<void> {
     resetStore()
 
     const state = useAgentStore.getState()
-    await state.initialize()
+    await state.initialize('autobiography')
 
     await state.createSession('ch-test')
     assert(useAgentStore.getState().currentSession !== null, '会话已创建')
@@ -541,7 +541,7 @@ async function testEndToEnd(): Promise<void> {
     resetStore()
 
     const state = useAgentStore.getState()
-    await state.initialize()
+    await state.initialize('autobiography')
     await state.createSession('ch-test')
 
     await state.activateSkill('style_check')

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import useNovelStore from '../../stores/novelStore';
 import useAIStore from '../../stores/aiStore';
-import NovelAIService from '../../services/ai/NovelAIService';
+import { UnifiedLLMService } from '../../agent/llm/UnifiedLLMService';
 import { useToast } from '../common/Toast';
 import Modal from '../ui/Modal';
 import {
@@ -96,13 +96,14 @@ const CharacterPanel: React.FC<CharacterPanelProps> = ({
 
     setIsAIGenerating(true);
     try {
-      const aiService = new NovelAIService({
+      const llmService = new UnifiedLLMService({
         apiKey,
         model,
         baseUrl,
         vendor,
         temperature,
         customModelName,
+        maxOutputTokens: 2000,
       });
 
       const description = [
@@ -115,7 +116,7 @@ const CharacterPanel: React.FC<CharacterPanelProps> = ({
         .filter(Boolean)
         .join('\n');
 
-      const profile = await aiService.generateCharacterProfile(description);
+      const profile = await generateCharacterProfile(llmService, description);
       if (profile) {
         setFormData((prev) => ({
           ...prev,
@@ -411,3 +412,53 @@ const CharacterPanel: React.FC<CharacterPanelProps> = ({
 };
 
 export default CharacterPanel;
+
+async function generateCharacterProfile(
+  llmService: UnifiedLLMService,
+  description: string
+): Promise<Partial<import('../../types/novel').Character> | null> {
+  const messages = [
+    {
+      role: 'system' as const,
+      content: `你是一位角色设计专家。请根据用户的描述，生成完整的角色设定。
+
+【输出格式】
+请输出JSON格式：
+{
+  "name": "角色名",
+  "gender": "male/female/unknown",
+  "age": 年龄数字,
+  "appearance": "外貌描写",
+  "personality": "性格特点",
+  "background": "背景故事",
+  "goals": "目标/动机"
+}`,
+    },
+    {
+      role: 'user' as const,
+      content: `【描述】${description}
+
+请生成角色设定：`,
+    },
+  ];
+
+  try {
+    const response = await llmService.sendRequest(messages);
+    const jsonMatch = response.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      return {
+        name: parsed.name || '未命名',
+        gender: parsed.gender || 'unknown',
+        age: parsed.age || 20,
+        appearance: parsed.appearance || '',
+        personality: parsed.personality || '',
+        background: parsed.background || '',
+        goals: parsed.goals || '',
+      };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}

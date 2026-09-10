@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import useNovelStore from '../../stores/novelStore';
 import useAIStore from '../../stores/aiStore';
-import NovelAIService from '../../services/ai/NovelAIService';
+import { UnifiedLLMService } from '../../agent/llm/UnifiedLLMService';
 import { useToast } from '../common/Toast';
 import type { Novel } from '../../types/novel';
 
@@ -106,16 +106,17 @@ const NovelInfoPanel: React.FC<NovelInfoPanelProps> = ({ novel }) => {
 
     setIsGeneratingImage(true);
     try {
-      const aiService = new NovelAIService({
+      const llmService = new UnifiedLLMService({
         apiKey,
         model,
         baseUrl,
         vendor,
         temperature,
         customModelName,
+        maxOutputTokens: 2000,
       });
 
-      const imageUrl = await aiService.generateCoverImage(prompt, imageStyle);
+      const imageUrl = await generateCoverImage(llmService, prompt, imageStyle);
       if (imageUrl) {
         setFormData((prev) => ({ ...prev, coverImage: imageUrl }));
         toast.addToast({ type: 'success', message: '封面图片已生成' });
@@ -418,3 +419,49 @@ const NovelInfoPanel: React.FC<NovelInfoPanelProps> = ({ novel }) => {
 };
 
 export default NovelInfoPanel;
+
+async function generateCoverImage(
+  llmService: UnifiedLLMService,
+  prompt: string,
+  style: 'realistic' | 'anime' | 'watercolor' | 'oil_painting' | 'sketch' = 'anime'
+): Promise<string | null> {
+  const stylePrompts: Record<string, string> = {
+    realistic: 'realistic, detailed, cinematic lighting, high quality',
+    anime: 'anime style, vibrant colors, clean lines, manga illustration',
+    watercolor: 'watercolor painting, soft colors, artistic, flowing',
+    oil_painting: 'oil painting, classical art style, rich textures, masterpiece',
+    sketch: 'pencil sketch, hand-drawn, artistic, detailed linework',
+  };
+
+  const enhancedPrompt = `Book cover illustration: ${prompt}. Style: ${stylePrompts[style]}. Professional novel cover design, vertical composition, no text.`;
+
+  try {
+    const response = await fetch(`${llmService.getConfig().baseUrl}/images/generations`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${llmService.getConfig().apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'dall-e-3',
+        prompt: enhancedPrompt,
+        n: 1,
+        size: '1024x1792',
+        quality: 'hd',
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => '');
+      throw new Error(
+        `图片生成失败: ${response.status}${errorText ? ` - ${errorText.slice(0, 200)}` : ''}`,
+      );
+    }
+
+    const data = await response.json();
+    return data.data?.[0]?.url || null;
+  } catch (error) {
+    console.error('生成封面图片失败:', error);
+    throw error;
+  }
+}

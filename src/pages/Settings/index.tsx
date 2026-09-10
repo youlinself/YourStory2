@@ -11,7 +11,7 @@ import { isTauriEnvironment, migrateToTauriStorage } from '../../services/storag
 import FileStorageService from '../../services/storage/FileStorageService';
 import { useToast } from '../../components';
 import { AI_VENDORS, getVendorById, getVendorModels } from '../../ai_config/vendors';
-import AIService from '../../services/ai/AIService';
+import { UnifiedLLMService } from '../../agent/llm/UnifiedLLMService';
 import type { ThinkTankMember, ThinkTankRole } from '../../types';
 
 const SettingsPage: React.FC = () => {
@@ -263,16 +263,18 @@ const SettingsPage: React.FC = () => {
     setValidationMessage('');
 
     try {
-      const aiService = new AIService({
+      const llmService = new UnifiedLLMService({
         apiKey,
         model: customModelName || model,
         baseUrl,
         vendor,
         customModelName,
         testUrl,
+        temperature: 0.7,
+        maxOutputTokens: 2000,
       });
 
-      const result = await aiService.testConnection();
+      const result = await llmService.testConnection();
 
       if (result.success) {
         setValidationResult('success');

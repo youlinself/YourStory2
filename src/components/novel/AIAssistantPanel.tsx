@@ -1,6 +1,8 @@
 import React, { useState, useCallback } from 'react';
 import type { AIParams, AIHistoryItem } from '../../types';
 import { DEFAULT_AI_PARAMS } from '../../types';
+import { UnifiedLLMService } from '../../agent/llm/UnifiedLLMService';
+import useAIStore from '../../stores/aiStore';
 import ThinkTankSelector from './ThinkTankSelector';
 
 interface AIAssistantPanelProps {
@@ -74,8 +76,6 @@ const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
     setSuggestions([]);
 
     try {
-      const NovelAIService = (await import('../../services/ai/NovelAIService')).default;
-      const { default: useAIStore } = await import('../../stores/aiStore');
       const { apiKey, model, baseUrl, vendor, temperature, customModelName } = useAIStore.getState();
 
       if (!apiKey) {
@@ -84,16 +84,17 @@ const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
         return;
       }
 
-      const aiService = new NovelAIService({
+      const llmService = new UnifiedLLMService({
         apiKey,
         model,
         baseUrl,
         vendor,
         temperature,
         customModelName,
+        maxOutputTokens: 2000,
       });
 
-      const names = await aiService.generateNameSuggestions(nameType, nameDescription);
+      const names = await generateNameSuggestions(llmService, nameType, nameDescription);
       setSuggestions(names);
     } catch {
       setResult('生成失败，请重试');
@@ -537,3 +538,50 @@ const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
 };
 
 export default AIAssistantPanel;
+
+async function generateNameSuggestions(
+  llmService: UnifiedLLMService,
+  type: 'character' | 'location' | 'skill' | 'item',
+  description: string,
+  count: number = 5
+): Promise<string[]> {
+  const typeMap = {
+    character: '角色名',
+    location: '地点名',
+    skill: '技能/功法名',
+    item: '物品名',
+  };
+
+  const messages = [
+    {
+      role: 'system' as const,
+      content: `你是一位富有创意的命名专家。请根据描述生成${count}个${typeMap[type]}。
+
+【命名原则】
+- 符合中文语言习惯
+- 有文化内涵和美感
+- 与描述的特征相符
+- 避免过于常见或奇怪的名字
+
+请直接输出名字列表，每行一个。`,
+    },
+    {
+      role: 'user' as const,
+      content: `【类型】${typeMap[type]}
+【描述】${description || '无特定要求'}
+
+请生成${count}个名字：`,
+    },
+  ];
+
+  try {
+    const response = await llmService.sendRequest(messages);
+    return response
+      .split('\n')
+      .map((line) => line.replace(/^\d+[\.\、\)\】]\s*/, '').trim())
+      .filter((line) => line.length > 0)
+      .slice(0, count);
+  } catch {
+    return [];
+  }
+}

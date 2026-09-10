@@ -6,7 +6,7 @@
 declare const process: { exit(code?: number): never }
 
 import { ToolRegistry } from '../tools'
-import { AutobiographyAgent } from '../AutobiographyAgent'
+import { Agent } from '../Agent'
 import { MemoryStorageAdapter } from '../session'
 import {
   extractContentTool,
@@ -416,7 +416,7 @@ async function testToolRegistration(): Promise<void> {
   })
 
   await runAsync('工具注册 - Agent集成测试', async () => {
-    const agent = new AutobiographyAgent({ storage: new MemoryStorageAdapter() })
+    const agent = new Agent({ storage: new MemoryStorageAdapter() })
     agent.registerTools(autobiographyTools)
 
     const session = await agent.createSession('ch-001', mockContext)

@@ -65,6 +65,7 @@ const DialogueAgent: React.FC = () => {
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [pendingNavigationPath, setPendingNavigationPath] = useState<string | null>(null);
   const [sidePanelMode, setSidePanelMode] = useState<'outline' | 'draft'>('outline');
+  const lastSavedHistoryLengthRef = useRef<number>(0);
 
   const { loadSettings } = useAIStore();
 
@@ -110,7 +111,7 @@ const DialogueAgent: React.FC = () => {
       await loadSettings();
       await loadAutobiography();
       if (!agent) {
-        await initialize();
+        await initialize('autobiography');
       }
     };
     init();
@@ -137,11 +138,14 @@ const DialogueAgent: React.FC = () => {
   useEffect(() => {
     if (currentSession) {
       setSessionMapEntry(chapterId || null, currentSession.id);
+      lastSavedHistoryLengthRef.current = currentSession.history.length;
+      setHasUnsavedChanges(false);
     }
   }, [currentSession, chapterId]);
 
   useEffect(() => {
-    if (currentSession && currentSession.history.length > 0) {
+    if (!currentSession) return;
+    if (currentSession.history.length > lastSavedHistoryLengthRef.current) {
       setHasUnsavedChanges(true);
     }
   }, [currentSession?.history.length]);
@@ -173,6 +177,8 @@ const DialogueAgent: React.FC = () => {
         .map((turn) => `${turn.role === 'user' ? '我' : 'AI'}: ${turn.content}`)
         .join('\n\n');
       await updateChapterDraft(chapterId, conversationText);
+      lastSavedHistoryLengthRef.current = currentSession.history.length;
+      setHasUnsavedChanges(false);
     }
     setShowLeaveConfirm(false);
     if (pendingNavigationPath) {
@@ -213,6 +219,7 @@ const DialogueAgent: React.FC = () => {
           .map((turn) => `${turn.role === 'user' ? '我' : 'AI'}: ${turn.content}`)
           .join('\n\n');
         await updateChapterDraft(chapterId, conversationText);
+        lastSavedHistoryLengthRef.current = currentSession.history.length;
         setHasUnsavedChanges(false);
         addToast({
           type: 'success',
@@ -278,6 +285,7 @@ const DialogueAgent: React.FC = () => {
           .join('\n\n');
         await updateChapterDraft(chapterId, conversationText);
         await approveContent(chapterId);
+        lastSavedHistoryLengthRef.current = currentSession.history.length;
         setHasUnsavedChanges(false);
         addToast({ type: 'success', message: '内容已确认写入章节' });
       } catch (error) {

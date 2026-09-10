@@ -4,7 +4,7 @@ import useAutobiographyStore from '../../stores/autobiographyStore';
 import useDialogueStore from '../../stores/dialogueStore';
 import ExportService from '../../services/export/ExportService';
 import ShareService from '../../services/share/ShareService';
-import AIService from '../../services/ai/AIService';
+import { UnifiedLLMService } from '../../agent/llm/UnifiedLLMService';
 import useAIStore from '../../stores/aiStore';
 import type { ExportFormat } from '../../services/export/ExportService';
 import type { Autobiography, Chapter } from '../../types';
@@ -311,16 +311,29 @@ const AutobiographyPage: React.FC = () => {
     setStyleCheckResult(null);
 
     try {
-      const aiService = new AIService({ apiKey, model, baseUrl, vendor, temperature, customModelName });
-      const result = await aiService.checkStyleConsistency(
-        chaptersWithContent.map((ch) => ({
-          title: ch.title,
-          timeRange: ch.timeRange,
-          content: ch.content || ch.draftContent || '',
-        }))
-      );
-      setStyleCheckResult(result);
-      setIsStyleCheckModalOpen(true);
+      const llmService = new UnifiedLLMService({
+        apiKey,
+        model,
+        baseUrl,
+        vendor,
+        temperature,
+        customModelName,
+        maxOutputTokens: 2000,
+      });
+      const messages = buildStyleCheckMessages(chaptersWithContent.map((ch) => ({
+        title: ch.title,
+        timeRange: ch.timeRange,
+        content: ch.content || ch.draftContent || '',
+      })));
+      const response = await llmService.sendCustomMessages(messages);
+      const jsonMatch = response.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const result = JSON.parse(jsonMatch[0]);
+        setStyleCheckResult(result);
+        setIsStyleCheckModalOpen(true);
+      } else {
+        throw new Error('无法解析分析结果');
+      }
     } catch (error) {
       toast.addToast({ type: 'error', message: error instanceof Error ? error.message : '风格检查失败' });
     } finally {
@@ -343,8 +356,16 @@ const AutobiographyPage: React.FC = () => {
     setTimelineResult(null);
 
     try {
-      const aiService = new AIService({ apiKey, model, baseUrl, vendor, temperature, customModelName });
-      const result = await aiService.organizeTimeline(
+      const llmService = new UnifiedLLMService({
+        apiKey,
+        model,
+        baseUrl,
+        vendor,
+        temperature,
+        customModelName,
+        maxOutputTokens: 2000,
+      });
+      const messages = buildTimelineMessages(
         autobiography.chapters.map((ch) => ({
           id: ch.id,
           title: ch.title,
@@ -352,8 +373,15 @@ const AutobiographyPage: React.FC = () => {
           content: ch.content || ch.draftContent,
         }))
       );
-      setTimelineResult(result);
-      setIsTimelineModalOpen(true);
+      const response = await llmService.sendCustomMessages(messages);
+      const jsonMatch = response.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const result = JSON.parse(jsonMatch[0]);
+        setTimelineResult(result);
+        setIsTimelineModalOpen(true);
+      } else {
+        throw new Error('无法解析分析结果');
+      }
     } catch (error) {
       toast.addToast({ type: 'error', message: error instanceof Error ? error.message : '时间线整理失败' });
     } finally {
@@ -869,3 +897,78 @@ const AutobiographyPage: React.FC = () => {
 };
 
 export default AutobiographyPage;
+
+function buildStyleCheckMessages(chapters: Array<{ title: string; timeRange?: string; content: string }>) {
+  return [
+    {
+      role: 'system' as const,
+      content: `你是一位专业的文学风格分析专家。请分析以下自传章节的风格一致性。
+
+【输出格式】
+请输出JSON格式：
+{
+  "overall_consistency": 0.0-1.0之间的数值,
+  "issues": [
+    {
+      "chapter": "章节标题",
+      "type": "问题类型",
+      "description": "问题描述",
+      "suggestion": "改进建议",
+      "examples": ["示例文本"]
+    }
+  ],
+  "suggestions": ["改进建议1", "改进建议2"]
+}`,
+    },
+    {
+      role: 'user' as const,
+      content: `请分析以下${chapters.length}个章节的风格一致性：
+
+${chapters.map((ch, i) => `【第${i + 1}章】${ch.title}（${ch.timeRange || '未设置时间'}）\n${ch.content.slice(0, 1000)}`).join('\n\n')}`,
+    },
+  ];
+}
+
+function buildTimelineMessages(chapters: Array<{ id: string; title: string; timeRange?: string; content?: string }>) {
+  return [
+    {
+      role: 'system' as const,
+      content: `你是一位专业的自传编辑。请分析以下章节的时间线，整理出合理的时间顺序，并找出时间空白期和冲突。
+
+【输出格式】
+请输出JSON格式：
+{
+  "sortedChapters": [
+    {
+      "id": "章节ID",
+      "title": "章节标题",
+      "timeRange": "时间范围",
+      "startYear": 起始年份,
+      "endYear": 结束年份,
+      "order": 顺序号
+    }
+  ],
+  "gaps": [
+    {
+      "period": "时间段",
+      "description": "空白描述",
+      "suggestedTitle": "建议的章节标题"
+    }
+  ],
+  "conflicts": [
+    {
+      "chapterId": "章节ID",
+      "issue": "冲突描述",
+      "suggestion": "解决建议"
+    }
+  ]
+}`,
+    },
+    {
+      role: 'user' as const,
+      content: `请分析以下${chapters.length}个章节的时间线：
+
+${chapters.map((ch, i) => `【第${i + 1}章】${ch.title}（${ch.timeRange || '未设置时间'}）\n${ch.content?.slice(0, 500) || '暂无内容'}`).join('\n\n')}`,
+    },
+  ];
+}
