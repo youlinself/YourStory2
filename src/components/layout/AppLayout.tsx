@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { Outlet, useLocation, Link, useParams } from 'react-router-dom';
+import logoImage from '../../assets/logo.png';
 import useAutobiographyStore from '../../stores/autobiographyStore';
 import useDialogueStore from '../../stores/dialogueStore';
 import useLocalStorage from '../../hooks/useLocalStorage';
@@ -219,7 +220,7 @@ const AppLayout: React.FC = () => {
           <div className="flex items-center justify-between sidebar-header-inner">
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-lg bg-brand flex items-center justify-center flex-shrink-0 overflow-hidden">
-                <img src="/logo.png" alt="YourStory" className="w-full h-full object-cover" />
+                <img src={logoImage} alt="YourStory" className="w-full h-full object-cover" />
               </div>
               <span className="font-semibold text-[15px] tracking-tight text-ink logo-text">YourStory</span>
             </div>
