@@ -54,7 +54,7 @@ export interface ExtractionTask {
 
 /** 会话上下文 */
 export interface SessionContext {
-  chapterId: string
+  chapterId: string | null
   existingContent: Chapter | null
   userPreferences: WritingPreferences
   timelineContext: TimelineContext
@@ -72,7 +72,7 @@ export interface SessionState {
 /** 完整会话 */
 export interface AutobiographySession {
   id: string
-  chapterId: string
+  chapterId: string | null
   history: ConversationTurn[]
   context: SessionContext
   state: SessionState

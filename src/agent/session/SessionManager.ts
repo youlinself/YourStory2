@@ -28,6 +28,36 @@ export class MemoryStorageAdapter implements StorageAdapter {
   }
 }
 
+/** localStorage 存储适配器（用于生产环境，数据持久化） */
+export class LocalStorageStorageAdapter implements StorageAdapter {
+  async get<T>(key: string): Promise<T | null> {
+    try {
+      const raw = localStorage.getItem(key)
+      return raw ? JSON.parse(raw) : null
+    } catch (error) {
+      console.error(`[LocalStorageAdapter] 读取失败: ${key}`, error)
+      return null
+    }
+  }
+
+  async set<T>(key: string, value: T): Promise<void> {
+    try {
+      localStorage.setItem(key, JSON.stringify(value))
+    } catch (error) {
+      console.error(`[LocalStorageAdapter] 写入失败: ${key}`, error)
+      throw error
+    }
+  }
+
+  async remove(key: string): Promise<void> {
+    try {
+      localStorage.removeItem(key)
+    } catch (error) {
+      console.error(`[LocalStorageAdapter] 删除失败: ${key}`, error)
+    }
+  }
+}
+
 export interface SessionManagerConfig {
   /** 防抖延迟（毫秒），0 表示立即持久化 */
   debounceMs?: number
@@ -52,7 +82,7 @@ export class SessionManager {
   }
 
   /** 创建新会话 */
-  async create(chapterId: string, context: SessionContext): Promise<AutobiographySession> {
+  async create(chapterId: string | null, context: SessionContext): Promise<AutobiographySession> {
     const session: AutobiographySession = {
       id: generateId(),
       chapterId,

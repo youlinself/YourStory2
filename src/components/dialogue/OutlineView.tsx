@@ -2,7 +2,10 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { Autobiography } from '../../types';
 import { useAutobiographyStore } from '../../stores';
+import { useAgentStore } from '../../stores/agentStore';
 import { Trash2 } from 'lucide-react';
+
+const SESSION_MAP_KEY = 'dialogue-session-map';
 
 interface OutlineViewProps {
   autobiography: Autobiography | null;
@@ -18,6 +21,21 @@ const statusConfig = {
   completed: { icon: '●', color: 'text-success', bg: 'bg-success/10' },
 };
 
+function getSessionMap(): Record<string, string> {
+  try {
+    const raw = localStorage.getItem(SESSION_MAP_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function removeSessionMapEntry(chapterId: string) {
+  const map = getSessionMap();
+  delete map[chapterId];
+  localStorage.setItem(SESSION_MAP_KEY, JSON.stringify(map));
+}
+
 const OutlineView: React.FC<OutlineViewProps> = ({
   autobiography,
   currentChapterId,
@@ -27,13 +45,23 @@ const OutlineView: React.FC<OutlineViewProps> = ({
   const navigate = useNavigate();
   const chapters = autobiography?.chapters || [];
   const { deleteChapter } = useAutobiographyStore();
+  const { deleteSession } = useAgentStore();
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   const completedCount = chapters.filter((ch) => ch.status === 'completed').length;
   const progress = chapters.length > 0 ? Math.round((completedCount / chapters.length) * 100) : 0;
 
   const handleDeleteChapter = async (chapterId: string) => {
+    const sessionMap = getSessionMap();
+    const sessionId = sessionMap[chapterId];
+
     await deleteChapter(chapterId);
+
+    if (sessionId) {
+      await deleteSession(sessionId);
+      removeSessionMapEntry(chapterId);
+    }
+
     if (currentChapterId === chapterId) {
       onSwitchChapter(null);
     }

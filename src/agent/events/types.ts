@@ -50,7 +50,7 @@ export type SurfaceOp =
   | { op: 'replace'; events: SessionEvent[] }
 
 export interface SessionEvents {
-  'session/created': { sessionId: string; chapterId: string }
+  'session/created': { sessionId: string; chapterId: string | null }
   'session/resumed': { sessionId: string }
   'session/paused': { sessionId: string }
   'session/closed': { sessionId: string }
@@ -64,9 +64,9 @@ export interface TurnEvents {
 
 export interface ContentEvents {
   'content/extracted': { sessionId: string; extraction: ExtractedContent }
-  'content/merged': { sessionId: string; chapterId: string; draft: string }
-  'content/approved': { sessionId: string; chapterId: string; content: string }
-  'content/rejected': { sessionId: string; chapterId: string; reason: string }
+  'content/merged': { sessionId: string; chapterId: string | null; draft: string }
+  'content/approved': { sessionId: string; chapterId: string | null; content: string }
+  'content/rejected': { sessionId: string; chapterId: string | null; reason: string }
 }
 
 export interface ToolEvents {

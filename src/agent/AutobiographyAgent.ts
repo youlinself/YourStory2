@@ -206,7 +206,7 @@ export class AutobiographyAgent {
     }
   }
 
-  async createSession(chapterId: string, context: SessionContext): Promise<AutobiographySession> {
+  async createSession(chapterId: string | null, context: SessionContext): Promise<AutobiographySession> {
     const session = await this.sessionManager.create(chapterId, context)
     this.tokenBudgetManager.initSession(session.id)
     this.events.emit('session/created', { sessionId: session.id, chapterId })

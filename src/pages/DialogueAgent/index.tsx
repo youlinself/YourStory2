@@ -23,6 +23,7 @@ import Modal from '../../components/ui/Modal';
 import '../../styles/dialogue.css';
 
 const SESSION_MAP_KEY = 'dialogue-session-map';
+const FREE_DIALOGUE_KEY = 'free';
 
 function getSessionMap(): Record<string, string> {
   try {
@@ -33,14 +34,23 @@ function getSessionMap(): Record<string, string> {
   }
 }
 
-function setSessionMapEntry(chapterId: string, sessionId: string) {
+function setSessionMapEntry(chapterId: string | null, sessionId: string) {
   const map = getSessionMap();
-  map[chapterId] = sessionId;
+  const key = chapterId || FREE_DIALOGUE_KEY;
+  map[key] = sessionId;
   localStorage.setItem(SESSION_MAP_KEY, JSON.stringify(map));
 }
 
-function getSessionIdForChapter(chapterId: string): string | null {
-  return getSessionMap()[chapterId] || null;
+function getSessionIdForChapter(chapterId: string | null): string | null {
+  const key = chapterId || FREE_DIALOGUE_KEY;
+  return getSessionMap()[key] || null;
+}
+
+function removeSessionMapEntry(chapterId: string | null) {
+  const map = getSessionMap();
+  const key = chapterId || FREE_DIALOGUE_KEY;
+  delete map[key];
+  localStorage.setItem(SESSION_MAP_KEY, JSON.stringify(map));
 }
 
 const DialogueAgent: React.FC = () => {
@@ -95,29 +105,37 @@ const DialogueAgent: React.FC = () => {
   useChatScroll(messages);
 
   useEffect(() => {
-    loadSettings();
-    loadAutobiography();
-    if (!agent) {
-      initialize();
-    }
+    const init = async () => {
+      await loadSettings();
+      await loadAutobiography();
+      if (!agent) {
+        await initialize();
+      }
+    };
+    init();
   }, [loadSettings, loadAutobiography, agent, initialize]);
 
   useEffect(() => {
-    if (!agent || !chapterId) return;
+    if (!agent) return;
 
-    const existingSessionId = getSessionIdForChapter(chapterId);
+    const existingSessionId = getSessionIdForChapter(chapterId || null);
     if (existingSessionId) {
-      resumeSession(existingSessionId).catch(() => {
-        createSession(chapterId);
+      resumeSession(existingSessionId).then((success) => {
+        if (!success) {
+          removeSessionMapEntry(chapterId || null);
+          createSession(chapterId || null);
+        }
+      }).catch(() => {
+        createSession(chapterId || null);
       });
     } else {
-      createSession(chapterId);
+      createSession(chapterId || null);
     }
   }, [agent, chapterId, createSession, resumeSession]);
 
   useEffect(() => {
-    if (currentSession && chapterId) {
-      setSessionMapEntry(chapterId, currentSession.id);
+    if (currentSession) {
+      setSessionMapEntry(chapterId || null, currentSession.id);
     }
   }, [currentSession, chapterId]);
 

@@ -20,7 +20,7 @@ export type SkillEventHandlers = {
 /** 技能上下文 */
 export interface SkillContext {
   sessionId: string
-  chapterId: string
+  chapterId: string | null
   sessionContext: SessionContext
   agent: AutobiographyAgent
 }

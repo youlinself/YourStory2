@@ -1,18 +1,18 @@
 import { create } from 'zustand'
 import { subscribeWithSelector } from 'zustand/middleware'
 import { AutobiographyAgent } from '@/agent/AutobiographyAgent'
-import { MemoryStorageAdapter } from '@/agent/session/SessionManager'
+import { LocalStorageStorageAdapter } from '@/agent/session/SessionManager'
 import type { AutobiographySession, SessionContext } from '@/agent/session/types'
 import type { Chapter } from '@/types'
 import type { AutobiographyEventMap } from '@/agent/events/types'
 import AIService from '@/services/ai/AIService'
 import useAIStore from './aiStore'
 
-let sharedStorage: MemoryStorageAdapter | null = null
+let sharedStorage: LocalStorageStorageAdapter | null = null
 
-function getSharedStorage(): MemoryStorageAdapter {
+function getSharedStorage(): LocalStorageStorageAdapter {
   if (!sharedStorage) {
-    sharedStorage = new MemoryStorageAdapter()
+    sharedStorage = new LocalStorageStorageAdapter()
   }
   return sharedStorage
 }
@@ -41,9 +41,10 @@ interface AgentState {
 
 interface AgentActions {
   initialize: () => Promise<void>
-  createSession: (chapterId: string) => Promise<void>
-  resumeSession: (sessionId: string) => Promise<void>
+  createSession: (chapterId: string | null) => Promise<void>
+  resumeSession: (sessionId: string) => Promise<boolean>
   pauseSession: () => Promise<void>
+  deleteSession: (sessionId: string) => Promise<void>
   sendMessage: (content: string) => Promise<string>
   handleMessage: (content: string, options?: { generateFollowUpQuestions?: boolean }) => Promise<{
     extractedContent?: any
@@ -101,7 +102,7 @@ export const useAgentStore = create<AgentState & AgentActions>()(
       set({ agent })
     },
 
-    createSession: async (chapterId: string) => {
+    createSession: async (chapterId: string | null) => {
       const { agent } = get()
       if (!agent) throw new Error('Agent not initialized')
 
@@ -111,7 +112,11 @@ export const useAgentStore = create<AgentState & AgentActions>()(
         const context = await loadChapterContext(chapterId)
         const session = await agent.createSession(chapterId, context)
 
-        await agent.activateSkill(session.id, 'deep_interview')
+        try {
+          await agent.activateSkill(session.id, 'deep_interview')
+        } catch (skillError) {
+          console.warn('[AgentStore] activateSkill failed:', skillError)
+        }
 
         const activeSkills = agent.getActiveSkills(session.id)
 
@@ -129,7 +134,7 @@ export const useAgentStore = create<AgentState & AgentActions>()(
       }
     },
 
-    resumeSession: async (sessionId: string) => {
+    resumeSession: async (sessionId: string): Promise<boolean> => {
       const { agent } = get()
       if (!agent) throw new Error('Agent not initialized')
 
@@ -140,14 +145,17 @@ export const useAgentStore = create<AgentState & AgentActions>()(
         if (session) {
           const activeSkills = agent.getActiveSkills(sessionId)
           set({ currentSession: session, activeSkills, isLoading: false })
+          return true
         } else {
           set({ error: '会话不存在', isLoading: false })
+          return false
         }
       } catch (error) {
         set({
           error: error instanceof Error ? error.message : '恢复会话失败',
           isLoading: false
         })
+        return false
       }
     },
 
@@ -156,6 +164,17 @@ export const useAgentStore = create<AgentState & AgentActions>()(
       if (!agent || !currentSession) return
 
       await agent.pauseSession(currentSession.id)
+    },
+
+    deleteSession: async (sessionId: string) => {
+      const { agent, currentSession } = get()
+      if (!agent) return
+
+      await agent.sessionManager.delete(sessionId)
+
+      if (currentSession?.id === sessionId) {
+        set({ currentSession: null, activeSkills: [] })
+      }
     },
 
     sendMessage: async (content: string) => {
@@ -346,15 +365,17 @@ function setupEventListeners(agent: AutobiographyAgent): void {
   })
 }
 
-async function loadChapterContext(chapterId: string): Promise<SessionContext> {
+async function loadChapterContext(chapterId: string | null): Promise<SessionContext> {
   let existingContent: Chapter | null = null
 
-  try {
-    const useAutobiographyStore = (await import('./autobiographyStore')).default
-    const store = useAutobiographyStore.getState()
-    existingContent = store.autobiography?.chapters.find((c: Chapter) => c.id === chapterId) ?? null
-  } catch {
-    existingContent = null
+  if (chapterId) {
+    try {
+      const useAutobiographyStore = (await import('./autobiographyStore')).default
+      const store = useAutobiographyStore.getState()
+      existingContent = store.autobiography?.chapters.find((c: Chapter) => c.id === chapterId) ?? null
+    } catch {
+      existingContent = null
+    }
   }
 
   return {

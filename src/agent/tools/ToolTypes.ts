@@ -20,7 +20,7 @@ export interface ToolParameters {
 /** 工具执行上下文 */
 export interface ToolExecutionContext {
   sessionId: string
-  chapterId: string
+  chapterId: string | null
   sessionContext: SessionContext
   signal: AbortSignal
 }
