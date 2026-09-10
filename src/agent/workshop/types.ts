@@ -149,15 +149,17 @@ export const ROLE_TASK_COMPATIBILITY: Record<ThinkTankRole, TaskCategory[]> = {
   dialogue_specialist: ['dialogue', 'full_project'],
   style_polisher: ['polish', 'full_project'],
   creative_consultant: ['brainstorm', 'plot', 'character', 'worldbuilding', 'full_project'],
+  secretary_assistant: ['plot', 'character', 'worldbuilding', 'dialogue', 'polish', 'brainstorm', 'full_project'],
   custom: ['plot', 'character', 'worldbuilding', 'dialogue', 'polish', 'brainstorm', 'full_project'],
 };
 
 export const ROLE_FALLBACK_MAP: Record<ThinkTankRole, ThinkTankRole[]> = {
-  plot_writer: ['creative_consultant', 'custom'],
-  character_designer: ['creative_consultant', 'custom'],
-  world_builder: ['creative_consultant', 'custom'],
-  dialogue_specialist: ['style_polisher', 'creative_consultant', 'custom'],
-  style_polisher: ['dialogue_specialist', 'creative_consultant', 'custom'],
-  creative_consultant: ['plot_writer', 'character_designer', 'world_builder', 'custom'],
+  plot_writer: ['creative_consultant', 'secretary_assistant', 'custom'],
+  character_designer: ['creative_consultant', 'secretary_assistant', 'custom'],
+  world_builder: ['creative_consultant', 'secretary_assistant', 'custom'],
+  dialogue_specialist: ['style_polisher', 'creative_consultant', 'secretary_assistant', 'custom'],
+  style_polisher: ['dialogue_specialist', 'creative_consultant', 'secretary_assistant', 'custom'],
+  creative_consultant: ['plot_writer', 'character_designer', 'world_builder', 'secretary_assistant', 'custom'],
+  secretary_assistant: ['creative_consultant', 'custom'],
   custom: [],
 };

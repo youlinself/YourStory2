@@ -318,6 +318,7 @@ ${subtask.description}
       dialogue_specialist: '对话专家',
       style_polisher: '文风润色师',
       creative_consultant: '创意顾问',
+      secretary_assistant: '秘书助手',
       custom: '自定义角色',
     };
     return roleNames[role] || role;

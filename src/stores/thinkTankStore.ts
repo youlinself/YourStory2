@@ -67,6 +67,13 @@ const DEFAULT_ROLE_PRESETS: ThinkTankRolePreset[] = [
     defaultPrompt: '你是一位创意顾问，擅长提供创意建议、激发灵感，帮助解决创作中的难题。',
   },
   {
+    role: 'secretary_assistant',
+    name: '秘书助手',
+    description: '辅助用户招募员工、整理文档、对接系统级操作，遇到问题会询问用户并提供选项',
+    icon: '📋',
+    defaultPrompt: '你是一位专业的秘书助手，负责辅助用户处理各类事务。你的主要职责包括：\n1. 帮助用户招募和配置AI智囊团成员\n2. 整理和管理文档资料\n3. 对接系统级操作和设置\n\n工作方式：\n- 遇到不确定的情况时，会主动询问用户\n- 提供多个合适的选项供用户选择\n- 始终以用户需求为中心，提供高效、准确的服务',
+  },
+  {
     role: 'custom',
     name: '自定义',
     description: '自定义角色和职责',

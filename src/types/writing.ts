@@ -267,7 +267,7 @@ export interface WritingStylePreset {
 }
 
 /** AI智囊团成员角色类型 */
-export type ThinkTankRole = 'plot_writer' | 'character_designer' | 'world_builder' | 'dialogue_specialist' | 'style_polisher' | 'creative_consultant' | 'custom';
+export type ThinkTankRole = 'plot_writer' | 'character_designer' | 'world_builder' | 'dialogue_specialist' | 'style_polisher' | 'creative_consultant' | 'secretary_assistant' | 'custom';
 
 /** AI智囊团成员 */
 export interface ThinkTankMember {
