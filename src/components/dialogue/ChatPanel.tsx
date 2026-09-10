@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import { Sparkles, Users, BookOpen, TreePine, Cake, School, PenLine } from 'lucide-react';
+import { Sparkles, Users, BookOpen, PenLine } from 'lucide-react';
 import type { Message } from '../../types';
 import ContentExtractCard from './ContentExtractCard';
 import MDEditor from '@uiw/react-md-editor';
@@ -12,7 +12,6 @@ interface ChatPanelProps {
   onRejectExtract: (messageId: string) => void;
   onEditExtract: (messageId: string, editedContent: string) => void;
   onStartChapter: () => void;
-  onTopicClick: (label: string) => void;
 }
 
 const ChatPanel: React.FC<ChatPanelProps> = ({
@@ -23,7 +22,6 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
   onRejectExtract,
   onEditExtract,
   onStartChapter,
-  onTopicClick,
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 

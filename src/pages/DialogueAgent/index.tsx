@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Sparkles,
@@ -14,7 +14,6 @@ import {
 import { useAIStore, useAutobiographyStore } from '../../stores';
 import { useAgentStore } from '../../stores/agentStore';
 import ExportService from '../../services/export/ExportService';
-import { generateId } from '../../utils';
 import { useChatScroll } from '../../hooks/useChatScroll';
 import { useToast } from '../../components/common';
 import ChatPanel from '../../components/dialogue/ChatPanel';
@@ -93,14 +92,16 @@ const DialogueAgent: React.FC = () => {
 
   const currentChapter = autobiography?.chapters.find((ch) => ch.id === chapterId) || null;
 
-  const messages = currentSession?.history?.map((turn) => ({
-    id: generateId(),
-    content: turn.content,
-    isUser: turn.role === 'user',
-    timestamp: new Date(turn.timestamp),
-    type: 'text' as const,
-    extractedContent: undefined,
-  })) || [];
+  const messages = useMemo(() => {
+    return currentSession?.history?.map((turn, index) => ({
+      id: `msg-${index}-${turn.timestamp}`,
+      content: turn.content,
+      isUser: turn.role === 'user',
+      timestamp: new Date(turn.timestamp),
+      type: 'text' as const,
+      extractedContent: undefined,
+    })) || [];
+  }, [currentSession?.history]);
 
   useChatScroll(messages);
 
@@ -203,10 +204,6 @@ const DialogueAgent: React.FC = () => {
       console.error('发送消息错误:', error);
       addToast({ type: 'error', message: '发送消息失败，请重试' });
     }
-  };
-
-  const handleTopicClick = (label: string) => {
-    setInputValue(`我想先聊聊${label}`);
   };
 
   const handleSaveDraft = async () => {
@@ -360,7 +357,6 @@ const DialogueAgent: React.FC = () => {
           onRejectExtract={handleRejectExtract}
           onEditExtract={handleEditExtract}
           onStartChapter={handleStartChapter}
-          onTopicClick={handleTopicClick}
         />
 
         <div className="composer-area">

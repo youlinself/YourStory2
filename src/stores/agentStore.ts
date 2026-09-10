@@ -210,16 +210,26 @@ export const useAgentStore = create<AgentState & AgentActions>()(
       const { agent, currentSession } = get()
       if (!agent || !currentSession) throw new Error('No active session')
 
-      set({ isLoading: true, error: null })
+      const userTurn = {
+        role: 'user' as const,
+        content,
+        timestamp: Date.now()
+      }
+
+      const updatedSession: AutobiographySession = {
+        ...currentSession,
+        history: [...currentSession.history, userTurn]
+      }
+      set({ currentSession: updatedSession, isLoading: true, error: null })
 
       try {
         const result = await agent.handleMessage(currentSession.id, content, {
           generateFollowUpQuestions: options.generateFollowUpQuestions ?? false
         })
 
-        const updatedSession = agent.getSession(currentSession.id)
-        if (updatedSession) {
-          set({ currentSession: updatedSession, isLoading: false })
+        const finalSession = agent.getSession(currentSession.id)
+        if (finalSession) {
+          set({ currentSession: finalSession, isLoading: false })
         } else {
           set({ isLoading: false })
         }
