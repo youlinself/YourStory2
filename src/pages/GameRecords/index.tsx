@@ -4,6 +4,7 @@ import useGameRecordStore from '../../stores/gameRecordStore';
 import { CULTIVATION_REALM_NAMES } from '../../data/simulationData';
 import type { GameRecord } from '../../types/simulation';
 import { useToast } from '../../components/common';
+import { Scroll, Inbox, TriangleAlert } from 'lucide-react';
 
 const GameRecordsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -43,12 +44,12 @@ const GameRecordsPage: React.FC = () => {
   };
 
   const getScoreColor = (score: number) => {
-    if (score >= 100) return 'text-amber-500';
-    if (score >= 80) return 'text-purple-500';
-    if (score >= 60) return 'text-blue-500';
-    if (score >= 40) return 'text-green-500';
-    if (score >= 20) return 'text-gray-500';
-    return 'text-gray-400';
+    if (score >= 100) return 'text-warning';
+    if (score >= 80) return 'text-power';
+    if (score >= 60) return 'text-info';
+    if (score >= 40) return 'text-success';
+    if (score >= 20) return 'text-ink-muted';
+    return 'text-ink-faint';
   };
 
   if (isLoading) {
@@ -67,7 +68,7 @@ const GameRecordsPage: React.FC = () => {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-ink flex items-center gap-2">
-            <span>📜</span>
+            <Scroll className="h-6 w-6 text-brand" />
             <span>游戏记录</span>
           </h1>
           <p className="text-ink-muted text-sm mt-1">共 {records.length} 条记录</p>
@@ -83,8 +84,8 @@ const GameRecordsPage: React.FC = () => {
       </div>
 
       {records.length === 0 ? (
-        <div className="bg-white rounded-xl border border-border-subtle p-12 text-center">
-          <div className="text-5xl mb-4">📭</div>
+        <div className="bg-bg-elevated rounded-xl border border-border-subtle p-12 text-center">
+          <Inbox className="h-12 w-12 text-ink-faint mx-auto mb-4" strokeWidth={1.5} />
           <h3 className="text-lg font-semibold text-ink mb-2">暂无游戏记录</h3>
           <p className="text-ink-muted text-sm mb-6">完成一次游戏后，记录会自动保存到这里</p>
           <button
@@ -100,7 +101,7 @@ const GameRecordsPage: React.FC = () => {
             <div
               key={record.id}
               onClick={() => handleViewDetail(record)}
-              className="bg-white rounded-xl border border-border-subtle p-5 hover:border-brand hover:shadow-md transition-all cursor-pointer group"
+              className="bg-bg-elevated rounded-xl border border-border-subtle p-5 hover:border-brand hover:shadow-md transition-all cursor-pointer group"
             >
               <div className="flex items-start gap-4">
                 <div className="text-4xl">{record.titleIcon}</div>
@@ -118,7 +119,7 @@ const GameRecordsPage: React.FC = () => {
                     <span>享年 {record.age} 岁</span>
                     <span>{record.mode === 'endless' ? '修仙模式' : '普通模式'}</span>
                     {record.cultivationRealm && (
-                      <span className="text-purple-600">
+                      <span className="text-power">
                         {CULTIVATION_REALM_NAMES[record.cultivationRealm] || record.cultivationRealm}
                       </span>
                     )}
@@ -127,7 +128,7 @@ const GameRecordsPage: React.FC = () => {
                     {record.evaluations.map((evaluation, idx) => (
                       <span
                         key={idx}
-                        className="px-2 py-0.5 bg-amber-50 text-amber-700 text-xs rounded-full border border-amber-200"
+                        className="px-2 py-0.5 bg-warning-bg text-warning text-xs rounded-full border border-warning/30"
                       >
                         {evaluation}
                       </span>
@@ -178,9 +179,9 @@ const GameRecordsPage: React.FC = () => {
       {/* 清空确认弹窗 */}
       {showConfirmClear && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowConfirmClear(false)}>
-          <div className="bg-white rounded-2xl p-6 max-w-sm w-full" onClick={(e) => e.stopPropagation()}>
+          <div role="dialog" aria-modal="true" className="bg-bg-elevated rounded-2xl p-6 max-w-sm w-full" onClick={(e) => e.stopPropagation()}>
             <div className="text-center mb-6">
-              <div className="text-4xl mb-3">⚠️</div>
+              <TriangleAlert className="h-10 w-10 text-warning mx-auto mb-3" strokeWidth={1.5} />
               <h3 className="text-lg font-bold text-ink mb-2">确认清空所有记录？</h3>
               <p className="text-sm text-ink-muted">此操作不可撤销</p>
             </div>

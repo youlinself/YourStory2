@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import type { Character, Relationship, CharacterArcNode, ArcNodeType } from '../../types/novel';
 import { CHARACTER_ROLE_LABELS, ARC_NODE_TYPES, ARC_NODE_COLORS } from '../../types/novel';
+import { DATA_COLORS } from '../../utils/palette';
 
 interface CharacterRelationshipGraphProps {
   characters: Character[];
@@ -32,10 +33,10 @@ interface GraphEdge {
 }
 
 const ROLE_COLORS: Record<string, string> = {
-  protagonist: '#3b82f6',
-  supporting: '#10b981',
-  antagonist: '#ef4444',
-  extra: '#94a3b8',
+  protagonist: DATA_COLORS.blue,
+  supporting: DATA_COLORS.emerald,
+  antagonist: DATA_COLORS.red,
+  extra: DATA_COLORS.slate,
 };
 
 const CharacterRelationshipGraph: React.FC<CharacterRelationshipGraphProps> = ({
@@ -789,10 +790,10 @@ const CharacterRelationshipGraph: React.FC<CharacterRelationshipGraphProps> = ({
             <svg className="absolute inset-0 w-full h-full pointer-events-none">
               <defs>
                 <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-                  <polygon points="0 0, 10 3.5, 0 7" fill="#94a3b8" />
+                  <polygon points="0 0, 10 3.5, 0 7" fill={DATA_COLORS.slate} />
                 </marker>
                 <marker id="arrowhead-highlighted" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-                  <polygon points="0 0, 10 3.5, 0 7" fill="#3b82f6" />
+                  <polygon points="0 0, 10 3.5, 0 7" fill={DATA_COLORS.blue} />
                 </marker>
               </defs>
 
@@ -837,7 +838,7 @@ const CharacterRelationshipGraph: React.FC<CharacterRelationshipGraphProps> = ({
                     <path
                       d={pathD}
                       fill="none"
-                      stroke={isHighlighted ? '#3b82f6' : '#94a3b8'}
+                      stroke={isHighlighted ? DATA_COLORS.blue : DATA_COLORS.slate}
                       strokeWidth={isHighlighted ? 2 : 1}
                       strokeDasharray={isHighlighted ? '' : '4 2'}
                       opacity={isHighlighted ? 1 : 0.5}
@@ -848,7 +849,7 @@ const CharacterRelationshipGraph: React.FC<CharacterRelationshipGraphProps> = ({
                       y={labelY}
                       textAnchor="middle"
                       fontSize="10"
-                      fill={isHighlighted ? '#3b82f6' : '#64748b'}
+                      fill={isHighlighted ? DATA_COLORS.blue : DATA_COLORS.slateDark}
                       className="select-none"
                     >
                       {edge.type}

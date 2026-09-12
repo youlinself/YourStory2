@@ -1,5 +1,9 @@
 import React from 'react';
 import Tooltip from '../common/Tooltip';
+import {
+  Dumbbell, TrendingDown, ShieldOff, Skull, Flame, HeartPulse, Shield,
+  Flower2, Wind, Gem, Ghost, EyeOff, Droplet, Heart, type LucideIcon,
+} from 'lucide-react';
 
 export interface BuffDebuffInfo {
   type: string;
@@ -11,146 +15,130 @@ interface BuffDebuffBadgeProps {
   buff: BuffDebuffInfo;
 }
 
-const BUFF_DEBUFF_CONFIG: Record<string, { icon: string; name: string; color: string; bgColor: string; borderColor: string; description: (value: number, duration: number) => string }> = {
+type BuffTone = 'danger' | 'info' | 'success' | 'warning' | 'power' | 'muted';
+
+const TONE_CLASSES: Record<BuffTone, string> = {
+  danger: 'text-danger bg-danger-bg border-danger/20',
+  info: 'text-info bg-info-light border-info/20',
+  success: 'text-success bg-success-bg border-success/20',
+  warning: 'text-warning bg-warning-bg border-warning/20',
+  power: 'text-power bg-power-light border-power/20',
+  muted: 'text-ink-secondary bg-bg-subtle border-border',
+};
+
+const BUFF_DEBUFF_CONFIG: Record<string, { icon: LucideIcon; name: string; tone: BuffTone; description: (value: number, duration: number) => string }> = {
   strength: {
-    icon: '💪',
+    icon: Dumbbell,
     name: '力量',
-    color: 'text-red-600',
-    bgColor: 'bg-red-50',
-    borderColor: 'border-red-200',
+    tone: 'danger',
     description: (value, duration) => `攻击力 +${value}${duration === Infinity ? '，永久' : `，持续 ${duration} 回合`}`,
   },
   weak: {
-    icon: '😰',
+    icon: TrendingDown,
     name: '虚弱',
-    color: 'text-purple-600',
-    bgColor: 'bg-purple-50',
-    borderColor: 'border-purple-200',
+    tone: 'power',
     description: (value, duration) => `攻击力降低 ${value}${duration === Infinity ? '，永久' : `，持续 ${duration} 回合`}`,
   },
   vulnerable: {
-    icon: '💔',
+    icon: ShieldOff,
     name: '脆弱',
-    color: 'text-orange-600',
-    bgColor: 'bg-orange-50',
-    borderColor: 'border-orange-200',
+    tone: 'warning',
     description: (value, duration) => `受到伤害增加 ${value}${duration === Infinity ? '，永久' : `，持续 ${duration} 回合`}`,
   },
   poison: {
-    icon: '☠️',
+    icon: Skull,
     name: '中毒',
-    color: 'text-green-600',
-    bgColor: 'bg-green-50',
-    borderColor: 'border-green-200',
+    tone: 'success',
     description: (value, duration) => `每回合损失 ${value} 点生命${duration === Infinity ? '，永久' : `，持续 ${duration} 回合`}`,
   },
   rage: {
-    icon: '😡',
+    icon: Flame,
     name: '狂暴',
-    color: 'text-red-600',
-    bgColor: 'bg-red-50',
-    borderColor: 'border-red-200',
+    tone: 'danger',
     description: (value, duration) => `攻击力 +${value}${duration === Infinity ? '，永久' : `，持续 ${duration} 回合`}`,
   },
   regen: {
-    icon: '💚',
+    icon: HeartPulse,
     name: '回复',
-    color: 'text-emerald-600',
-    bgColor: 'bg-emerald-50',
-    borderColor: 'border-emerald-200',
+    tone: 'success',
     description: (value, duration) => `每回合回复 ${value} 点生命${duration === Infinity ? '，永久' : `，持续 ${duration} 回合`}`,
   },
   shields: {
-    icon: '🛡️',
+    icon: Shield,
     name: '护盾',
-    color: 'text-blue-600',
-    bgColor: 'bg-blue-50',
-    borderColor: 'border-blue-200',
+    tone: 'info',
     description: (value, duration) => `吸收 ${value} 点伤害${duration === Infinity ? '，永久' : `，持续 ${duration} 回合`}`,
   },
   thorns: {
-    icon: '🌹',
+    icon: Flower2,
     name: '荆棘',
-    color: 'text-rose-600',
-    bgColor: 'bg-rose-50',
-    borderColor: 'border-rose-200',
+    tone: 'danger',
     description: (value, duration) => `反弹 ${value} 点伤害给攻击者${duration === Infinity ? '，永久' : `，持续 ${duration} 回合`}`,
   },
   dexterity: {
-    icon: '🏃',
+    icon: Wind,
     name: '敏捷',
-    color: 'text-cyan-600',
-    bgColor: 'bg-cyan-50',
-    borderColor: 'border-cyan-200',
+    tone: 'info',
     description: (value, duration) => `格挡获得 +${value}${duration === Infinity ? '，永久' : `，持续 ${duration} 回合`}`,
   },
   block: {
-    icon: '🛡️',
+    icon: Shield,
     name: '格挡',
-    color: 'text-blue-600',
-    bgColor: 'bg-blue-50',
-    borderColor: 'border-blue-200',
+    tone: 'info',
     description: (value, _duration) => `当前格挡值 ${value}`,
   },
   artifact: {
-    icon: '🔮',
+    icon: Gem,
     name: '神器',
-    color: 'text-indigo-600',
-    bgColor: 'bg-indigo-50',
-    borderColor: 'border-indigo-200',
+    tone: 'power',
     description: (value, duration) => `受到法术伤害减少 ${value} 点${duration === Infinity ? '，永久' : `，持续 ${duration} 回合`}`,
   },
   intangible: {
-    icon: '👻',
+    icon: Ghost,
     name: '虚无',
-    color: 'text-gray-600',
-    bgColor: 'bg-gray-50',
-    borderColor: 'border-gray-200',
+    tone: 'muted',
     description: (_value, duration) => `受到所有伤害减少为 1 点${duration === Infinity ? '，永久' : `，持续 ${duration} 回合`}`,
   },
   stealth: {
-    icon: '🌑',
+    icon: EyeOff,
     name: '潜行',
-    color: 'text-slate-600',
-    bgColor: 'bg-slate-50',
-    borderColor: 'border-slate-200',
+    tone: 'muted',
     description: (_value, duration) => `无法被攻击${duration === Infinity ? '，永久' : `，持续 ${duration} 回合`}`,
   },
   lifedrain: {
-    icon: '🩸',
+    icon: Droplet,
     name: '吸取',
-    color: 'text-red-700',
-    bgColor: 'bg-red-50',
-    borderColor: 'border-red-200',
+    tone: 'danger',
     description: (value, duration) => `每次攻击吸取 ${value} 点生命${duration === Infinity ? '，永久' : `，持续 ${duration} 回合`}`,
   },
   lifesteal: {
-    icon: '🧛',
+    icon: Heart,
     name: '吸血',
-    color: 'text-rose-700',
-    bgColor: 'bg-rose-50',
-    borderColor: 'border-rose-200',
+    tone: 'danger',
     description: (value, duration) => `每次攻击回复 ${value} 点生命${duration === Infinity ? '，永久' : `，持续 ${duration} 回合`}`,
   },
 };
 
 const BuffDebuffBadge: React.FC<BuffDebuffBadgeProps> = ({ buff }) => {
   const config = BUFF_DEBUFF_CONFIG[buff.type];
-  
+
   if (!config) {
     return (
-      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] bg-gray-100 border border-gray-200 text-gray-600">
+      <span className="inline-flex items-center gap-1 rounded border border-border bg-bg-subtle px-1.5 py-0.5 text-[10px] text-ink-secondary">
         {buff.type}:{buff.value}
       </span>
     );
   }
 
+  const Icon = config.icon;
+
   const tooltipContent = (
     <div className="space-y-1">
-      <div className="font-semibold text-xs">
-        {config.icon} {config.name}
+      <div className="flex items-center gap-1.5 text-xs font-semibold">
+        <Icon className="h-3.5 w-3.5" />
+        {config.name}
       </div>
-      <div className="text-[10px] text-gray-300">
+      <div className="text-[10px] opacity-80">
         {config.description(buff.value, buff.duration)}
       </div>
     </div>
@@ -158,10 +146,10 @@ const BuffDebuffBadge: React.FC<BuffDebuffBadgeProps> = ({ buff }) => {
 
   return (
     <Tooltip content={tooltipContent} position="top">
-      <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] ${config.bgColor} ${config.borderColor} ${config.color} border cursor-help`}>
-        <span>{config.icon}</span>
+      <span className={`inline-flex cursor-help items-center gap-1 rounded border px-1.5 py-0.5 text-[10px] ${TONE_CLASSES[config.tone]}`}>
+        <Icon className="h-3 w-3" />
         <span className="font-medium">{buff.value}</span>
-        <span className="text-[9px] opacity-70">{buff.duration === Infinity ? '∞' : buff.duration}</span>
+        <span className="text-[10px] opacity-70">{buff.duration === Infinity ? '∞' : buff.duration}</span>
       </span>
     </Tooltip>
   );

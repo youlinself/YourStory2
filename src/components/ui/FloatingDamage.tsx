@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Shield, HeartPulse } from 'lucide-react';
 import { getDamageEvents } from '../../stores/simulationStore';
 import type { DamageEvent } from '../../stores/simulationStore';
 
@@ -16,13 +17,13 @@ const FloatingDamage: React.FC<FloatingDamageProps> = ({ counter }) => {
   if (events.length === 0) return null;
 
   const getEventStyle = (event: DamageEvent) => {
-    if (event.targetId === 'player_block') return { class: 'block', prefix: '-', label: '🛡️' };
-    if (event.targetId === 'player_block_gained') return { class: 'block', prefix: '+', label: '🛡️' };
-    if (event.targetId === 'player_heal') return { class: 'heal', prefix: '+', label: '💚' };
-    if (event.targetId.startsWith('enemy_block_')) return { class: 'block', prefix: '-', label: '🛡️' };
-    if (event.isHeal) return { class: 'block', prefix: '+', label: '🛡️' };
-    if (event.targetId === 'player') return { class: 'damage', prefix: '-', label: '' };
-    return { class: 'damage', prefix: '-', label: '' };
+    if (event.targetId === 'player_block') return { class: 'block', prefix: '-', icon: <Shield className="h-3 w-3" /> };
+    if (event.targetId === 'player_block_gained') return { class: 'block', prefix: '+', icon: <Shield className="h-3 w-3" /> };
+    if (event.targetId === 'player_heal') return { class: 'heal', prefix: '+', icon: <HeartPulse className="h-3 w-3" /> };
+    if (event.targetId.startsWith('enemy_block_')) return { class: 'block', prefix: '-', icon: <Shield className="h-3 w-3" /> };
+    if (event.isHeal) return { class: 'block', prefix: '+', icon: <Shield className="h-3 w-3" /> };
+    if (event.targetId === 'player') return { class: 'damage', prefix: '-', icon: null };
+    return { class: 'damage', prefix: '-', icon: null };
   };
 
   const getPosition = (event: DamageEvent) => {
@@ -44,7 +45,7 @@ const FloatingDamage: React.FC<FloatingDamageProps> = ({ counter }) => {
             className={`floating-damage ${style.class} ${event.targetId.startsWith('player') ? 'player-target' : ''}`}
             style={pos}
           >
-            {style.label} {style.prefix}{event.value}
+            {style.icon} {style.prefix}{event.value}
           </div>
         );
       })}

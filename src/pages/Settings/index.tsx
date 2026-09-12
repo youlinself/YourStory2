@@ -4,12 +4,14 @@ import useSettingsStore from '../../stores/settingsStore';
 import useAutobiographyStore from '../../stores/autobiographyStore';
 import useThinkTankStore, { defaultConfig } from '../../stores/thinkTankStore';
 import { useTheme } from '../../contexts/ThemeContext';
+import { Bot } from 'lucide-react';
+import { AGENT_ROLE_ICONS, AGENT_ROLE_DEFAULT_ICON } from '../../utils/palette';
 import { useNotification } from '../../hooks/useNotification';
 import ExportService from '../../services/export/ExportService';
 import BackupService from '../../services/backup/BackupService';
 import { isTauriEnvironment, migrateToTauriStorage } from '../../services/storage/tauriStorage';
 import FileStorageService from '../../services/storage/FileStorageService';
-import { useToast } from '../../components';
+import { useToast, useConfirm } from '../../components';
 import { AI_VENDORS, getVendorById, getVendorModels } from '../../ai_config/vendors';
 import { UnifiedLLMService } from '../../agent/llm/UnifiedLLMService';
 import type { ThinkTankMember, ThinkTankRole } from '../../types';
@@ -66,6 +68,7 @@ const SettingsPage: React.FC = () => {
   const { isDark, setTheme } = useTheme();
   const { permission: notificationPermission, requestPermission, isSupported: notificationSupported } = useNotification();
   const toast = useToast();
+  const confirmDialog = useConfirm();
 
   const [isValidating, setIsValidating] = useState(false);
   const [validationResult, setValidationResult] = useState<'success' | 'error' | null>(null);
@@ -146,7 +149,7 @@ const SettingsPage: React.FC = () => {
     if (value && notificationSupported && notificationPermission !== 'granted') {
       const granted = await requestPermission();
       if (!granted) {
-        alert('请在浏览器设置中允许通知权限');
+        toast.addToast({ type: 'warning', message: '请在浏览器设置中允许通知权限' });
         return;
       }
     }
@@ -215,9 +218,9 @@ const SettingsPage: React.FC = () => {
           if (typeof data.app.notifications === 'boolean') setNotifications(data.app.notifications);
           await saveAppSettings();
         }
-        alert('设置导入成功！');
+        toast.addToast({ type: 'success', message: '设置导入成功' });
       } catch (error) {
-        alert('导入失败：文件格式错误');
+        toast.addToast({ type: 'error', message: '导入失败：文件格式错误' });
       }
     };
     input.click();
@@ -548,7 +551,7 @@ const SettingsPage: React.FC = () => {
             <div className="card p-5">
               {members.length === 0 ? (
                 <div className="text-center py-8">
-                  <span className="text-4xl mb-3 block">🤖</span>
+                  <Bot className="h-10 w-10 text-ink-faint mx-auto mb-3" strokeWidth={1.5} />
                   <p className="text-ink-muted mb-2">还没有AI成员</p>
                   <p className="text-xs text-ink-faint mb-4">添加AI成员来组建你的智囊团，每个AI可以配置不同的模型和参数</p>
                   <button
@@ -567,13 +570,13 @@ const SettingsPage: React.FC = () => {
                         key={member.id}
                         className={`p-4 rounded-lg border transition-all ${
                           member.isEnabled
-                            ? 'border-border-subtle bg-white'
-                            : 'border-border-subtle/50 bg-gray-50 opacity-60'
+                            ? 'border-border-subtle bg-bg-elevated'
+                            : 'border-border-subtle/50 bg-bg-subtle opacity-60'
                         }`}
                       >
                         <div className="flex items-start justify-between">
                           <div className="flex items-start gap-3">
-                            <span className="text-2xl">{rolePreset?.icon || '⚙️'}</span>
+                            <span className="text-brand">{(() => { const RoleIcon = AGENT_ROLE_ICONS[member.role] || AGENT_ROLE_DEFAULT_ICON; return <RoleIcon className="h-7 w-7" />; })()}</span>
                             <div>
                               <div className="flex items-center gap-2">
                                 <span className="font-medium text-ink">{member.name}</span>
@@ -581,7 +584,7 @@ const SettingsPage: React.FC = () => {
                                   {rolePreset?.name || member.role}
                                 </span>
                                 {!member.isEnabled && (
-                                  <span className="text-xs px-2 py-0.5 rounded bg-gray-200 text-gray-500">
+                                  <span className="text-xs px-2 py-0.5 rounded bg-border text-ink-muted">
                                     已禁用
                                   </span>
                                 )}
@@ -606,7 +609,7 @@ const SettingsPage: React.FC = () => {
                               <span className="toggle-slider" />
                             </label>
                             <button
-                              className="p-1.5 rounded hover:bg-gray-100 text-ink-muted hover:text-ink transition-colors"
+                              className="p-1.5 rounded hover:bg-bg-subtle text-ink-muted hover:text-ink transition-colors"
                               onClick={() => setEditingMember(member)}
                               title="编辑"
                             >
@@ -615,11 +618,16 @@ const SettingsPage: React.FC = () => {
                               </svg>
                             </button>
                             <button
-                              className="p-1.5 rounded hover:bg-red-50 text-ink-muted hover:text-danger transition-colors"
+                              className="p-1.5 rounded hover:bg-danger-bg text-ink-muted hover:text-danger transition-colors"
                               onClick={() => {
-                                if (confirm('确定要删除这个AI成员吗？')) {
-                                  removeMember(member.id);
-                                }
+                                confirmDialog({
+                                  title: '删除AI成员',
+                                  description: '删除后该成员的配置将丢失。',
+                                  confirmText: '删除',
+                                  confirmVariant: 'danger',
+                                }).then((ok) => {
+                                  if (ok) removeMember(member.id);
+                                });
                               }}
                               title="删除"
                             >
@@ -634,6 +642,26 @@ const SettingsPage: React.FC = () => {
                   })}
                 </div>
               )}
+            </div>
+          </section>
+
+          <section>
+            <h2 className="section-title mb-4">快捷键</h2>
+            <div className="card p-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
+                {[
+                  { keys: 'Ctrl/⌘ + 1 ~ 7', desc: '切换主导航页面' },
+                  { keys: 'Ctrl/⌘ + ,', desc: '打开设置' },
+                  { keys: 'Ctrl/⌘ + B', desc: '折叠 / 展开侧边栏' },
+                  { keys: 'Enter / Shift + Enter', desc: '对话中发送 / 换行' },
+                ].map((item) => (
+                  <div key={item.keys} className="flex items-center justify-between py-1">
+                    <span className="text-sm text-ink-secondary">{item.desc}</span>
+                    <kbd>{item.keys}</kbd>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-ink-faint mt-3">提示：在小说卡片、章节列表和对话消息上点击右键，可以使用上下文菜单快捷操作。</p>
             </div>
           </section>
 
@@ -854,6 +882,7 @@ interface AddMemberModalProps {
 }
 
 const AddMemberModal: React.FC<AddMemberModalProps> = ({ onClose, onAdd }) => {
+  const toast = useToast();
   const { rolePresets } = useThinkTankStore();
   const [name, setName] = useState('');
   const [role, setRole] = useState<ThinkTankRole>('plot_writer');
@@ -866,7 +895,7 @@ const AddMemberModal: React.FC<AddMemberModalProps> = ({ onClose, onAdd }) => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) {
-      alert('请输入AI成员名称');
+      toast.addToast({ type: 'warning', message: '请输入AI成员名称' });
       return;
     }
     onAdd({
@@ -880,8 +909,8 @@ const AddMemberModal: React.FC<AddMemberModalProps> = ({ onClose, onAdd }) => {
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div
-        className="bg-white rounded-xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-xl"
+      <div role="dialog" aria-modal="true"
+        className="bg-bg-elevated rounded-xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4">
@@ -1096,6 +1125,7 @@ interface EditMemberModalProps {
 }
 
 const EditMemberModal: React.FC<EditMemberModalProps> = ({ member, onClose, onSave }) => {
+  const toast = useToast();
   const { rolePresets } = useThinkTankStore();
   const [name, setName] = useState(member.name);
   const [role, setRole] = useState<ThinkTankRole>(member.role);
@@ -1108,7 +1138,7 @@ const EditMemberModal: React.FC<EditMemberModalProps> = ({ member, onClose, onSa
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) {
-      alert('请输入AI成员名称');
+      toast.addToast({ type: 'warning', message: '请输入AI成员名称' });
       return;
     }
     onSave({
@@ -1122,8 +1152,8 @@ const EditMemberModal: React.FC<EditMemberModalProps> = ({ member, onClose, onSa
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div
-        className="bg-white rounded-xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-xl"
+      <div role="dialog" aria-modal="true"
+        className="bg-bg-elevated rounded-xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4">

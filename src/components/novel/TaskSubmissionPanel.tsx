@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
+import { BookOpen, User, Globe, MessageSquare, ClipboardList, Send, AlertTriangle, type LucideIcon } from 'lucide-react';
 import useAIWorkshopStore from '../../stores/aiWorkshopStore';
 import useThinkTankStore from '../../stores/thinkTankStore';
 import { TASK_CATEGORY_LABELS, TASK_PRIORITY_LABELS } from '../../agent/workshop/types';
 import type { TaskCategory, TaskPriority } from '../../agent/workshop/types';
 
-const QUICK_TEMPLATES = [
-  { label: '📖 创作小说', title: '创作一个短篇故事', category: 'plot' as TaskCategory },
-  { label: '👤 设计角色', title: '设计一个新角色', category: 'character' as TaskCategory },
-  { label: '🌍 构建世界', title: '构建世界观设定', category: 'worldbuilding' as TaskCategory },
-  { label: '💬 优化对话', title: '优化角色对话', category: 'dialogue' as TaskCategory },
+const QUICK_TEMPLATES: { label: string; title: string; category: TaskCategory; icon: LucideIcon }[] = [
+  { label: '创作小说', title: '创作一个短篇故事', category: 'plot' as TaskCategory, icon: BookOpen },
+  { label: '设计角色', title: '设计一个新角色', category: 'character' as TaskCategory, icon: User },
+  { label: '构建世界', title: '构建世界观设定', category: 'worldbuilding' as TaskCategory, icon: Globe },
+  { label: '优化对话', title: '优化角色对话', category: 'dialogue' as TaskCategory, icon: MessageSquare },
 ];
 
 const TaskSubmissionPanel: React.FC = () => {
@@ -81,11 +82,11 @@ const TaskSubmissionPanel: React.FC = () => {
   };
 
   return (
-    <div className="rounded-2xl border border-border-subtle overflow-hidden bg-white shadow-sm h-full flex flex-col">
+    <div className="rounded-2xl border border-border-subtle overflow-hidden bg-bg-elevated shadow-sm h-full flex flex-col">
       <div className="px-4 py-3 border-b border-border-subtle bg-gradient-to-r from-brand/5 to-transparent">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand to-brand-hover flex items-center justify-center">
-            <span className="text-sm">📋</span>
+            <ClipboardList className="h-4 w-4 text-white" />
           </div>
           <div>
             <h3 className="text-sm font-semibold text-ink">指令下达</h3>
@@ -101,15 +102,19 @@ const TaskSubmissionPanel: React.FC = () => {
             <div className="flex-1 h-px bg-border-subtle" />
           </div>
           <div className="grid grid-cols-2 gap-2">
-            {QUICK_TEMPLATES.map((template) => (
-              <button
-                key={template.label}
-                onClick={() => handleQuickTemplate(template)}
-                className="px-3 py-2 rounded-lg bg-bg-subtle border border-border-subtle text-xs text-ink-secondary hover:bg-brand-surface hover:border-brand/30 hover:text-brand transition-all text-left"
-              >
-                {template.label}
-              </button>
-            ))}
+            {QUICK_TEMPLATES.map((template) => {
+              const TemplateIcon = template.icon;
+              return (
+                <button
+                  key={template.label}
+                  onClick={() => handleQuickTemplate(template)}
+                  className="px-3 py-2 rounded-lg bg-bg-subtle border border-border-subtle text-xs text-ink-secondary hover:bg-brand-surface hover:border-brand/30 hover:text-brand transition-all text-left inline-flex items-center gap-1.5"
+                >
+                  <TemplateIcon className="h-3.5 w-3.5" />
+                  {template.label}
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -127,7 +132,7 @@ const TaskSubmissionPanel: React.FC = () => {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="例如：创作一个关于时间旅行的短篇故事"
-              className="w-full px-3 py-2 rounded-lg border border-border-subtle bg-white text-sm text-ink placeholder-ink-faint focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand/20"
+              className="w-full px-3 py-2 rounded-lg border border-border-subtle bg-bg-elevated text-sm text-ink placeholder-ink-faint focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand/20"
               disabled={isSubmitting}
             />
           </div>
@@ -139,7 +144,7 @@ const TaskSubmissionPanel: React.FC = () => {
               onChange={(e) => setDescription(e.target.value)}
               placeholder="详细描述你的创作需求，包括故事背景、角色设定、风格要求等..."
               rows={4}
-              className="w-full px-3 py-2 rounded-lg border border-border-subtle bg-white text-sm text-ink placeholder-ink-faint focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand/20 resize-none"
+              className="w-full px-3 py-2 rounded-lg border border-border-subtle bg-bg-elevated text-sm text-ink placeholder-ink-faint focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand/20 resize-none"
               disabled={isSubmitting}
             />
           </div>
@@ -150,7 +155,7 @@ const TaskSubmissionPanel: React.FC = () => {
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value as TaskCategory)}
-                className="w-full px-3 py-2 rounded-lg border border-border-subtle bg-white text-sm text-ink focus:outline-none focus:border-brand"
+                className="w-full px-3 py-2 rounded-lg border border-border-subtle bg-bg-elevated text-sm text-ink focus:outline-none focus:border-brand"
                 disabled={isSubmitting}
               >
                 {Object.entries(TASK_CATEGORY_LABELS).map(([value, label]) => (
@@ -166,7 +171,7 @@ const TaskSubmissionPanel: React.FC = () => {
               <select
                 value={priority}
                 onChange={(e) => setPriority(e.target.value as TaskPriority)}
-                className="w-full px-3 py-2 rounded-lg border border-border-subtle bg-white text-sm text-ink focus:outline-none focus:border-brand"
+                className="w-full px-3 py-2 rounded-lg border border-border-subtle bg-bg-elevated text-sm text-ink focus:outline-none focus:border-brand"
                 disabled={isSubmitting}
               >
                 {Object.entries(TASK_PRIORITY_LABELS).map(([value, label]) => (
@@ -194,7 +199,7 @@ const TaskSubmissionPanel: React.FC = () => {
                 </>
               ) : (
                 <>
-                  <span>📤</span>
+                  <Send className="h-4 w-4" />
                   下达指令
                 </>
               )}
@@ -221,7 +226,10 @@ const TaskSubmissionPanel: React.FC = () => {
 
         {enabledMembers.length === 0 && (
           <div className="p-3 rounded-lg bg-warning-bg border border-warning/20 text-warning text-xs">
-            <p className="font-medium">⚠️ 没有可用的AI成员</p>
+            <p className="flex items-center gap-1.5 font-medium">
+              <AlertTriangle className="h-3.5 w-3.5" />
+              没有可用的AI成员
+            </p>
             <p className="mt-1 text-[10px] text-warning/70">请前往「智囊团」页面添加并启用AI成员</p>
           </div>
         )}

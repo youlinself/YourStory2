@@ -1,4 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import {
+  Cake, Dumbbell, TrendingUp, Target, Coins, Landmark, Shuffle, Layers, Link2, Gift,
+  Flower2, type LucideIcon,
+} from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import useGameRecordStore from '../../stores/gameRecordStore';
 import { CULTIVATION_REALM_NAMES, ATTRIBUTE_NAMES, ATTRIBUTE_ICONS, ATTRIBUTE_COLORS, RARITY_NAMES } from '../../data/simulationData';
@@ -66,7 +70,7 @@ const RecordDetailPage: React.FC = () => {
   return (
     <div className="min-h-full bg-gradient-to-b from-bg-base to-bg-elevated">
       <div className="max-w-4xl mx-auto p-6">
-        <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+        <div className="bg-bg-elevated rounded-2xl shadow-lg overflow-hidden">
           <div className="bg-gradient-to-r from-brand to-purple-600 px-8 py-10 text-center text-white">
             <button
               onClick={() => navigate('/records')}
@@ -88,12 +92,12 @@ const RecordDetailPage: React.FC = () => {
             {/* Tab Navigation */}
             <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
               {[
-                { key: 'overview', label: '📊 概览' },
-                { key: 'attributes', label: '🌟 属性' },
+                { key: 'overview', label: '概览' },
+                { key: 'attributes', label: '属性' },
                 { key: 'deck', label: '🃏 卡组' },
-                { key: 'relics', label: '🏺 遗物' },
-                { key: 'bonds', label: '🔗 羁绊' },
-                { key: 'timeline', label: '📜 轨迹' },
+                { key: 'relics', label: '遗物' },
+                { key: 'bonds', label: '羁绊' },
+                { key: 'timeline', label: '轨迹' },
               ].map((tab) => (
                 <button
                   key={tab.key}
@@ -101,7 +105,7 @@ const RecordDetailPage: React.FC = () => {
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
                     activeTab === tab.key
                       ? 'bg-brand text-white'
-                      : 'bg-gray-100 text-ink-muted hover:bg-gray-200'
+                      : 'bg-bg-subtle text-ink-muted hover:bg-border'
                   }`}
                 >
                   {tab.label}
@@ -113,33 +117,33 @@ const RecordDetailPage: React.FC = () => {
             {activeTab === 'overview' && (
               <div className="space-y-6">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <StatCard label="最终年龄" value={`${record.age}岁`} icon="🎂" />
-                  <StatCard label="总属性值" value={String(Object.values(record.finalAttributes).reduce((a, b) => a + b, 0))} icon="💪" />
-                  <StatCard label="属性成长" value={`+${record.totalAttributeGain}`} icon="📈" />
-                  <StatCard label="选择成功率" value={`${record.successRate}%`} icon="🎯" />
-                  <StatCard label="获得金币" value={String(record.gold)} icon="💰" />
-                  <StatCard label="收集卡牌" value={String(record.deckSize)} icon="🃏" />
-                  <StatCard label="收集遗物" value={String(record.relicsCount)} icon="🏺" />
-                  <StatCard label="人生选择" value={String(totalChoices)} icon="🔀" />
+                  <StatCard label="最终年龄" value={`${record.age}岁`} icon={Cake} />
+                  <StatCard label="总属性值" value={String(Object.values(record.finalAttributes).reduce((a, b) => a + b, 0))} icon={Dumbbell} />
+                  <StatCard label="属性成长" value={`+${record.totalAttributeGain}`} icon={TrendingUp} />
+                  <StatCard label="选择成功率" value={`${record.successRate}%`} icon={Target} />
+                  <StatCard label="获得金币" value={String(record.gold)} icon={Coins} />
+                  <StatCard label="收集卡牌" value={String(record.deckSize)} icon={Layers} />
+                  <StatCard label="收集遗物" value={String(record.relicsCount)} icon={Landmark} />
+                  <StatCard label="人生选择" value={String(totalChoices)} icon={Shuffle} />
                 </div>
 
                 {gs.cultivation && (
-                  <div className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg p-4 border border-purple-200">
+                  <div className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg p-4 border border-power/30">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-lg font-bold text-purple-700">
+                        <p className="text-lg font-bold text-power">
                           {CULTIVATION_REALM_NAMES[gs.cultivation.realm] || gs.cultivation.realm}
                         </p>
-                        <p className="text-sm text-purple-600 mt-1">
+                        <p className="text-sm text-power mt-1">
                           寿元延长至 {gs.cultivation.maxLifespan} 年
                         </p>
                       </div>
-                      <div className="text-4xl">🧘</div>
+                      <Flower2 className="h-10 w-10 text-power" strokeWidth={1.5} />
                     </div>
                     {gs.cultivation.realmBonus && Object.keys(gs.cultivation.realmBonus).length > 0 && (
                       <div className="mt-3 flex flex-wrap gap-2">
                         {Object.entries(gs.cultivation.realmBonus).map(([attr, value]) => (
-                          <span key={attr} className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full">
+                          <span key={attr} className="px-2 py-1 bg-power-light text-power text-xs rounded-full">
                             {ATTRIBUTE_NAMES[attr as keyof PlayerAttributes] || attr} +{String(value)}
                           </span>
                         ))}
@@ -150,12 +154,12 @@ const RecordDetailPage: React.FC = () => {
 
                 {record.evaluations.length > 0 && (
                   <div>
-                    <h3 className="text-lg font-semibold text-ink mb-3">🏆 人生成就</h3>
+                    <h3 className="text-lg font-semibold text-ink mb-3">人生成就</h3>
                     <div className="flex flex-wrap gap-2">
                       {record.evaluations.map((evaluation, index) => (
                         <span
                           key={index}
-                          className="px-3 py-1.5 bg-gradient-to-r from-amber-100 to-yellow-100 text-amber-800 text-sm font-medium rounded-full border border-amber-200"
+                          className="px-3 py-1.5 bg-gradient-to-r from-amber-100 to-yellow-100 text-warning text-sm font-medium rounded-full border border-warning/30"
                         >
                           {evaluation}
                         </span>
@@ -182,13 +186,13 @@ const RecordDetailPage: React.FC = () => {
                           <span className="text-sm font-bold" style={{ color: ATTRIBUTE_COLORS[attr] }}>
                             {value}
                             {growth !== 0 && (
-                              <span className={`ml-1 text-xs ${growth > 0 ? 'text-green-500' : 'text-red-500'}`}>
+                              <span className={`ml-1 text-xs ${growth > 0 ? 'text-success' : 'text-danger'}`}>
                                 ({growth > 0 ? '+' : ''}{growth})
                               </span>
                             )}
                           </span>
                         </div>
-                        <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                        <div className="h-2 bg-border rounded-full overflow-hidden">
                           <div
                             className="h-full rounded-full transition-all"
                             style={{
@@ -218,7 +222,7 @@ const RecordDetailPage: React.FC = () => {
                           <span className="text-lg">{card.icon}</span>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-ink truncate">{card.name}</p>
-                            <p className="text-xs text-gray-500">{RARITY_NAMES[card.rarity] || card.rarity}</p>
+                            <p className="text-xs text-ink-muted">{RARITY_NAMES[card.rarity] || card.rarity}</p>
                           </div>
                         </div>
                       </div>
@@ -231,7 +235,7 @@ const RecordDetailPage: React.FC = () => {
             {/* Relics Tab */}
             {activeTab === 'relics' && (
               <div>
-                <h3 className="text-lg font-semibold text-ink mb-3">🏺 遗物收藏 ({gs.relics.length}件)</h3>
+                <h3 className="text-lg font-semibold text-ink mb-3">遗物收藏 ({gs.relics.length}件)</h3>
                 {gs.relics.length === 0 ? (
                   <p className="text-ink-muted text-center py-8">无遗物</p>
                 ) : (
@@ -241,7 +245,7 @@ const RecordDetailPage: React.FC = () => {
                         <span className="text-2xl">{relic.icon}</span>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-ink truncate">{relic.name}</p>
-                          <p className="text-xs text-gray-500">{RARITY_NAMES[relic.rarity] || relic.rarity}</p>
+                          <p className="text-xs text-ink-muted">{RARITY_NAMES[relic.rarity] || relic.rarity}</p>
                         </div>
                       </div>
                     ))}
@@ -255,23 +259,23 @@ const RecordDetailPage: React.FC = () => {
               <div className="space-y-4">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   <div className="text-center p-3 bg-bg-elevated rounded-lg">
-                    <div className="text-2xl mb-1">🎴</div>
+                    <Layers className="h-6 w-6 mx-auto mb-1 text-ink-secondary" strokeWidth={1.75} />
                     <div className="text-lg font-bold text-ink">{record.bondCardCount}</div>
                     <div className="text-xs text-ink-muted">收集卡牌</div>
                   </div>
                   <div className="text-center p-3 bg-bg-elevated rounded-lg">
-                    <div className="text-2xl mb-1">🔗</div>
+                    <Link2 className="h-6 w-6 mx-auto mb-1 text-brand" strokeWidth={1.75} />
                     <div className="text-lg font-bold text-brand">{record.bondGroupCount}</div>
                     <div className="text-xs text-ink-muted">激活羁绊</div>
                   </div>
                   <div className="text-center p-3 bg-bg-elevated rounded-lg">
                     <div className="text-2xl mb-1">⭐</div>
-                    <div className="text-lg font-bold text-amber-500">{record.bondTotalTier}</div>
+                    <div className="text-lg font-bold text-warning">{record.bondTotalTier}</div>
                     <div className="text-xs text-ink-muted">羁绊等级</div>
                   </div>
                   <div className="text-center p-3 bg-bg-elevated rounded-lg">
-                    <div className="text-2xl mb-1">🎁</div>
-                    <div className="text-lg font-bold text-green-500">0</div>
+                    <Gift className="h-6 w-6 mx-auto mb-1 text-success" strokeWidth={1.75} />
+                    <div className="text-lg font-bold text-success">0</div>
                     <div className="text-xs text-ink-muted">领取奖励</div>
                   </div>
                 </div>
@@ -281,7 +285,7 @@ const RecordDetailPage: React.FC = () => {
             {/* Timeline Tab */}
             {activeTab === 'timeline' && (
               <div>
-                <h3 className="text-lg font-semibold text-ink mb-3">📜 人生轨迹</h3>
+                <h3 className="text-lg font-semibold text-ink mb-3">人生轨迹</h3>
                 {timelineEvents.length === 0 ? (
                   <p className="text-ink-muted text-center py-8">无记录</p>
                 ) : (
@@ -332,9 +336,9 @@ const RecordDetailPage: React.FC = () => {
   );
 };
 
-const StatCard: React.FC<{ label: string; value: string; icon: string }> = ({ label, value, icon }) => (
+const StatCard: React.FC<{ label: string; value: string; icon: LucideIcon }> = ({ label, value, icon: Icon }) => (
   <div className="bg-bg-elevated rounded-lg p-3 text-center">
-    <div className="text-2xl mb-1">{icon}</div>
+    <Icon className="h-6 w-6 mx-auto mb-1 text-brand" strokeWidth={1.75} />
     <div className="text-lg font-bold text-ink">{value}</div>
     <div className="text-xs text-ink-muted">{label}</div>
   </div>

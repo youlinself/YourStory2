@@ -1,6 +1,9 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import type { NovelChapter, Volume } from '../../types/novel';
 import { CHAPTER_STATUS_LABELS } from '../../types/novel';
+import { getCategoryColor } from '../../utils/palette';
+import { showContextMenu } from '../ContextMenu';
+import { Trash2, PenLine } from 'lucide-react';
 
 interface ChapterListProps {
   chapters: NovelChapter[];
@@ -14,12 +17,6 @@ interface ChapterListProps {
   onTagAdd?: (chapterId: string, tag: string) => void;
   onTagRemove?: (chapterId: string, tag: string) => void;
 }
-
-const TAG_COLORS = [
-  '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
-  '#ec4899', '#14b8a6', '#f97316', '#6366f1', '#84cc16',
-  '#06b6d4', '#84cc16', '#f43f5e', '#8b5cf6', '#0ea5e9',
-];
 
 const PRESET_TAGS = ['主线', '支线', '高潮', '转折', '伏笔', '回忆', '感情线', '战斗', '日常', '对话', '铺垫', '悬念'];
 
@@ -132,13 +129,7 @@ const ChapterList: React.FC<ChapterListProps> = ({
     }
   };
 
-  const getTagColor = useCallback((tagName: string) => {
-    let hash = 0;
-    for (let i = 0; i < tagName.length; i++) {
-      hash = tagName.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    return TAG_COLORS[Math.abs(hash) % TAG_COLORS.length];
-  }, []);
+  const getTagColor = useCallback((tagName: string) => getCategoryColor(tagName), []);
 
   const totalWordsInVolume = (volumeId: string) => {
     const volChapters = chaptersByVolume.get(volumeId) || [];
@@ -159,6 +150,19 @@ const ChapterList: React.FC<ChapterListProps> = ({
       onDrop={(e) => handleDrop(e, globalIndex)}
       onDragEnd={handleDragEnd}
       onClick={() => onSelect(chapter.id)}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        showContextMenu(e.clientX, e.clientY, [
+          { label: '打开章节', icon: <PenLine className="h-3.5 w-3.5" />, onSelect: () => onSelect(chapter.id) },
+          {
+            label: '删除章节',
+            icon: <Trash2 className="h-3.5 w-3.5" />,
+            danger: true,
+            onSelect: () => onDelete(chapter.id),
+          },
+        ]);
+      }}
     >
       <div className="flex items-center gap-2">
         <svg
@@ -264,7 +268,10 @@ const ChapterList: React.FC<ChapterListProps> = ({
               }`}
               onClick={() => setTagFilter(tagFilter === tag.name ? null : tag.name)}
             >
-              <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: tagFilter === tag.name ? '#fff' : getTagColor(tag.name) }} />
+              <span
+                className={`w-1.5 h-1.5 rounded-full ${tagFilter === tag.name ? 'bg-bg-elevated' : ''}`}
+                style={tagFilter === tag.name ? undefined : { backgroundColor: getTagColor(tag.name) }}
+              />
               {tag.name}
               <span className="opacity-60">×{tag.count}</span>
             </button>

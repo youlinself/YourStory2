@@ -3,6 +3,11 @@ import useThinkTankStore from '../../stores/thinkTankStore';
 import useAIWorkshopStore from '../../stores/aiWorkshopStore';
 import type { ThinkTankMember } from '../../types/writing';
 import { ROLE_TASK_COMPATIBILITY } from '../../agent/workshop/types';
+import { AGENT_ROLE_COLORS } from '../../utils/palette';
+import {
+  FilePen, User, Globe, MessageSquare, Sparkles, Lightbulb, Settings, Bot,
+  Brain, ClipboardList, Building2, type LucideIcon,
+} from 'lucide-react';
 
 interface WorkstationProps {
   member: ThinkTankMember;
@@ -11,25 +16,17 @@ interface WorkstationProps {
   currentTaskTitle?: string;
 }
 
-const ROLE_ICONS: Record<string, string> = {
-  plot_writer: '📝',
-  character_designer: '👤',
-  world_builder: '🌍',
-  dialogue_specialist: '💬',
-  style_polisher: '✨',
-  creative_consultant: '💡',
-  custom: '⚙️',
+const ROLE_ICONS: Record<string, LucideIcon> = {
+  plot_writer: FilePen,
+  character_designer: User,
+  world_builder: Globe,
+  dialogue_specialist: MessageSquare,
+  style_polisher: Sparkles,
+  creative_consultant: Lightbulb,
+  custom: Settings,
 };
 
-const ROLE_COLORS: Record<string, string> = {
-  plot_writer: '#da7756',
-  character_designer: '#2d7bb9',
-  world_builder: '#7a9e7e',
-  dialogue_specialist: '#c9a96e',
-  style_polisher: '#9b59b6',
-  creative_consultant: '#e67e22',
-  custom: '#95a5a6',
-};
+const ROLE_COLORS: Record<string, string> = AGENT_ROLE_COLORS;
 
 const TypingAnimation: React.FC = () => (
   <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-success-bg">
@@ -41,7 +38,7 @@ const TypingAnimation: React.FC = () => (
 
 const ThinkingAnimation: React.FC = () => (
   <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-warning-bg">
-    <span className="text-xs animate-pulse">💭</span>
+    <span className="animate-pulse"><Brain className="h-3.5 w-3.5 text-warning" /></span>
     <span className="text-[10px] text-warning">思考中</span>
   </div>
 );
@@ -54,8 +51,8 @@ const IdleAnimation: React.FC = () => (
 );
 
 const WorkstationCard: React.FC<WorkstationProps & { padding: number }> = ({ member, index, isActive, currentTaskTitle, padding }) => {
-  const color = ROLE_COLORS[member.role] || '#95a5a6';
-  const icon = ROLE_ICONS[member.role] || '🤖';
+  const color = ROLE_COLORS[member.role] || AGENT_ROLE_COLORS.custom;
+  const Icon = ROLE_ICONS[member.role] || Bot;
   const roles = ROLE_TASK_COMPATIBILITY[member.role] || [];
 
   const col = index % 3;
@@ -71,10 +68,10 @@ const WorkstationCard: React.FC<WorkstationProps & { padding: number }> = ({ mem
       }}
     >
       <div
-        className={`relative w-[180px] rounded-xl border-2 p-3 transition-all duration-300 ${
+        className={`workstation-card relative w-[180px] rounded-xl border-2 p-3 transition-all duration-300 ${
           isActive
-            ? 'bg-white border-brand/40 shadow-lg shadow-brand/10'
-            : 'bg-white/80 border-border-subtle hover:border-border-emphasis hover:shadow-md'
+            ? 'bg-bg-elevated border-brand/40 shadow-lg shadow-brand/10'
+            : 'bg-bg-elevated/80 border-border-subtle hover:border-border-emphasis hover:shadow-md'
         }`}
         style={{ borderTopColor: color, borderTopWidth: '3px' }}
       >
@@ -89,12 +86,10 @@ const WorkstationCard: React.FC<WorkstationProps & { padding: number }> = ({ mem
 
         <div className="flex items-start gap-2 mb-2">
           <div
-            className={`w-9 h-9 rounded-lg flex items-center justify-center text-lg ${
-              isActive ? 'animate-float' : ''
-            }`}
-            style={{ backgroundColor: `${color}15` }}
+            className="w-9 h-9 rounded-lg flex items-center justify-center"
+            style={{ backgroundColor: `${color}15`, color }}
           >
-            {icon}
+            <Icon className="h-4 w-4" />
           </div>
           <div className="flex-1 min-w-0">
             <h4 className="text-sm font-medium text-ink truncate">{member.name}</h4>
@@ -119,7 +114,7 @@ const WorkstationCard: React.FC<WorkstationProps & { padding: number }> = ({ mem
         {isActive && currentTaskTitle && (
           <div className="mt-2 p-1.5 rounded-lg bg-brand-surface border border-brand/10">
             <p className="text-[10px] text-brand font-medium truncate">
-              📋 {currentTaskTitle}
+              <ClipboardList className="h-3 w-3" /> {currentTaskTitle}
             </p>
           </div>
         )}
@@ -214,11 +209,11 @@ const OfficeCanvas: React.FC = () => {
   }, [handleScroll]);
 
   return (
-    <div className="rounded-2xl border border-border-subtle overflow-hidden bg-white shadow-sm">
+    <div className="rounded-2xl border border-border-subtle overflow-hidden bg-bg-elevated shadow-sm">
       <div className="px-4 py-3 border-b border-border-subtle flex items-center justify-between bg-gradient-to-r from-brand/5 to-transparent">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand to-brand-hover flex items-center justify-center">
-            <span className="text-sm">🏢</span>
+            <Building2 className="h-4 w-4 text-white" />
           </div>
           <div>
             <h3 className="text-sm font-semibold text-ink">团队监控</h3>
@@ -256,7 +251,7 @@ const OfficeCanvas: React.FC = () => {
             width: `${contentWidth}px`,
             height: `${contentHeight}px`,
             minWidth: '100%',
-            background: 'linear-gradient(135deg, #faf8f5 0%, #f5f0eb 50%, #eae5de 100%)',
+            background: 'linear-gradient(135deg, var(--color-bg) 0%, var(--color-bg-subtle) 50%, var(--color-bg) 100%)',
           }}
         >
           <div className="absolute inset-0 opacity-30">
@@ -275,10 +270,10 @@ const OfficeCanvas: React.FC = () => {
           </div>
 
           <div
-            className="absolute px-2 py-1 rounded-full bg-white/70 backdrop-blur-sm border border-border-subtle"
+            className="absolute px-2 py-1 rounded-full bg-bg-elevated/70 backdrop-blur-sm border border-border-subtle"
             style={{ top: PADDING - 10, left: '50%', transform: 'translateX(-50%)' }}
           >
-            <span className="text-[10px] text-ink-muted font-medium">✨ AI创作空间</span>
+            <span className="inline-flex items-center gap-1 text-[10px] text-ink-muted font-medium"><Sparkles className="h-3 w-3" /> AI创作空间</span>
           </div>
 
           {enabledMembers.map((member, index) => (
@@ -296,7 +291,7 @@ const OfficeCanvas: React.FC = () => {
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="text-center">
                 <div className="w-16 h-16 mx-auto mb-3 rounded-2xl bg-bg-subtle flex items-center justify-center border border-border-subtle">
-                  <span className="text-3xl opacity-50">🏢</span>
+                  <Building2 className="h-8 w-8 text-ink-faint opacity-60" strokeWidth={1.5} />
                 </div>
                 <p className="text-sm text-ink font-medium">暂无AI成员在岗</p>
                 <p className="text-xs text-ink-muted mt-1">请前往「智囊团」添加AI成员</p>

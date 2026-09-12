@@ -3,6 +3,8 @@ import type { SavedInspiration } from '../../types';
 import InspirationImportModal from './InspirationImportModal';
 import useAIStore from '../../stores/aiStore';
 import { UnifiedLLMService } from '../../agent/llm/UnifiedLLMService';
+import { DATA_COLORS } from '../../utils/palette';
+import { BookOpen, User, Image, MessageSquare, Theater, Dices, Sparkles, Lightbulb, type LucideIcon } from 'lucide-react';
 
 interface InspirationBoardProps {
   inspirations: SavedInspiration[];
@@ -25,20 +27,20 @@ const INSPIRATION_TYPE_LABELS: Record<SavedInspiration['type'], string> = {
   theme: '主题',
 };
 
-const INSPIRATION_TYPE_ICONS: Record<SavedInspiration['type'], string> = {
-  plot: '📖',
-  character: '👤',
-  scene: '🌄',
-  dialogue: '💬',
-  theme: '🎭',
+const INSPIRATION_TYPE_ICONS: Record<SavedInspiration['type'], LucideIcon> = {
+  plot: BookOpen,
+  character: User,
+  scene: Image,
+  dialogue: MessageSquare,
+  theme: Theater,
 };
 
 const INSPIRATION_TYPE_COLORS: Record<SavedInspiration['type'], string> = {
-  plot: '#3b82f6',
-  character: '#10b981',
-  scene: '#f59e0b',
-  dialogue: '#8b5cf6',
-  theme: '#ec4899',
+  plot: DATA_COLORS.blue,
+  character: DATA_COLORS.emerald,
+  scene: DATA_COLORS.amber,
+  dialogue: DATA_COLORS.violet,
+  theme: DATA_COLORS.pink,
 };
 
 const InspirationBoard: React.FC<InspirationBoardProps> = ({
@@ -229,14 +231,14 @@ const InspirationBoard: React.FC<InspirationBoardProps> = ({
             className="btn btn-ghost btn-sm text-xs"
             onClick={handleRandomInspiration}
           >
-            🎲 随机
+            <Dices className="h-3.5 w-3.5" /> 随机
           </button>
           <button
             className="btn btn-ghost btn-sm text-xs"
             onClick={() => setShowAIModal(true)}
             title="AI 生成灵感"
           >
-            🤖 AI生成
+            <Sparkles className="h-3.5 w-3.5" /> AI生成
           </button>
           <button
             className="btn btn-primary btn-sm text-xs"
@@ -265,10 +267,13 @@ const InspirationBoard: React.FC<InspirationBoardProps> = ({
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <span
-                      className="w-6 h-6 rounded flex items-center justify-center text-sm"
-                      style={{ backgroundColor: `${INSPIRATION_TYPE_COLORS[inspiration.type]}20` }}
+                      className="w-6 h-6 rounded flex items-center justify-center"
+                      style={{ backgroundColor: `${INSPIRATION_TYPE_COLORS[inspiration.type]}20`, color: INSPIRATION_TYPE_COLORS[inspiration.type] }}
                     >
-                      {INSPIRATION_TYPE_ICONS[inspiration.type]}
+                      {(() => {
+                        const TypeIcon = INSPIRATION_TYPE_ICONS[inspiration.type];
+                        return <TypeIcon className="h-3.5 w-3.5" />;
+                      })()}
                     </span>
                     <span className="text-xs font-medium text-ink">
                       {INSPIRATION_TYPE_LABELS[inspiration.type]}
@@ -341,7 +346,10 @@ const InspirationBoard: React.FC<InspirationBoardProps> = ({
                       style={newInspiration.type === key ? { backgroundColor: INSPIRATION_TYPE_COLORS[key as SavedInspiration['type']] } : {}}
                       onClick={() => setNewInspiration({ ...newInspiration, type: key as SavedInspiration['type'] })}
                     >
-                      {INSPIRATION_TYPE_ICONS[key as SavedInspiration['type']]} {label}
+                      {(() => {
+                        const TypeIcon = INSPIRATION_TYPE_ICONS[key as SavedInspiration['type']];
+                        return <TypeIcon className="h-3.5 w-3.5 inline" />;
+                      })()} {label}
                     </button>
                   ))}
                 </div>
@@ -416,8 +424,11 @@ const InspirationBoard: React.FC<InspirationBoardProps> = ({
       {showRandom && randomInspiration && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="bg-bg-base rounded-xl p-6 w-96 shadow-xl text-center">
-            <span className="text-4xl mb-4 block">
-              {INSPIRATION_TYPE_ICONS[randomInspiration.type]}
+            <span className="text-4xl mb-4 inline-flex text-brand">
+              {(() => {
+                const RandomIcon = INSPIRATION_TYPE_ICONS[randomInspiration.type];
+                return <RandomIcon className="h-10 w-10" strokeWidth={1.5} />;
+              })()}
             </span>
             <h3 className="text-base font-semibold text-ink mb-2">
               随机灵感 · {INSPIRATION_TYPE_LABELS[randomInspiration.type]}
@@ -447,7 +458,7 @@ const InspirationBoard: React.FC<InspirationBoardProps> = ({
       {showEmptyPrompt && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="bg-bg-base rounded-xl p-6 w-96 shadow-xl text-center">
-            <span className="text-4xl mb-4 block">💡</span>
+            <Lightbulb className="h-10 w-10 text-gold mx-auto mb-4" strokeWidth={1.5} />
             <h3 className="text-base font-semibold text-ink mb-2">灵感库为空</h3>
             <p className="text-sm text-ink-muted mb-4">还没有任何灵感记录，先去收集一些创意吧！</p>
             <div className="flex justify-center gap-2">
@@ -481,7 +492,10 @@ const InspirationBoard: React.FC<InspirationBoardProps> = ({
       {showAIModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="bg-bg-base rounded-xl p-6 w-[500px] shadow-xl">
-            <h3 className="text-base font-semibold text-ink mb-4">🤖 AI 灵感生成</h3>
+            <h3 className="flex items-center gap-2 text-base font-semibold text-ink mb-4">
+              <Sparkles className="h-4 w-4 text-brand" />
+              AI 灵感生成
+            </h3>
             <div className="space-y-4">
               <div>
                 <label className="text-xs text-ink-muted block mb-1">灵感类型</label>
@@ -497,7 +511,10 @@ const InspirationBoard: React.FC<InspirationBoardProps> = ({
                       style={aiSelectedType === key ? { backgroundColor: INSPIRATION_TYPE_COLORS[key as SavedInspiration['type']] } : {}}
                       onClick={() => setAiSelectedType(key as SavedInspiration['type'])}
                     >
-                      {INSPIRATION_TYPE_ICONS[key as SavedInspiration['type']]} {label}
+                      {(() => {
+                        const TypeIcon = INSPIRATION_TYPE_ICONS[key as SavedInspiration['type']];
+                        return <TypeIcon className="h-3.5 w-3.5 inline" />;
+                      })()} {label}
                     </button>
                   ))}
                 </div>
@@ -524,7 +541,7 @@ const InspirationBoard: React.FC<InspirationBoardProps> = ({
               {aiResult && (
                 <div className="p-4 rounded-lg bg-gradient-to-br from-brand/5 to-brand/10 border border-brand/20">
                   <div className="flex items-start gap-2 mb-3">
-                    <span className="text-lg">💡</span>
+                    <Lightbulb className="h-4 w-4 text-gold flex-shrink-0" />
                     <p className="text-sm text-ink leading-relaxed whitespace-pre-wrap flex-1">{aiResult}</p>
                   </div>
                   <div className="flex gap-2">

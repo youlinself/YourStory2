@@ -1,5 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import type { AIGenerationPhase } from '../types/simulation';
+import {
+  Hourglass, Wrench, ScrollText, Ghost, Swords, Layers, Heart, Skull,
+  Puzzle, CircleCheck, CircleX, Lightbulb, type LucideIcon,
+} from 'lucide-react';
 
 interface AIGenerationLoadingProps {
   isVisible: boolean;
@@ -26,18 +30,18 @@ const PHASE_LABELS: Record<AIGenerationPhase, string> = {
   error: '生成失败',
 };
 
-const PHASE_ICONS: Record<AIGenerationPhase, string> = {
-  idle: '⏳',
-  preparing: '🔧',
-  generating_events: '📜',
-  generating_enemies: '👾',
-  generating_elites: '👹',
-  generating_shop_cards: '🃏',
-  generating_bond_cards: '💕',
-  generating_boss: '💀',
-  assembling: '🧩',
-  complete: '✅',
-  error: '❌',
+const PHASE_ICONS: Record<AIGenerationPhase, LucideIcon> = {
+  idle: Hourglass,
+  preparing: Wrench,
+  generating_events: ScrollText,
+  generating_enemies: Ghost,
+  generating_elites: Swords,
+  generating_shop_cards: Layers,
+  generating_bond_cards: Heart,
+  generating_boss: Skull,
+  assembling: Puzzle,
+  complete: CircleCheck,
+  error: CircleX,
 };
 
 export const AIGenerationLoading: React.FC<AIGenerationLoadingProps> = ({
@@ -78,133 +82,54 @@ export const AIGenerationLoading: React.FC<AIGenerationLoadingProps> = ({
   const elapsedSeconds = (elapsedTime / 1000).toFixed(1);
   const remainingSeconds = Math.max(0, ((estimatedDuration - elapsedTime) / 1000)).toFixed(0);
   const displayProgress = Math.min(100, Math.max(0, progress));
+  const PhaseIcon = PHASE_ICONS[phase];
 
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: 'rgba(0, 0, 0, 0.85)',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 9999,
-      backdropFilter: 'blur(8px)',
-    }}>
-      <div style={{
-        background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
-        borderRadius: '20px',
-        padding: '40px',
-        maxWidth: '400px',
-        width: '90%',
-        boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)',
-        border: '1px solid rgba(255, 255, 255, 0.1)',
-      }}>
-        <div style={{
-          fontSize: '48px',
-          textAlign: 'center',
-          marginBottom: '20px',
-          animation: 'pulse 2s ease-in-out infinite',
-        }}>
-          {PHASE_ICONS[phase]}
+    <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-black/85 backdrop-blur-md">
+      <div className="mx-4 w-[90%] max-w-[400px] rounded-2xl border border-border-subtle bg-bg-elevated p-10 shadow-lg">
+        <div className="mb-5 flex justify-center">
+          <PhaseIcon className="h-12 w-12 text-brand" strokeWidth={1.5} />
         </div>
 
-        <h2 style={{
-          color: '#fff',
-          textAlign: 'center',
-          fontSize: '20px',
-          margin: '0 0 10px 0',
-          fontWeight: 600,
-        }}>
+        <h2 className="mb-2.5 text-center text-xl font-semibold text-ink">
           AI 正在生成内容{dots}
         </h2>
 
-        <p style={{
-          color: 'rgba(255, 255, 255, 0.7)',
-          textAlign: 'center',
-          fontSize: '14px',
-          margin: '0 0 10px 0',
-        }}>
+        <p className="mb-2.5 text-center text-sm text-ink-secondary">
           {PHASE_LABELS[phase]}{dots}
         </p>
 
         {message && (
-          <p style={{
-            color: 'rgba(255, 255, 255, 0.5)',
-            textAlign: 'center',
-            fontSize: '12px',
-            margin: '0 0 15px 0',
-          }}>
+          <p className="mb-4 text-center text-xs text-ink-tertiary">
             {message}
           </p>
         )}
 
         {totalSteps > 0 && (
-          <p style={{
-            color: 'rgba(255, 255, 255, 0.4)',
-            textAlign: 'center',
-            fontSize: '11px',
-            margin: '0 0 15px 0',
-          }}>
+          <p className="mb-4 text-center text-[11px] text-ink-muted">
             步骤 {currentStep} / {totalSteps}
           </p>
         )}
 
-        <div style={{
-          width: '100%',
-          height: '8px',
-          backgroundColor: 'rgba(255, 255, 255, 0.1)',
-          borderRadius: '4px',
-          overflow: 'hidden',
-          marginBottom: '20px',
-        }}>
-          <div style={{
-            width: `${displayProgress}%`,
-            height: '100%',
-            background: 'linear-gradient(90deg, #667eea 0%, #764ba2 100%)',
-            borderRadius: '4px',
-            transition: 'width 0.3s ease',
-            boxShadow: '0 0 10px rgba(102, 126, 234, 0.5)',
-          }} />
+        <div className="mb-5 h-2 w-full overflow-hidden rounded-full bg-bg-subtle">
+          <div
+            className="h-full rounded-full bg-brand transition-[width] duration-300 ease-out"
+            style={{ width: `${displayProgress}%` }}
+          />
         </div>
 
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          color: 'rgba(255, 255, 255, 0.5)',
-          fontSize: '12px',
-        }}>
+        <div className="flex justify-between text-xs text-ink-muted">
           <span>已用时间: {elapsedSeconds}s</span>
           <span>预计剩余: {remainingSeconds}s</span>
         </div>
 
-        <div style={{
-          marginTop: '20px',
-          padding: '12px',
-          backgroundColor: 'rgba(102, 126, 234, 0.1)',
-          borderRadius: '8px',
-          border: '1px solid rgba(102, 126, 234, 0.2)',
-        }}>
-          <p style={{
-            color: 'rgba(255, 255, 255, 0.6)',
-            fontSize: '12px',
-            margin: 0,
-            textAlign: 'center',
-          }}>
-            💡 AI正在根据你的游戏表现智能调整难度
+        <div className="mt-5 rounded-lg border border-brand-light bg-brand-surface p-3">
+          <p className="m-0 flex items-center justify-center gap-1.5 text-center text-xs text-ink-tertiary">
+            <Lightbulb className="h-3.5 w-3.5 text-gold" />
+            AI正在根据你的游戏表现智能调整难度
           </p>
         </div>
       </div>
-
-      <style>{`
-        @keyframes pulse {
-          0%, 100% { transform: scale(1); opacity: 1; }
-          50% { transform: scale(1.1); opacity: 0.8; }
-        }
-      `}</style>
     </div>
   );
 };

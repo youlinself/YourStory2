@@ -5,7 +5,8 @@ import useAIStore from '../../stores/aiStore';
 import useThinkTankStore from '../../stores/thinkTankStore';
 import useWritingSkillStore from '../../stores/writingSkillStore';
 import { UnifiedLLMService } from '../../agent/llm/UnifiedLLMService';
-import { useToast } from '../../components';
+import { getCategoryColor } from '../../utils/palette';
+import { useToast, useConfirm } from '../../components';
 import {
   GENRE_LABELS,
   NOVEL_STATUS_LABELS,
@@ -57,6 +58,7 @@ const NovelEditor: React.FC = () => {
   const { novelId } = useParams<{ novelId: string }>();
   const navigate = useNavigate();
   const toast = useToast();
+  const confirmDialog = useConfirm();
 
   const {
     novels,
@@ -179,19 +181,7 @@ const NovelEditor: React.FC = () => {
     return chineseChars + englishWords;
   };
 
-  const TAG_COLORS = [
-    '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
-    '#ec4899', '#14b8a6', '#f97316', '#6366f1', '#84cc16',
-    '#06b6d4', '#84cc16', '#f43f5e', '#8b5cf6', '#0ea5e9',
-  ];
-
-  const getTagColor = (tagName: string): string => {
-    let hash = 0;
-    for (let i = 0; i < tagName.length; i++) {
-      hash = tagName.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    return TAG_COLORS[Math.abs(hash) % TAG_COLORS.length];
-  };
+  const getTagColor = (tagName: string): string => getCategoryColor(tagName);
 
   const updateWritingStats = useCallback(
     (_novelId: string, chapterId: string, newContent: string) => {
@@ -415,7 +405,7 @@ const NovelEditor: React.FC = () => {
   const handleDeleteChapter = async (chapterId: string) => {
     if (!novelId) return;
 
-    if (!confirm('确定要删除这个章节吗？此操作不可恢复。')) return;
+    if (!(await confirmDialog({ title: '删除章节', description: '此操作不可恢复。', confirmText: '删除', confirmVariant: 'danger' }))) return;
 
     try {
       await deleteChapter(novelId, chapterId);
@@ -783,7 +773,7 @@ const NovelEditor: React.FC = () => {
                     >
                       {tag}
                       <button
-                        className="hover:bg-white/20 rounded"
+                        className="hover:bg-bg-elevated/20 rounded"
                         onClick={(e) => {
                           e.stopPropagation();
                           handleChapterTagRemove(currentChapter.id, tag);

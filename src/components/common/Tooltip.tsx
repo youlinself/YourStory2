@@ -157,7 +157,7 @@ const Tooltip: React.FC<TooltipProps> = ({ content, children, position = 'top' }
       {show && createPortal(
         <div
           ref={tooltipRef}
-          className="fixed rounded-lg bg-white/90 backdrop-blur-sm text-ink text-xs shadow-lg border border-border-subtle simulation-no-copy"
+          className="fixed rounded-lg bg-bg-elevated/90 backdrop-blur-sm text-ink text-xs shadow-lg border border-border-subtle simulation-no-copy"
           style={{ left: coords.x, top: coords.y, zIndex: 99999 }}
         >
           {content}

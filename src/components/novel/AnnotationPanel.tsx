@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import type { Annotation } from '../../types/novel';
+import { DATA_COLORS } from '../../utils/palette';
 
 interface AnnotationPanelProps {
   annotations: Annotation[];
@@ -16,9 +17,9 @@ const ANNOTATION_TYPE_LABELS: Record<Annotation['type'], string> = {
 };
 
 const ANNOTATION_TYPE_COLORS: Record<Annotation['type'], string> = {
-  comment: '#3b82f6',
-  todo: '#f59e0b',
-  idea: '#10b981',
+  comment: DATA_COLORS.blue,
+  todo: DATA_COLORS.amber,
+  idea: DATA_COLORS.emerald,
 };
 
 const AnnotationPanel: React.FC<AnnotationPanelProps> = ({

@@ -1,4 +1,5 @@
 import React from 'react';
+import { Crown } from 'lucide-react';
 import useAIWorkshopStore from '../../stores/aiWorkshopStore';
 import useThinkTankStore from '../../stores/thinkTankStore';
 
@@ -17,13 +18,13 @@ const DashboardHeader: React.FC = () => {
     : 100;
 
   return (
-    <div className="bg-white border-b border-border-subtle shadow-sm">
+    <div className="bg-bg-elevated border-b border-border-subtle shadow-sm">
       <div className="px-4 lg:px-6 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand to-brand-hover flex items-center justify-center shadow-md shadow-brand/20">
-                <span className="text-lg">👔</span>
+                <Crown className="h-5 w-5 text-white" />
               </div>
               <div>
                 <h1 className="text-lg font-bold text-ink tracking-wide">创意指挥中心</h1>
@@ -39,7 +40,7 @@ const DashboardHeader: React.FC = () => {
 
           <div className="flex items-center gap-3">
             <div className="hidden sm:grid grid-cols-4 gap-3">
-              <div className="px-3 py-2 rounded-lg bg-white border border-border-subtle min-w-[80px] shadow-sm">
+              <div className="px-3 py-2 rounded-lg bg-bg-subtle border border-border-subtle min-w-[80px] shadow-sm">
                 <div className="text-lg font-bold text-ink">{enabledMembers.length}</div>
                 <div className="text-[10px] text-ink-muted">团队人数</div>
               </div>
@@ -51,7 +52,7 @@ const DashboardHeader: React.FC = () => {
                 <div className="text-lg font-bold text-gold">{successRate}%</div>
                 <div className="text-[10px] text-ink-muted">成功率</div>
               </div>
-              <div className="px-3 py-2 rounded-lg bg-white border border-border-subtle min-w-[80px] shadow-sm">
+              <div className="px-3 py-2 rounded-lg bg-bg-subtle border border-border-subtle min-w-[80px] shadow-sm">
                 <div className="flex items-center gap-1.5">
                   {isRunning ? (
                     <>

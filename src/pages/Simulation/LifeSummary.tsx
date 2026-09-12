@@ -1,4 +1,8 @@
 import React, { useMemo } from 'react';
+import {
+  Crown, Star, Sparkles, BookOpen, Sprout, Cake, Dumbbell, TrendingUp, Target,
+  Coins, Layers, Landmark, Shuffle, Link2, Gift, Flower2, RotateCcw, type LucideIcon,
+} from 'lucide-react';
 import useSimulationStore from '../../stores/simulationStore';
 import useBondStore from '../../stores/bondStore';
 import { BOND_CARD_MAP, BOND_GROUPS } from '../../data/bondCards';
@@ -13,11 +17,11 @@ import {
 import type { PlayerAttributes, LifeCard, LifeRelic } from '../../types/simulation';
 
 const RARITY_COLORS: Record<string, string> = {
-  common: 'text-gray-500',
-  uncommon: 'text-green-600',
-  rare: 'text-blue-600',
-  boss: 'text-purple-600',
-  legendary: 'text-amber-500',
+  common: 'text-ink-muted',
+  uncommon: 'text-success',
+  rare: 'text-info',
+  boss: 'text-power',
+  legendary: 'text-warning',
 };
 
 interface LifeSummaryProps {
@@ -142,22 +146,22 @@ const LifeSummary: React.FC<LifeSummaryProps> = ({ onRestart }) => {
     }
 
     let title = '平凡一生';
-    let titleIcon = '🌱';
+    let titleIcon: LucideIcon = Sprout;
     if (score >= 100) {
       title = '传奇人生';
-      titleIcon = '👑';
+      titleIcon = Crown;
     } else if (score >= 80) {
       title = '辉煌人生';
-      titleIcon = '⭐';
+      titleIcon = Star;
     } else if (score >= 60) {
       title = '精彩人生';
-      titleIcon = '🌟';
+      titleIcon = Star;
     } else if (score >= 40) {
       title = '充实人生';
-      titleIcon = '✨';
+      titleIcon = Sparkles;
     } else if (score >= 20) {
       title = '普通人生';
-      titleIcon = '📖';
+      titleIcon = BookOpen;
     }
 
     return { score, title, titleIcon, evaluations };
@@ -187,12 +191,14 @@ const LifeSummary: React.FC<LifeSummaryProps> = ({ onRestart }) => {
     return events.sort((a, b) => a.year - b.year);
   }, [choiceHistory, lifeRecords, birthYear]);
 
+  const LifeTitleIcon = lifeEvaluation.titleIcon;
+
   return (
     <div className="min-h-full bg-gradient-to-b from-bg-base to-bg-elevated">
       <div className="max-w-4xl mx-auto p-6">
-        <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
-          <div className="bg-gradient-to-r from-brand to-purple-600 px-8 py-10 text-center text-white">
-            <div className="text-5xl mb-3">{lifeEvaluation.titleIcon}</div>
+        <div className="bg-bg-elevated rounded-2xl shadow-lg overflow-hidden">
+          <div className="bg-gradient-to-r from-brand to-brand-hover px-8 py-10 text-center text-white">
+            <div className="mb-3 flex justify-center"><LifeTitleIcon className="h-14 w-14" strokeWidth={1.5} /></div>
             <h1 className="text-3xl font-bold mb-2">{lifeEvaluation.title}</h1>
             <p className="text-white/80 text-lg">
               {birthYear}年 - {deathYear}年
@@ -203,24 +209,24 @@ const LifeSummary: React.FC<LifeSummaryProps> = ({ onRestart }) => {
           </div>
 
           <div className="p-6 space-y-6">
-            <Section title="📊 人生数据" icon="📊">
+            <Section title="人生数据">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <StatCard label="最终年龄" value={`${age}岁`} icon="🎂" />
-                <StatCard label="总属性值" value={String((Object.values(attributes) as number[]).reduce((a: number, b: number) => a + b, 0))} icon="💪" />
-                <StatCard label="属性成长" value={`+${stats.totalAttributeGain}`} icon="📈" />
-                <StatCard label="选择成功率" value={`${stats.successRate}%`} icon="🎯" />
-                <StatCard label="获得金币" value={String(gold)} icon="💰" />
-                <StatCard label="收集卡牌" value={String(deck.length)} icon="🃏" />
-                <StatCard label="收集遗物" value={String(relics.length)} icon="🏺" />
-                <StatCard label="人生选择" value={String(stats.totalChoices)} icon="🔀" />
-                <StatCard label="收集卡牌" value={String(bondStats.unique)} icon="🎴" />
-                <StatCard label="激活羁绊" value={String(bondActiveGroups.length)} icon="🔗" />
-                <StatCard label="羁绊等级" value={String(Object.values(bondActiveTiers).reduce((a: number, b: number) => a + b, 0))} icon="⭐" />
-                <StatCard label="领取奖励" value={String(claimedRewards.length)} icon="🎁" />
+                <StatCard label="最终年龄" value={`${age}岁`} icon={Cake} />
+                <StatCard label="总属性值" value={String((Object.values(attributes) as number[]).reduce((a: number, b: number) => a + b, 0))} icon={Dumbbell} />
+                <StatCard label="属性成长" value={`+${stats.totalAttributeGain}`} icon={TrendingUp} />
+                <StatCard label="选择成功率" value={`${stats.successRate}%`} icon={Target} />
+                <StatCard label="获得金币" value={String(gold)} icon={Coins} />
+                <StatCard label="收集卡牌" value={String(deck.length)} icon={Layers} />
+                <StatCard label="收集遗物" value={String(relics.length)} icon={Landmark} />
+                <StatCard label="人生选择" value={String(stats.totalChoices)} icon={Shuffle} />
+                <StatCard label="收集卡牌" value={String(bondStats.unique)} icon={Layers} />
+                <StatCard label="激活羁绊" value={String(bondActiveGroups.length)} icon={Link2} />
+                <StatCard label="羁绊等级" value={String(Object.values(bondActiveTiers).reduce((a: number, b: number) => a + b, 0))} icon={Star} />
+                <StatCard label="领取奖励" value={String(claimedRewards.length)} icon={Gift} />
               </div>
             </Section>
 
-            <Section title="🌟 最终属性" icon="🌟">
+            <Section title="最终属性">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {(Object.keys(attributes) as (keyof PlayerAttributes)[]).map((attr) => {
                   const value = attributes[attr];
@@ -235,13 +241,13 @@ const LifeSummary: React.FC<LifeSummaryProps> = ({ onRestart }) => {
                           <span className="text-sm font-bold" style={{ color: ATTRIBUTE_COLORS[attr] }}>
                             {value}
                             {growth !== 0 && (
-                              <span className={`ml-1 text-xs ${growth > 0 ? 'text-green-500' : 'text-red-500'}`}>
+                              <span className={`ml-1 text-xs ${growth > 0 ? 'text-success' : 'text-danger'}`}>
                                 ({growth > 0 ? '+' : ''}{growth})
                               </span>
                             )}
                           </span>
                         </div>
-                        <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                        <div className="h-2 bg-border rounded-full overflow-hidden">
                           <div
                             className="h-full rounded-full transition-all"
                             style={{
@@ -258,23 +264,23 @@ const LifeSummary: React.FC<LifeSummaryProps> = ({ onRestart }) => {
             </Section>
 
             {cultivation && (
-              <Section title="☯️ 修仙境界" icon="☯️">
-                <div className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg p-4 border border-purple-200">
+              <Section title="修仙境界">
+                <div className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg p-4 border border-power/30">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-lg font-bold text-purple-700">
+                      <p className="text-lg font-bold text-power">
                         {CULTIVATION_REALM_NAMES[cultivation.realm] || cultivation.realm}
                       </p>
-                      <p className="text-sm text-purple-600 mt-1">
+                      <p className="text-sm text-power mt-1">
                         寿元延长至 {cultivation.maxLifespan} 年
                       </p>
                     </div>
-                    <div className="text-4xl">🧘</div>
+                    <Flower2 className="h-10 w-10 text-power" strokeWidth={1.5} />
                   </div>
                   {cultivation.realmBonus && Object.keys(cultivation.realmBonus).length > 0 && (
                     <div className="mt-3 flex flex-wrap gap-2">
                       {Object.entries(cultivation.realmBonus).map(([attr, value]) => (
-                        <span key={attr} className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full">
+                        <span key={attr} className="px-2 py-1 bg-power-light text-power text-xs rounded-full">
                           {ATTRIBUTE_NAMES[attr as keyof PlayerAttributes] || attr} +{String(value)}
                         </span>
                       ))}
@@ -285,12 +291,12 @@ const LifeSummary: React.FC<LifeSummaryProps> = ({ onRestart }) => {
             )}
 
             {lifeEvaluation.evaluations.length > 0 && (
-              <Section title="🏆 人生成就" icon="🏆">
+              <Section title="人生成就">
                 <div className="flex flex-wrap gap-2">
                   {lifeEvaluation.evaluations.map((evaluation, index) => (
                     <span
                       key={index}
-                      className="px-3 py-1.5 bg-gradient-to-r from-amber-100 to-yellow-100 text-amber-800 text-sm font-medium rounded-full border border-amber-200"
+                      className="px-3 py-1.5 bg-gradient-to-r from-amber-100 to-yellow-100 text-warning text-sm font-medium rounded-full border border-warning/30"
                     >
                       {evaluation}
                     </span>
@@ -300,7 +306,7 @@ const LifeSummary: React.FC<LifeSummaryProps> = ({ onRestart }) => {
             )}
 
             {(deck as any[]).length > 0 && (
-              <Section title="🃏 卡组概览" icon="🃏">
+              <Section title="卡组概览">
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
                   {(deck as any[]).slice(0, 12).map((card: any) => (
                     <Card key={card.id} card={card as LifeCard} />
@@ -315,27 +321,27 @@ const LifeSummary: React.FC<LifeSummaryProps> = ({ onRestart }) => {
             )}
 
             {bondCollection.length > 0 && (
-              <Section title="🔗 羁绊回顾" icon="🔗">
+              <Section title="羁绊回顾">
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     <div className="text-center p-3 bg-bg-elevated rounded-lg">
-                      <div className="text-2xl mb-1">🎴</div>
+                      <Layers className="h-6 w-6 mx-auto mb-1 text-ink-secondary" strokeWidth={1.75} />
                       <div className="text-lg font-bold text-ink">{bondStats.unique}</div>
                       <div className="text-xs text-ink-muted">收集卡牌</div>
                     </div>
                     <div className="text-center p-3 bg-bg-elevated rounded-lg">
-                      <div className="text-2xl mb-1">🔗</div>
+                      <Link2 className="h-6 w-6 mx-auto mb-1 text-brand" strokeWidth={1.75} />
                       <div className="text-lg font-bold text-brand">{bondActiveGroups.length}</div>
                       <div className="text-xs text-ink-muted">激活羁绊</div>
                     </div>
                     <div className="text-center p-3 bg-bg-elevated rounded-lg">
                       <div className="text-2xl mb-1">⭐</div>
-                      <div className="text-lg font-bold text-amber-500">{Object.values(bondActiveTiers).reduce((a: number, b: number) => a + b, 0)}</div>
+                      <div className="text-lg font-bold text-warning">{Object.values(bondActiveTiers).reduce((a: number, b: number) => a + b, 0)}</div>
                       <div className="text-xs text-ink-muted">羁绊等级</div>
                     </div>
                     <div className="text-center p-3 bg-bg-elevated rounded-lg">
-                      <div className="text-2xl mb-1">🎁</div>
-                      <div className="text-lg font-bold text-green-500">{claimedRewards.length}</div>
+                      <Gift className="h-6 w-6 mx-auto mb-1 text-success" strokeWidth={1.75} />
+                      <div className="text-lg font-bold text-success">{claimedRewards.length}</div>
                       <div className="text-xs text-ink-muted">领取奖励</div>
                     </div>
                   </div>
@@ -351,7 +357,7 @@ const LifeSummary: React.FC<LifeSummaryProps> = ({ onRestart }) => {
                           return (
                             <span
                               key={groupId}
-                              className="px-3 py-1.5 bg-gradient-to-r from-purple-100 to-indigo-100 text-purple-800 text-sm font-medium rounded-full border border-purple-200"
+                              className="px-3 py-1.5 bg-gradient-to-r from-purple-100 to-indigo-100 text-power text-sm font-medium rounded-full border border-power/30"
                             >
                               {group.icon} {group.name} {tier > 0 ? `T${tier}` : ''}
                             </span>
@@ -395,7 +401,7 @@ const LifeSummary: React.FC<LifeSummaryProps> = ({ onRestart }) => {
             )}
 
             {(relics as any[]).length > 0 && (
-              <Section title="🏺 遗物收藏" icon="🏺">
+              <Section title="遗物收藏">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                   {(relics as any[]).map((relic: any) => (
                     <Relic key={relic.id} relic={relic as LifeRelic} />
@@ -405,7 +411,7 @@ const LifeSummary: React.FC<LifeSummaryProps> = ({ onRestart }) => {
             )}
 
             {timelineEvents.length > 0 && (
-              <Section title="📜 人生轨迹" icon="📜">
+              <Section title="人生轨迹">
                 <div className="relative">
                   <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-border-subtle" />
                   <div className="space-y-3">
@@ -437,7 +443,7 @@ const LifeSummary: React.FC<LifeSummaryProps> = ({ onRestart }) => {
                 onClick={onRestart}
                 className="w-full py-3 bg-gradient-to-r from-brand to-purple-600 text-white rounded-xl font-medium hover:shadow-lg transition-all flex items-center justify-center gap-2"
               >
-                <span>🔄</span>
+                <RotateCcw className="h-4 w-4" />
                 <span>开启新的人生</span>
               </button>
             </div>
@@ -452,16 +458,16 @@ const LifeSummary: React.FC<LifeSummaryProps> = ({ onRestart }) => {
   );
 };
 
-const Section: React.FC<{ title: string; icon: string; children: React.ReactNode }> = ({ title, children }) => (
+const Section: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
   <div>
     <h3 className="text-lg font-semibold text-ink mb-3">{title}</h3>
     {children}
   </div>
 );
 
-const StatCard: React.FC<{ label: string; value: string; icon: string }> = ({ label, value, icon }) => (
+const StatCard: React.FC<{ label: string; value: string; icon: LucideIcon }> = ({ label, value, icon: Icon }) => (
   <div className="bg-bg-elevated rounded-lg p-3 text-center">
-    <div className="text-2xl mb-1">{icon}</div>
+    <Icon className="h-6 w-6 mx-auto mb-1 text-brand" strokeWidth={1.75} />
     <div className="text-lg font-bold text-ink">{value}</div>
     <div className="text-xs text-ink-muted">{label}</div>
   </div>
@@ -473,7 +479,7 @@ const Card: React.FC<{ card: LifeCard }> = ({ card }) => (
       <span className="text-lg">{card.icon}</span>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-ink truncate">{card.name}</p>
-        <p className={`text-xs ${RARITY_COLORS[card.rarity] || 'text-gray-500'}`}>
+        <p className={`text-xs ${RARITY_COLORS[card.rarity] || 'text-ink-muted'}`}>
           {RARITY_NAMES[card.rarity] || card.rarity}
         </p>
       </div>
@@ -486,7 +492,7 @@ const Relic: React.FC<{ relic: LifeRelic }> = ({ relic }) => (
     <span className="text-2xl">{relic.icon}</span>
     <div className="flex-1 min-w-0">
       <p className="text-sm font-medium text-ink truncate">{relic.name}</p>
-      <p className={`text-xs ${RARITY_COLORS[relic.rarity] || 'text-gray-500'}`}>
+      <p className={`text-xs ${RARITY_COLORS[relic.rarity] || 'text-ink-muted'}`}>
         {RARITY_NAMES[relic.rarity] || relic.rarity}
       </p>
     </div>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { ClipboardList, KeyRound } from 'lucide-react';
 import { createSecretaryAssistant, SecretaryMessage, SecretaryOption, SecretaryContext } from '../../services/secretaryAssistantService';
 import useThinkTankStore from '../../stores/thinkTankStore';
 import useAIStore from '../../stores/aiStore';
@@ -95,7 +96,7 @@ const SecretaryAssistant: React.FC<SecretaryAssistantProps> = ({ onClose, onActi
       <div className="flex flex-col h-full bg-bg-base rounded-xl border border-border-subtle shadow-lg overflow-hidden">
         <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-brand/10 to-brand/5 border-b border-border-subtle">
           <div className="flex items-center gap-2">
-            <span className="text-xl">📋</span>
+            <ClipboardList className="h-5 w-5 text-brand" />
             <div>
               <h3 className="text-sm font-semibold text-ink">秘书助手</h3>
               <p className="text-[10px] text-ink-faint">需要配置AI</p>
@@ -115,7 +116,7 @@ const SecretaryAssistant: React.FC<SecretaryAssistantProps> = ({ onClose, onActi
         <div className="flex-1 flex items-center justify-center p-6">
           <div className="text-center space-y-4">
             <div className="w-16 h-16 rounded-full bg-brand/10 flex items-center justify-center mx-auto">
-              <span className="text-3xl">🔑</span>
+              <KeyRound className="h-7 w-7 text-brand" />
             </div>
             <div>
               <h4 className="text-base font-semibold text-ink mb-2">需要配置AI</h4>
@@ -139,7 +140,7 @@ const SecretaryAssistant: React.FC<SecretaryAssistantProps> = ({ onClose, onActi
     <div className="flex flex-col h-full bg-bg-base rounded-xl border border-border-subtle shadow-lg overflow-hidden">
       <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-brand/10 to-brand/5 border-b border-border-subtle">
         <div className="flex items-center gap-2">
-          <span className="text-xl">📋</span>
+          <ClipboardList className="h-5 w-5 text-brand" />
           <div>
             <h3 className="text-sm font-semibold text-ink">秘书助手</h3>
             <p className="text-[10px] text-ink-faint">
@@ -165,7 +166,7 @@ const SecretaryAssistant: React.FC<SecretaryAssistantProps> = ({ onClose, onActi
             <div className={`max-w-[85%] ${message.role === 'user' ? 'order-1' : 'order-2'}`}>
               {message.role === 'assistant' && (
                 <div className="flex items-center gap-1.5 mb-1">
-                  <span className="text-xs">📋</span>
+                  <ClipboardList className="h-3 w-3 text-brand" />
                   <span className="text-[10px] text-ink-faint">秘书助手</span>
                 </div>
               )}
@@ -216,7 +217,7 @@ const SecretaryAssistant: React.FC<SecretaryAssistantProps> = ({ onClose, onActi
           <div className="flex justify-start">
             <div className="max-w-[85%]">
               <div className="flex items-center gap-1.5 mb-1">
-                <span className="text-xs">📋</span>
+                <ClipboardList className="h-3 w-3 text-brand" />
                 <span className="text-[10px] text-ink-faint">秘书助手</span>
               </div>
               <div className="rounded-2xl rounded-bl-md px-4 py-3 bg-bg-subtle">

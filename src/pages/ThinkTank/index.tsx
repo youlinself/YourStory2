@@ -1,5 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import {
+  Landmark, BookOpen, Swords, Shield, Gem, Crown, Skull, Baby, GraduationCap,
+  Rocket, Briefcase, Flower2, Glasses, Zap, Dumbbell, HeartPulse, Brain,
+  MessageSquare, Coins, Users, Star, Sparkle, Search, LayoutGrid,
+  type LucideIcon,
+} from 'lucide-react';
+import {
   COMMON_ATTACK_CARDS,
   COMMON_SKILL_CARDS,
   RARE_CARDS,
@@ -63,23 +69,23 @@ interface StyleSet {
 }
 
 const RARITY_COLORS: Record<string, StyleSet> = {
-  common: { bg: 'bg-gray-100', text: 'text-gray-600', border: 'border-gray-300' },
-  uncommon: { bg: 'bg-green-100', text: 'text-green-700', border: 'border-green-300' },
-  rare: { bg: 'bg-blue-100', text: 'text-blue-700', border: 'border-blue-300' },
-  legendary: { bg: 'bg-amber-100', text: 'text-amber-700', border: 'border-amber-300' },
+  common: { bg: 'bg-bg-subtle', text: 'text-ink-secondary', border: 'border-border' },
+  uncommon: { bg: 'bg-success-bg', text: 'text-success', border: 'border-success/30' },
+  rare: { bg: 'bg-info-light', text: 'text-info', border: 'border-info/30' },
+  legendary: { bg: 'bg-warning-bg', text: 'text-warning', border: 'border-warning/30' },
 };
 
 const CARD_TYPE_COLORS: Record<string, StyleSet> = {
-  attack: { bg: 'bg-red-50', text: 'text-red-600', border: 'border-red-200' },
-  skill: { bg: 'bg-blue-50', text: 'text-blue-600', border: 'border-blue-200' },
-  power: { bg: 'bg-purple-50', text: 'text-purple-600', border: 'border-purple-200' },
-  curse: { bg: 'bg-gray-50', text: 'text-gray-600', border: 'border-gray-300' },
+  attack: { bg: 'bg-danger-bg', text: 'text-danger', border: 'border-danger/30' },
+  skill: { bg: 'bg-info-light', text: 'text-info', border: 'border-info/30' },
+  power: { bg: 'bg-power-light', text: 'text-power', border: 'border-power/30' },
+  curse: { bg: 'bg-bg-subtle', text: 'text-ink-secondary', border: 'border-border' },
 };
 
 interface CardCategory {
   id: string;
   name: string;
-  icon: string;
+  icon: LucideIcon;
   description: string;
   cards: LifeCard[];
 }
@@ -156,8 +162,8 @@ const CardDetailModal: React.FC<{ card: LifeCard; onClose: () => void }> = ({ ca
 
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div
-        className="bg-white rounded-2xl p-6 max-w-lg w-full shadow-2xl border border-border-subtle"
+      <div role="dialog" aria-modal="true"
+        className="bg-bg-elevated rounded-2xl p-6 max-w-lg w-full shadow-2xl border border-border-subtle"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between mb-4">
@@ -181,17 +187,17 @@ const CardDetailModal: React.FC<{ card: LifeCard; onClose: () => void }> = ({ ca
         <p className="text-sm text-ink-muted mb-4 leading-relaxed">{card.description}</p>
 
         <div className="grid grid-cols-3 gap-3 mb-4">
-          <div className="bg-gray-50 rounded-lg p-3 text-center">
+          <div className="bg-bg-subtle rounded-lg p-3 text-center">
             <div className="text-xs text-ink-muted mb-1">费用</div>
             <div className="text-lg font-bold text-brand">{card.cost} ⚡</div>
           </div>
-          <div className="bg-gray-50 rounded-lg p-3 text-center">
+          <div className="bg-bg-subtle rounded-lg p-3 text-center">
             <div className="text-xs text-ink-muted mb-1">目标</div>
             <div className="text-sm font-medium text-ink">
               {card.target === 'enemy' ? '敌人' : card.target === 'self' ? '自己' : card.target === 'all' ? '全体' : '无'}
             </div>
           </div>
-          <div className="bg-gray-50 rounded-lg p-3 text-center">
+          <div className="bg-bg-subtle rounded-lg p-3 text-center">
             <div className="text-xs text-ink-muted mb-1">年龄段</div>
             <div className="text-sm font-medium text-ink">{ageRestriction}</div>
           </div>
@@ -217,7 +223,7 @@ const CardDetailModal: React.FC<{ card: LifeCard; onClose: () => void }> = ({ ca
             <h4 className="text-sm font-semibold text-ink mb-2">标签</h4>
             <div className="flex flex-wrap gap-2">
               {card.tags.map((tag) => (
-                <span key={tag} className="px-2 py-1 rounded-full bg-amber-100 text-amber-700 text-xs">
+                <span key={tag} className="px-2 py-1 rounded-full bg-warning-bg text-warning text-xs">
                   {tag}
                 </span>
               ))}
@@ -245,7 +251,7 @@ const CardCard: React.FC<{ card: LifeCard; onClick: () => void }> = ({ card, onC
   return (
     <button
       onClick={onClick}
-      className="group relative rounded-xl p-4 text-left transition-all hover:scale-[1.02] hover:shadow-lg border bg-white"
+      className="group relative rounded-xl p-4 text-left transition-all hover:scale-[1.02] hover:shadow-lg border bg-bg-elevated"
       style={{ borderColor: 'var(--color-border-subtle)' }}
     >
       <div className="flex items-center justify-between mb-2">
@@ -277,28 +283,28 @@ const CardsLibrary: React.FC<{ onSwitchToBattle: () => void }> = ({ onSwitchToBa
   const [selectedCard, setSelectedCard] = useState<LifeCard | null>(null);
 
   const categories: CardCategory[] = useMemo(() => [
-    { id: 'all', name: '全部卡牌', icon: '📚', description: '查看所有已设计的卡牌', cards: [] },
-    { id: 'starter', name: '初始卡组', icon: '🎴', description: '游戏开始时获得的卡牌', cards: STARTER_DECK },
-    { id: 'common_attack', name: '普通攻击', icon: '⚔️', description: '基础攻击卡牌', cards: COMMON_ATTACK_CARDS },
-    { id: 'common_skill', name: '普通技能', icon: '🛡️', description: '基础技能卡牌', cards: COMMON_SKILL_CARDS },
-    { id: 'rare', name: '稀有卡牌', icon: '💎', description: '稀有强力卡牌', cards: RARE_CARDS },
-    { id: 'legendary', name: '传说卡牌', icon: '👑', description: '传说级卡牌', cards: LEGENDARY_CARDS },
-    { id: 'curse', name: '诅咒卡牌', icon: '💀', description: '负面效果卡牌', cards: CURSE_CARDS },
-    { id: 'childhood', name: '童年专属', icon: '🧒', description: '童年阶段专属卡牌', cards: CHILDHOOD_CARDS },
-    { id: 'adolescent', name: '少年专属', icon: '📚', description: '少年阶段专属卡牌', cards: ADOLESCENT_CARDS },
-    { id: 'youth', name: '青年专属', icon: '🚀', description: '青年阶段专属卡牌', cards: YOUTH_CARDS },
-    { id: 'prime', name: '壮年专属', icon: '💼', description: '壮年阶段专属卡牌', cards: PRIME_CARDS },
-    { id: 'middle_age', name: '中年专属', icon: '🧘', description: '中年阶段专属卡牌', cards: MIDDLE_AGE_CARDS },
-    { id: 'elderly', name: '老年专属', icon: '👴', description: '老年阶段专属卡牌', cards: ELDERLY_CARDS },
-    { id: 'energy', name: '精力卡牌', icon: '⚡', description: '精力属性阶层卡牌', cards: ENERGY_TIER_CARDS },
-    { id: 'physique', name: '体魄卡牌', icon: '💪', description: '体魄属性阶层卡牌', cards: PHYSIQUE_TIER_CARDS },
-    { id: 'health', name: '健康卡牌', icon: '❤️', description: '健康属性阶层卡牌', cards: HEALTH_TIER_CARDS },
-    { id: 'iq', name: '智商卡牌', icon: '🧠', description: '智商属性阶层卡牌', cards: IQ_TIER_CARDS },
-    { id: 'eq', name: '情商卡牌', icon: '💬', description: '情商属性阶层卡牌', cards: EQ_TIER_CARDS },
-    { id: 'wealth', name: '财富卡牌', icon: '💰', description: '财富属性阶层卡牌', cards: WEALTH_TIER_CARDS },
-    { id: 'network', name: '人脉卡牌', icon: '🤝', description: '人脉属性阶层卡牌', cards: NETWORK_TIER_CARDS },
-    { id: 'fame', name: '名望卡牌', icon: '⭐', description: '名望属性阶层卡牌', cards: FAME_TIER_CARDS },
-    { id: 'cultivation', name: '修仙卡牌', icon: '☯️', description: '修仙模式专属卡牌', cards: [...CULTIVATION_CARDS, ...CULTIVATION_CARDS_HIGH] },
+    { id: 'all', name: '全部卡牌', icon: LayoutGrid, description: '查看所有已设计的卡牌', cards: [] },
+    { id: 'starter', name: '初始卡组', icon: BookOpen, description: '游戏开始时获得的卡牌', cards: STARTER_DECK },
+    { id: 'common_attack', name: '普通攻击', icon: Swords, description: '基础攻击卡牌', cards: COMMON_ATTACK_CARDS },
+    { id: 'common_skill', name: '普通技能', icon: Shield, description: '基础技能卡牌', cards: COMMON_SKILL_CARDS },
+    { id: 'rare', name: '稀有卡牌', icon: Gem, description: '稀有强力卡牌', cards: RARE_CARDS },
+    { id: 'legendary', name: '传说卡牌', icon: Crown, description: '传说级卡牌', cards: LEGENDARY_CARDS },
+    { id: 'curse', name: '诅咒卡牌', icon: Skull, description: '负面效果卡牌', cards: CURSE_CARDS },
+    { id: 'childhood', name: '童年专属', icon: Baby, description: '童年阶段专属卡牌', cards: CHILDHOOD_CARDS },
+    { id: 'adolescent', name: '少年专属', icon: GraduationCap, description: '少年阶段专属卡牌', cards: ADOLESCENT_CARDS },
+    { id: 'youth', name: '青年专属', icon: Rocket, description: '青年阶段专属卡牌', cards: YOUTH_CARDS },
+    { id: 'prime', name: '壮年专属', icon: Briefcase, description: '壮年阶段专属卡牌', cards: PRIME_CARDS },
+    { id: 'middle_age', name: '中年专属', icon: Flower2, description: '中年阶段专属卡牌', cards: MIDDLE_AGE_CARDS },
+    { id: 'elderly', name: '老年专属', icon: Glasses, description: '老年阶段专属卡牌', cards: ELDERLY_CARDS },
+    { id: 'energy', name: '精力卡牌', icon: Zap, description: '精力属性阶层卡牌', cards: ENERGY_TIER_CARDS },
+    { id: 'physique', name: '体魄卡牌', icon: Dumbbell, description: '体魄属性阶层卡牌', cards: PHYSIQUE_TIER_CARDS },
+    { id: 'health', name: '健康卡牌', icon: HeartPulse, description: '健康属性阶层卡牌', cards: HEALTH_TIER_CARDS },
+    { id: 'iq', name: '智商卡牌', icon: Brain, description: '智商属性阶层卡牌', cards: IQ_TIER_CARDS },
+    { id: 'eq', name: '情商卡牌', icon: MessageSquare, description: '情商属性阶层卡牌', cards: EQ_TIER_CARDS },
+    { id: 'wealth', name: '财富卡牌', icon: Coins, description: '财富属性阶层卡牌', cards: WEALTH_TIER_CARDS },
+    { id: 'network', name: '人脉卡牌', icon: Users, description: '人脉属性阶层卡牌', cards: NETWORK_TIER_CARDS },
+    { id: 'fame', name: '名望卡牌', icon: Star, description: '名望属性阶层卡牌', cards: FAME_TIER_CARDS },
+    { id: 'cultivation', name: '修仙卡牌', icon: Sparkle, description: '修仙模式专属卡牌', cards: [...CULTIVATION_CARDS, ...CULTIVATION_CARDS_HIGH] },
   ], []);
 
   const filteredCards = useMemo(() => {
@@ -358,10 +364,10 @@ const CardsLibrary: React.FC<{ onSwitchToBattle: () => void }> = ({ onSwitchToBa
 
   return (
     <div className="flex flex-col h-full">
-      <div className="p-6 border-b border-border-subtle bg-white">
+      <div className="p-6 border-b border-border-subtle bg-bg-elevated">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-3">
-            <span className="text-3xl">🏛️</span>
+            <Landmark className="h-8 w-8 text-brand" strokeWidth={1.5} />
             <div>
               <h1 className="text-2xl font-bold text-ink">智库</h1>
               <p className="text-sm text-ink-muted">探索所有已设计的卡牌及其使用效果</p>
@@ -372,13 +378,13 @@ const CardsLibrary: React.FC<{ onSwitchToBattle: () => void }> = ({ onSwitchToBa
           <button
             className="px-4 py-2 rounded-lg text-sm font-medium bg-brand text-white transition-all"
           >
-            📚 卡牌库
+            卡牌库
           </button>
           <button
             onClick={onSwitchToBattle}
-            className="px-4 py-2 rounded-lg text-sm font-medium text-ink-muted hover:bg-gray-100 transition-all"
+            className="px-4 py-2 rounded-lg text-sm font-medium text-ink-muted hover:bg-bg-subtle transition-all"
           >
-            ⚔️ 模拟战斗
+            模拟战斗
           </button>
         </div>
         <div className="mt-4 flex items-center gap-4 text-sm">
@@ -386,15 +392,15 @@ const CardsLibrary: React.FC<{ onSwitchToBattle: () => void }> = ({ onSwitchToBa
             <span className="text-brand font-bold">{totalCards}</span>
             <span className="text-ink-muted">张卡牌</span>
           </div>
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-purple-50">
-            <span className="text-purple-600 font-bold">{categories.length - 1}</span>
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-power-light">
+            <span className="text-power font-bold">{categories.length - 1}</span>
             <span className="text-ink-muted">个分类</span>
           </div>
         </div>
       </div>
 
       <div className="flex flex-1 min-h-0">
-        <div className="w-64 border-r border-border-subtle bg-gray-50 overflow-y-auto p-4">
+        <div className="w-64 border-r border-border-subtle bg-bg-subtle overflow-y-auto p-4">
           <h3 className="text-sm font-semibold text-ink mb-3">分类浏览</h3>
           <div className="space-y-1">
             {categories.map((category) => (
@@ -404,10 +410,10 @@ const CardsLibrary: React.FC<{ onSwitchToBattle: () => void }> = ({ onSwitchToBa
                 className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all flex items-center gap-2 ${
                   selectedCategory === category.id
                     ? 'bg-brand text-white shadow-sm'
-                    : 'text-ink-muted hover:bg-white hover:text-ink'
+                    : 'text-ink-muted hover:bg-bg-elevated hover:text-ink'
                 }`}
               >
-                <span>{category.icon}</span>
+                <category.icon className="h-4 w-4" />
                 <span className="truncate">{category.name}</span>
                 {category.id !== 'all' && (
                   <span className={`ml-auto text-xs ${selectedCategory === category.id ? 'text-white/80' : 'text-ink-faint'}`}>
@@ -427,7 +433,7 @@ const CardsLibrary: React.FC<{ onSwitchToBattle: () => void }> = ({ onSwitchToBa
                 placeholder="搜索卡牌名称、描述或标签..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-lg border border-border-subtle bg-white text-sm focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand/20"
+                className="w-full px-4 py-2.5 rounded-lg border border-border-subtle bg-bg-elevated text-sm focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand/20"
               />
             </div>
             <div className="flex items-center gap-2">
@@ -435,7 +441,7 @@ const CardsLibrary: React.FC<{ onSwitchToBattle: () => void }> = ({ onSwitchToBa
               <select
                 value={selectedType}
                 onChange={(e) => setSelectedType(e.target.value)}
-                className="px-3 py-2 rounded-lg border border-border-subtle bg-white text-sm focus:outline-none focus:border-brand"
+                className="px-3 py-2 rounded-lg border border-border-subtle bg-bg-elevated text-sm focus:outline-none focus:border-brand"
               >
                 <option value="all">全部</option>
                 <option value="attack">攻击</option>
@@ -449,7 +455,7 @@ const CardsLibrary: React.FC<{ onSwitchToBattle: () => void }> = ({ onSwitchToBa
               <select
                 value={selectedRarity}
                 onChange={(e) => setSelectedRarity(e.target.value)}
-                className="px-3 py-2 rounded-lg border border-border-subtle bg-white text-sm focus:outline-none focus:border-brand"
+                className="px-3 py-2 rounded-lg border border-border-subtle bg-bg-elevated text-sm focus:outline-none focus:border-brand"
               >
                 <option value="all">全部</option>
                 <option value="common">普通</option>
@@ -469,7 +475,7 @@ const CardsLibrary: React.FC<{ onSwitchToBattle: () => void }> = ({ onSwitchToBa
 
           {filteredCards.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16">
-              <span className="text-5xl mb-4">🔍</span>
+              <Search className="h-12 w-12 text-ink-faint mx-auto mb-4" strokeWidth={1.5} />
               <p className="text-ink-muted">没有找到匹配的卡牌</p>
               <p className="text-sm text-ink-faint mt-1">尝试调整筛选条件或搜索关键词</p>
             </div>

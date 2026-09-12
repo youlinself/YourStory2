@@ -1,4 +1,7 @@
 import React, { useState } from 'react';
+import { BookOpen, Download, Trash2 } from 'lucide-react';
+import { useConfirm } from '../common/ConfirmProvider';
+import { showContextMenu } from '../ContextMenu';
 import type { Novel } from '../../types/novel';
 import { GENRE_LABELS, NOVEL_STATUS_LABELS } from '../../types/novel';
 
@@ -17,6 +20,7 @@ const NovelCard: React.FC<NovelCardProps> = ({
   onExport,
   isDeleting,
 }) => {
+  const confirmDialog = useConfirm();
   const [showMenu, setShowMenu] = useState(false);
 
   const formatDate = (date: Date) => {
@@ -42,7 +46,27 @@ const NovelCard: React.FC<NovelCardProps> = ({
   };
 
   return (
-    <div className="card group relative w-[235px] h-[360px] flex flex-col">
+    <div
+      className="card group relative w-[235px] h-[360px] flex flex-col"
+      onContextMenu={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        showContextMenu(e.clientX, e.clientY, [
+          { label: '打开小说', icon: <BookOpen className="h-3.5 w-3.5" />, onSelect: onClick },
+          { label: '导出', icon: <Download className="h-3.5 w-3.5" />, onSelect: onExport },
+          { label: '删除小说', icon: <Trash2 className="h-3.5 w-3.5" />, danger: true, onSelect: () => {
+            confirmDialog({
+              title: '删除小说',
+              description: '此操作不可恢复。',
+              confirmText: '删除',
+              confirmVariant: 'danger',
+            }).then((ok) => {
+              if (ok) onDelete();
+            });
+          } },
+        ]);
+      }}
+    >
       <div
         className="cursor-pointer flex flex-col flex-1 min-h-0"
         onClick={onClick}
@@ -146,9 +170,9 @@ const NovelCard: React.FC<NovelCardProps> = ({
               <button
                 className="w-full px-3 py-1.5 text-left text-xs text-danger hover:bg-danger/10 flex items-center gap-2"
                 onClick={() => {
-                  if (confirm('确定要删除这部小说吗？此操作不可恢复。')) {
-                    onDelete();
-                  }
+                  confirmDialog({ title: '删除小说', description: '此操作不可恢复。', confirmText: '删除', confirmVariant: 'danger' }).then((ok) => {
+                    if (ok) onDelete();
+                  });
                   setShowMenu(false);
                 }}
                 disabled={isDeleting}

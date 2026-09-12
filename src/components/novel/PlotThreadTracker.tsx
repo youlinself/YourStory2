@@ -1,5 +1,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
+import { Gem, Search, Swords, Leaf, CircleHelp, HeartHandshake, Target, type LucideIcon } from 'lucide-react';
 import type { NovelChapter } from '../../types/novel';
+import { DATA_COLORS } from '../../utils/palette';
 
 export type PlotThreadType = 'foreshadowing' | 'clue' | 'conflict' | 'subplot' | 'mystery' | 'romance' | 'quest';
 export type PlotThreadStatus = 'active' | 'resolved' | 'dormant' | 'abandoned';
@@ -43,24 +45,24 @@ const PLOT_TYPE_LABELS: Record<PlotThreadType, string> = {
   quest: '任务线',
 };
 
-const PLOT_TYPE_ICONS: Record<PlotThreadType, string> = {
-  foreshadowing: '🔮',
-  clue: '🔍',
-  conflict: '⚔️',
-  subplot: '🌿',
-  mystery: '❓',
-  romance: '💕',
-  quest: '🎯',
+const PLOT_TYPE_ICONS: Record<PlotThreadType, LucideIcon> = {
+  foreshadowing: Gem,
+  clue: Search,
+  conflict: Swords,
+  subplot: Leaf,
+  mystery: CircleHelp,
+  romance: HeartHandshake,
+  quest: Target,
 };
 
 const PLOT_TYPE_COLORS: Record<PlotThreadType, string> = {
-  foreshadowing: '#8b5cf6',
-  clue: '#f59e0b',
-  conflict: '#ef4444',
-  subplot: '#10b981',
-  mystery: '#6366f1',
-  romance: '#ec4899',
-  quest: '#14b8a6',
+  foreshadowing: DATA_COLORS.violet,
+  clue: DATA_COLORS.amber,
+  conflict: DATA_COLORS.red,
+  subplot: DATA_COLORS.emerald,
+  mystery: DATA_COLORS.indigo,
+  romance: DATA_COLORS.pink,
+  quest: DATA_COLORS.teal,
 };
 
 const STATUS_LABELS: Record<PlotThreadStatus, string> = {
@@ -71,10 +73,10 @@ const STATUS_LABELS: Record<PlotThreadStatus, string> = {
 };
 
 const STATUS_COLORS: Record<PlotThreadStatus, string> = {
-  active: '#10b981',
-  resolved: '#6b7280',
-  dormant: '#f59e0b',
-  abandoned: '#ef4444',
+  active: DATA_COLORS.emerald,
+  resolved: DATA_COLORS.gray,
+  dormant: DATA_COLORS.amber,
+  abandoned: DATA_COLORS.red,
 };
 
 const PlotThreadTracker: React.FC<PlotThreadTrackerProps> = ({
@@ -259,10 +261,13 @@ const PlotThreadTracker: React.FC<PlotThreadTrackerProps> = ({
                   >
                     <div className="flex items-center gap-3">
                       <span
-                        className="w-8 h-8 rounded-lg flex items-center justify-center text-lg"
-                        style={{ backgroundColor: `${PLOT_TYPE_COLORS[thread.type]}20` }}
+                        className="w-8 h-8 rounded-lg flex items-center justify-center"
+                        style={{ backgroundColor: `${PLOT_TYPE_COLORS[thread.type]}20`, color: PLOT_TYPE_COLORS[thread.type] }}
                       >
-                        {PLOT_TYPE_ICONS[thread.type]}
+                        {(() => {
+                          const Icon = PLOT_TYPE_ICONS[thread.type];
+                          return <Icon className="h-4 w-4" />;
+                        })()}
                       </span>
                       <div>
                         <div className="flex items-center gap-2">
@@ -393,7 +398,7 @@ const PlotThreadTracker: React.FC<PlotThreadTrackerProps> = ({
               ))
             ) : (
               <div className="text-center py-12">
-                <span className="text-4xl mb-4 block">🔍</span>
+                <Search className="h-10 w-10 text-ink-faint mx-auto mb-4" strokeWidth={1.5} />
                 <p className="text-ink-muted">暂无线索/伏笔</p>
                 <p className="text-xs text-ink-faint mt-1">点击"添加线索"开始追踪你的故事线索</p>
               </div>
@@ -419,16 +424,19 @@ const PlotThreadTracker: React.FC<PlotThreadTrackerProps> = ({
                       <span className="text-[10px] text-ink-faint">{chapterThreads.length}</span>
                     </div>
                     <div className="flex gap-1">
-                      {chapterThreads.slice(0, 5).map((thread) => (
-                        <span
-                          key={thread.id}
-                          className="w-4 h-4 rounded flex items-center justify-center text-[10px]"
-                          style={{ backgroundColor: `${PLOT_TYPE_COLORS[thread.type]}20` }}
-                          title={thread.title}
-                        >
-                          {PLOT_TYPE_ICONS[thread.type]}
-                        </span>
-                      ))}
+                      {chapterThreads.slice(0, 5).map((thread) => {
+                        const ThreadIcon = PLOT_TYPE_ICONS[thread.type];
+                        return (
+                          <span
+                            key={thread.id}
+                            className="w-4 h-4 rounded flex items-center justify-center"
+                            style={{ backgroundColor: `${PLOT_TYPE_COLORS[thread.type]}20`, color: PLOT_TYPE_COLORS[thread.type] }}
+                            title={thread.title}
+                          >
+                            <ThreadIcon className="h-2.5 w-2.5" />
+                          </span>
+                        );
+                      })}
                       {chapterThreads.length > 5 && (
                         <span className="text-[10px] text-ink-faint">+{chapterThreads.length - 5}</span>
                       )}

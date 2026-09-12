@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { HashRouter as Router, Routes, Route } from "react-router-dom";
-import { ToastProvider } from "./components";
+import { ToastProvider, ConfirmProvider } from "./components";
 import { Home, DialogueAgent, Settings, Autobiography, Novel, NovelEditor, AIWorkshop, Simulation, ThinkTank, AchievementWall, GameRecords, RecordDetail } from "./pages";
 import { useAIStore } from "./stores";
 import { AppLayout } from "./components/layout";
@@ -22,6 +22,7 @@ function App() {
     <ThemeProvider>
       <Router>
         <ToastProvider>
+          <ConfirmProvider>
           <AchievementNotification />
           <ContextMenu />
           <Routes>
@@ -42,6 +43,7 @@ function App() {
               <Route path="/settings" element={<Settings />} />
             </Route>
           </Routes>
+          </ConfirmProvider>
         </ToastProvider>
       </Router>
     </ThemeProvider>

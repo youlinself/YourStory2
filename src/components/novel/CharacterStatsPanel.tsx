@@ -136,7 +136,7 @@ const CharacterStatsPanel: React.FC<CharacterStatsPanelProps> = ({
               {displayChapters.map((ch, idx) => (
                 <div
                   key={ch.id}
-                  className="w-6 text-[9px] text-ink-faint text-center truncate"
+                  className="w-6 text-[10px] text-ink-faint text-center truncate"
                   title={ch.title}
                 >
                   {idx + 1}

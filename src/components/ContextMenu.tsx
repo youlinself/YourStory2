@@ -1,24 +1,56 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { Wrench, RotateCw } from 'lucide-react';
+
+export interface ContextMenuItem {
+  label: string;
+  icon?: React.ReactNode;
+  shortcut?: string;
+  danger?: boolean;
+  onSelect: () => void;
+}
 
 interface ContextMenuState {
   visible: boolean;
   x: number;
   y: number;
+  items: ContextMenuItem[];
 }
 
+/** 业务组件通过派发自定义事件注册自定义右键菜单项；未注册时回落到默认菜单 */
+export const CONTEXT_MENU_EVENT = 'app:context-menu';
+
+export const showContextMenu = (x: number, y: number, items: ContextMenuItem[]) => {
+  window.dispatchEvent(new CustomEvent(CONTEXT_MENU_EVENT, { detail: { x, y, items } }));
+};
+
+const DEFAULT_ITEMS: ContextMenuItem[] = [];
+
 export default function ContextMenu() {
-  const [menu, setMenu] = useState<ContextMenuState>({ visible: false, x: 0, y: 0 });
+  const [menu, setMenu] = useState<ContextMenuState>({ visible: false, x: 0, y: 0, items: DEFAULT_ITEMS });
   const menuRef = useRef<HTMLDivElement>(null);
 
-  const handleContextMenu = useCallback((e: MouseEvent) => {
-    e.preventDefault();
-    setMenu({
-      visible: true,
-      x: e.clientX,
-      y: e.clientY,
-    });
+  const open = useCallback((x: number, y: number, items: ContextMenuItem[]) => {
+    // 防止菜单贴出视口边缘
+    const maxX = window.innerWidth - 200;
+    const maxY = window.innerHeight - items.length * 36 - 16;
+    setMenu({ visible: true, x: Math.min(x, maxX), y: Math.min(y, maxY), items });
   }, []);
+
+  const handleContextMenu = useCallback((e: MouseEvent) => {
+    // 业务组件已通过自定义事件接管时跳过默认菜单
+    if (e.defaultPrevented) return;
+    e.preventDefault();
+    open(e.clientX, e.clientY, DEFAULT_ITEMS);
+  }, [open]);
+
+  const handleCustomMenu = useCallback((e: Event) => {
+    e.preventDefault();
+    const detail = (e as CustomEvent).detail as { x: number; y: number; items: ContextMenuItem[] };
+    if (detail?.items?.length) {
+      open(detail.x, detail.y, detail.items);
+    }
+  }, [open]);
 
   const handleClick = useCallback((e: MouseEvent) => {
     if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
@@ -38,14 +70,16 @@ export default function ContextMenu() {
 
   useEffect(() => {
     document.addEventListener('contextmenu', handleContextMenu);
+    document.addEventListener(CONTEXT_MENU_EVENT, handleCustomMenu);
     document.addEventListener('click', handleClick);
     document.addEventListener('keydown', handleKeyDown);
     return () => {
       document.removeEventListener('contextmenu', handleContextMenu);
+      document.removeEventListener(CONTEXT_MENU_EVENT, handleCustomMenu);
       document.removeEventListener('click', handleClick);
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [handleContextMenu, handleClick, handleKeyDown]);
+  }, [handleContextMenu, handleCustomMenu, handleClick, handleKeyDown]);
 
   const handleOpenDevtools = async () => {
     await invoke('toggle_devtools');
@@ -59,68 +93,55 @@ export default function ContextMenu() {
 
   if (!menu.visible) return null;
 
+  const isDefault = menu.items === DEFAULT_ITEMS;
+
   return (
     <div
       ref={menuRef}
-      style={{
-        position: 'fixed',
-        top: menu.y,
-        left: menu.x,
-        zIndex: 99999,
-        background: '#1e1e1e',
-        borderRadius: '8px',
-        padding: '4px 0',
-        minWidth: '180px',
-        boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
-        border: '1px solid #333',
-        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-        fontSize: '13px',
-        color: '#e0e0e0',
-        overflow: 'hidden',
-      }}
+      className="fixed z-[99999] min-w-[180px] overflow-hidden rounded-lg border border-border-subtle bg-bg-elevated p-1 shadow-lg"
+      style={{ top: menu.y, left: menu.x }}
     >
-      <MenuItem onClick={handleOpenDevtools} icon="🔧" text="开发者工具" shortcut="F12" />
-      <div style={{ height: 1, background: '#333', margin: '4px 0' }} />
-      <MenuItem onClick={handleReload} icon="🔄" text="重新加载" />
+      {menu.items.map((item, index) => (
+        <React.Fragment key={`${item.label}-${index}`}>
+          {index > 0 && <div className="my-1 h-px bg-border-subtle" />}
+          <MenuItem
+            onClick={() => { item.onSelect(); setMenu(prev => ({ ...prev, visible: false })); }}
+            icon={item.icon}
+            text={item.label}
+            shortcut={item.shortcut}
+            danger={item.danger}
+          />
+        </React.Fragment>
+      ))}
+      {isDefault && (
+        <>
+          <MenuItem onClick={handleOpenDevtools} icon={<Wrench className="h-3.5 w-3.5" />} text="开发者工具" shortcut="F12" />
+          <div className="my-1 h-px bg-border-subtle" />
+          <MenuItem onClick={handleReload} icon={<RotateCw className="h-3.5 w-3.5" />} text="重新加载" />
+        </>
+      )}
     </div>
   );
 }
 
-function MenuItem({ onClick, icon, text, shortcut }: {
+function MenuItem({ onClick, icon, text, shortcut, danger }: {
   onClick: () => void;
-  icon: string;
+  icon: React.ReactNode;
   text: string;
   shortcut?: string;
+  danger?: boolean;
 }) {
   return (
     <div
       onClick={onClick}
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        padding: '8px 16px',
-        cursor: 'pointer',
-        userSelect: 'none',
-        transition: 'background 0.15s',
-      }}
-      onMouseEnter={e => {
-        e.currentTarget.style.background = '#094771';
-      }}
-      onMouseLeave={e => {
-        e.currentTarget.style.background = 'transparent';
-      }}
+      className={`flex cursor-pointer select-none items-center rounded-md px-4 py-2 text-[13px] transition-colors hover:bg-bg-hover ${
+        danger ? 'text-danger' : 'text-ink'
+      }`}
     >
-      <span style={{ marginRight: 10, fontSize: 14 }}>{icon}</span>
-      <span style={{ flex: 1 }}>{text}</span>
+      {icon && <span className={`mr-2.5 ${danger ? 'text-danger' : 'text-ink-muted'}`}>{icon}</span>}
+      <span className="flex-1">{text}</span>
       {shortcut && (
-        <span style={{
-          fontSize: 11,
-          color: '#888',
-          marginLeft: 16,
-          background: '#333',
-          padding: '2px 6px',
-          borderRadius: 3,
-        }}>{shortcut}</span>
+        <span className="ml-4 rounded-sm bg-bg-subtle px-1.5 py-0.5 text-[11px] text-ink-muted">{shortcut}</span>
       )}
     </div>
   );

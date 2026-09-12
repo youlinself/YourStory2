@@ -1,4 +1,5 @@
 import type { Achievement, PlayerAttributes } from '../types/simulation';
+import { RARITY_COLORS } from '../utils/palette';
 
 const DEFAULT_ATTRIBUTES: PlayerAttributes = {
   energy: 0, physique: 0, health: 0, iq: 0, eq: 0, wealth: 0, network: 0, fame: 0
@@ -389,13 +390,7 @@ export const getAchievementsByCategory = (category: string): Achievement[] => {
 };
 
 export const getRarityColor = (rarity: string): string => {
-  switch (rarity) {
-    case 'common': return '#6B7280';
-    case 'rare': return '#3B82F6';
-    case 'epic': return '#8B5CF6';
-    case 'legendary': return '#F59E0B';
-    default: return '#6B7280';
-  }
+  return RARITY_COLORS[rarity] || RARITY_COLORS.common;
 };
 
 export const getCategoryName = (category: string): string => {

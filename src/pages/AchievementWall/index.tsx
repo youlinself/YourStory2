@@ -3,14 +3,16 @@ import { useNavigate } from 'react-router-dom';
 import useAchievementStore, { ACHIEVEMENTS } from '../../stores/achievementStore';
 import { getRarityColor, getRarityName } from '../../data/achievementData';
 import type { Achievement, AchievementCategory } from '../../types/simulation';
+import { DATA_COLORS } from '../../utils/palette';
+import { Trophy, Swords, Sprout, Moon, Layers, Sparkles, Search, Check, type LucideIcon } from 'lucide-react';
 
-const CATEGORIES: { id: AchievementCategory | 'all'; name: string; icon: string }[] = [
-  { id: 'all', name: '全部', icon: '🏆' },
-  { id: 'combat', name: '战斗', icon: '⚔️' },
-  { id: 'life', name: '人生', icon: '🌱' },
-  { id: 'cultivation', name: '修仙', icon: '☯️' },
-  { id: 'collection', name: '收集', icon: '🃏' },
-  { id: 'special', name: '特殊', icon: '✨' },
+const CATEGORIES: { id: AchievementCategory | 'all'; name: string; icon: LucideIcon }[] = [
+  { id: 'all', name: '全部', icon: Trophy },
+  { id: 'combat', name: '战斗', icon: Swords },
+  { id: 'life', name: '人生', icon: Sprout },
+  { id: 'cultivation', name: '修仙', icon: Moon },
+  { id: 'collection', name: '收集', icon: Layers },
+  { id: 'special', name: '特殊', icon: Sparkles },
 ];
 
 const AchievementCard: React.FC<{
@@ -26,8 +28,8 @@ const AchievementCard: React.FC<{
     <div
       className={`relative rounded-xl p-4 transition-all ${
         isUnlocked
-          ? 'bg-white border-2 shadow-md hover:shadow-lg hover:scale-[1.02]'
-          : 'bg-gray-50 border border-gray-200 opacity-70 hover:opacity-90'
+          ? 'bg-bg-elevated border-2 shadow-md hover:shadow-lg hover:scale-[1.02]'
+          : 'bg-bg-subtle border border-border opacity-70 hover:opacity-90'
       }`}
       style={{
         borderColor: isUnlocked ? rarityColor : undefined,
@@ -43,7 +45,7 @@ const AchievementCard: React.FC<{
       <div className="flex items-start gap-3">
         <div
           className={`text-3xl flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-lg ${
-            isUnlocked ? 'bg-gray-50' : 'bg-gray-100 grayscale'
+            isUnlocked ? 'bg-bg-subtle' : 'bg-bg-subtle grayscale'
           }`}
         >
           {achievement.icon}
@@ -77,12 +79,12 @@ const AchievementCard: React.FC<{
                   {Math.min(progress, maxProgress)}/{maxProgress}
                 </span>
               </div>
-              <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+              <div className="h-1.5 bg-border rounded-full overflow-hidden">
                 <div
                   className="h-full rounded-full transition-all duration-500"
                   style={{
                     width: `${progressPercent}%`,
-                    backgroundColor: isUnlocked ? rarityColor : '#9CA3AF',
+                    backgroundColor: isUnlocked ? rarityColor : DATA_COLORS.slate,
                   }}
                 />
               </div>
@@ -91,7 +93,7 @@ const AchievementCard: React.FC<{
 
           {isUnlocked && (
             <div className="mt-2 flex items-center gap-1">
-              <span className="text-[10px] text-success">✓ 已解锁</span>
+              <span className="inline-flex items-center gap-0.5 text-[10px] text-success"><Check className="h-3 w-3" />已解锁</span>
             </div>
           )}
         </div>
@@ -139,14 +141,14 @@ const AchievementWallPage: React.FC = () => {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => navigate('/simulation')}
-                className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                className="p-2 rounded-lg hover:bg-bg-subtle transition-colors"
               >
                 <svg className="w-5 h-5 text-ink-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
               </button>
               <h1 className="text-2xl font-semibold heading-serif tracking-tight text-ink">
-                🏆 成就墙
+                <Trophy className="inline h-5 w-5 text-gold" /> 成就墙
               </h1>
             </div>
             <div className="text-sm text-ink-muted">
@@ -155,19 +157,19 @@ const AchievementWallPage: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-            <div className="bg-white rounded-xl border border-border-subtle p-4 text-center">
+            <div className="bg-bg-elevated rounded-xl border border-border-subtle p-4 text-center">
               <div className="text-2xl font-bold text-brand">{totalGamesPlayed}</div>
               <div className="text-xs text-ink-muted mt-1">总游戏次数</div>
             </div>
-            <div className="bg-white rounded-xl border border-border-subtle p-4 text-center">
+            <div className="bg-bg-elevated rounded-xl border border-border-subtle p-4 text-center">
               <div className="text-2xl font-bold text-success">{totalGamesWon}</div>
               <div className="text-xs text-ink-muted mt-1">胜利次数</div>
             </div>
-            <div className="bg-white rounded-xl border border-border-subtle p-4 text-center">
+            <div className="bg-bg-elevated rounded-xl border border-border-subtle p-4 text-center">
               <div className="text-2xl font-bold text-danger">{totalCombatsWon}</div>
               <div className="text-xs text-ink-muted mt-1">战斗胜利</div>
             </div>
-            <div className="bg-white rounded-xl border border-border-subtle p-4 text-center">
+            <div className="bg-bg-elevated rounded-xl border border-border-subtle p-4 text-center">
               <div className="text-2xl font-bold text-gold">{highestAge}</div>
               <div className="text-xs text-ink-muted mt-1">最高年龄</div>
             </div>
@@ -181,10 +183,10 @@ const AchievementWallPage: React.FC = () => {
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
                   activeCategory === cat.id
                     ? 'bg-brand text-white shadow-sm'
-                    : 'bg-white border border-border-subtle text-ink-muted hover:border-brand hover:text-brand'
+                    : 'bg-bg-elevated border border-border-subtle text-ink-muted hover:border-brand hover:text-brand'
                 }`}
               >
-                <span>{cat.icon}</span>
+                <cat.icon className="h-4 w-4" />
                 <span>{cat.name}</span>
               </button>
             ))}
@@ -194,10 +196,10 @@ const AchievementWallPage: React.FC = () => {
               className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
                 showUnlockedOnly
                   ? 'bg-gold text-white'
-                  : 'bg-white border border-border-subtle text-ink-muted hover:border-gold hover:text-gold'
+                  : 'bg-bg-elevated border border-border-subtle text-ink-muted hover:border-gold hover:text-gold'
               }`}
             >
-              {showUnlockedOnly ? '✓ 已解锁' : '已解锁'}
+              {showUnlockedOnly ? <span className="inline-flex items-center gap-1"><Check className="h-3.5 w-3.5" />已解锁</span> : '已解锁'}
             </button>
           </div>
 
@@ -215,7 +217,7 @@ const AchievementWallPage: React.FC = () => {
 
           {filteredAchievements.length === 0 && (
             <div className="text-center py-12">
-              <div className="text-4xl mb-3">🔍</div>
+              <Search className="h-10 w-10 text-ink-faint mx-auto mb-3" strokeWidth={1.5} />
               <p className="text-ink-muted">没有找到符合条件的成就</p>
             </div>
           )}

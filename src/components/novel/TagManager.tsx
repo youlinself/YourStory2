@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import type { NovelChapter } from '../../types/novel';
+import { CATEGORICAL_COLORS, getCategoryColor } from '../../utils/palette';
 
 interface TagManagerProps {
   chapters: NovelChapter[];
@@ -14,12 +15,6 @@ interface TagInfo {
   count: number;
   color: string;
 }
-
-const TAG_COLORS = [
-  '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
-  '#ec4899', '#14b8a6', '#f97316', '#6366f1', '#84cc16',
-  '#06b6d4', '#84cc16', '#f43f5e', '#8b5cf6', '#0ea5e9',
-];
 
 const PRESET_TAGS = [
   { name: '主线', category: '情节' },
@@ -116,7 +111,7 @@ const QuickTagPanel: React.FC<QuickTagPanelProps> = ({ chapter, onAddTag, onClos
             className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs border border-border-subtle hover:border-brand hover:bg-brand/5 transition-colors"
             onClick={() => onAddTag(preset.name)}
           >
-            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: TAG_COLORS[PRESET_TAGS.indexOf(preset) % TAG_COLORS.length] }} />
+            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: CATEGORICAL_COLORS[PRESET_TAGS.indexOf(preset) % CATEGORICAL_COLORS.length] }} />
             <span>{preset.name}</span>
           </button>
         ))}
@@ -185,13 +180,9 @@ const TagManageModal: React.FC<TagManageModalProps> = ({ chapters, onClose }) =>
   const getTagColor = useCallback((tagName: string) => {
     const presetIndex = PRESET_TAGS.findIndex(p => p.name === tagName);
     if (presetIndex >= 0) {
-      return TAG_COLORS[presetIndex % TAG_COLORS.length];
+      return CATEGORICAL_COLORS[presetIndex % CATEGORICAL_COLORS.length];
     }
-    let hash = 0;
-    for (let i = 0; i < tagName.length; i++) {
-      hash = tagName.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    return TAG_COLORS[Math.abs(hash) % TAG_COLORS.length];
+    return getCategoryColor(tagName);
   }, []);
 
   const getTagCategory = useCallback((tagName: string) => {
@@ -222,7 +213,7 @@ const TagManageModal: React.FC<TagManageModalProps> = ({ chapters, onClose }) =>
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onClose}>
-      <div className="bg-bg-base rounded-lg shadow-xl w-[480px] max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+      <div role="dialog" aria-modal="true" className="bg-bg-base rounded-lg shadow-xl w-[480px] max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between px-4 py-3 border-b border-border-subtle">
           <h3 className="text-sm font-medium text-ink">标签管理</h3>
           <button
@@ -338,7 +329,7 @@ const TagManager: React.FC<TagManagerProps> = ({
     const tags: TagInfo[] = [];
     let colorIndex = 0;
     for (const [name, count] of tagMap) {
-      tags.push({ name, count, color: TAG_COLORS[colorIndex % TAG_COLORS.length] });
+      tags.push({ name, count, color: CATEGORICAL_COLORS[colorIndex % CATEGORICAL_COLORS.length] });
       colorIndex++;
     }
     return tags.sort((a, b) => b.count - a.count);
@@ -361,7 +352,7 @@ const TagManager: React.FC<TagManagerProps> = ({
 
   const handleTagColor = useCallback((tagName: string) => {
     const tag = allTags.find((t) => t.name === tagName);
-    return tag?.color || TAG_COLORS[0];
+    return tag?.color || CATEGORICAL_COLORS[0];
   }, [allTags]);
 
   const toggleChapterSelection = useCallback((chapterId: string) => {
@@ -524,7 +515,7 @@ const TagManager: React.FC<TagManagerProps> = ({
                             <span className="opacity-70 text-[8px]">{getTagCategory(tag)}</span>
                             {tag}
                             <button
-                              className="opacity-0 group-hover:opacity-100 hover:bg-white/20 rounded transition-all"
+                              className="opacity-0 group-hover:opacity-100 hover:bg-bg-elevated/20 rounded transition-all"
                               onClick={() => onChapterTagRemove(chapter.id, tag)}
                             >
                               ×

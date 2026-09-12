@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Outlet, useLocation, Link, useParams } from 'react-router-dom';
+import { Outlet, useLocation, Link, useParams, useNavigate } from 'react-router-dom';
 import logoImage from '../../assets/logo.png';
 import useAutobiographyStore from '../../stores/autobiographyStore';
 import useDialogueStore from '../../stores/dialogueStore';
@@ -16,6 +16,19 @@ const navItems = [
   { path: '/simulation', label: '模拟人生', icon: 'gamepad' },
   { path: '/settings', label: '设置', icon: 'settings' },
 ];
+
+/* 模拟人生的子功能：仅在进入该功能区时于侧边栏展示（上下文导航） */
+const simulationChildren = [
+  { path: '/thinktank', label: '智库' },
+  { path: '/achievements', label: '成就墙' },
+  { path: '/records', label: '游戏记录' },
+];
+
+const isSimulationActive = (pathname: string) =>
+  pathname.startsWith('/simulation') ||
+  pathname.startsWith('/thinktank') ||
+  pathname.startsWith('/achievements') ||
+  pathname.startsWith('/records');
 
 const iconMap: Record<string, React.ReactNode> = {
   home: (
@@ -129,7 +142,7 @@ const SidebarBottomContent: React.FC<{ collapsed: boolean }> = ({ collapsed }) =
                     className={`w-full rounded-sm ${ch.status === 'completed' ? 'bg-success' : 'bg-brand'}`}
                     style={{ height: `${Math.max(h * 0.4, 8)}px` }}
                   />
-                  <span className="text-[9px] text-ink-faint">{i + 1}</span>
+                  <span className="text-[10px] text-ink-faint">{i + 1}</span>
                 </div>
               );
             })
@@ -208,11 +221,34 @@ const SidebarBottomContent: React.FC<{ collapsed: boolean }> = ({ collapsed }) =
 
 const AppLayout: React.FC = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const [collapsed, setCollapsed] = useLocalStorage('sidebar-collapsed', false);
 
   const toggleSidebar = () => {
     setCollapsed(!collapsed);
   };
+
+  // 快捷键：Cmd/Ctrl+1..7 切换主导航，Cmd/Ctrl+, 打开设置，Cmd/Ctrl+B 折叠侧边栏
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey)) return;
+      if (e.key >= '1' && e.key <= '7') {
+        const item = navItems[Number(e.key) - 1];
+        if (item) {
+          e.preventDefault();
+          navigate(item.path);
+        }
+      } else if (e.key === ',') {
+        e.preventDefault();
+        navigate('/settings');
+      } else if (e.key === 'b' || e.key === 'B') {
+        e.preventDefault();
+        setCollapsed(!collapsed);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [navigate, collapsed, setCollapsed]);
 
   return (
     <div className="main-area h-screen">
@@ -246,15 +282,36 @@ const AppLayout: React.FC = () => {
             const isActive = location.pathname === item.path ||
               (item.path !== '/' && location.pathname.startsWith(item.path));
             return (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={`nav-link ${isActive ? 'active' : ''} ${collapsed ? 'nav-link-collapsed' : ''}`}
-                title={collapsed ? item.label : undefined}
-              >
-                <span className={isActive ? 'text-brand' : ''}>{iconMap[item.icon]}</span>
-                {!collapsed && <span>{item.label}</span>}
-              </Link>
+              <React.Fragment key={item.path}>
+                <Link
+                  to={item.path}
+                  className={`nav-link ${isActive ? 'active' : ''} ${collapsed ? 'nav-link-collapsed' : ''}`}
+                  title={collapsed ? item.label : undefined}
+                >
+                  <span className={isActive ? 'text-brand' : ''}>{iconMap[item.icon]}</span>
+                  {!collapsed && <span>{item.label}</span>}
+                </Link>
+                {item.path === '/simulation' && isSimulationActive(location.pathname) && !collapsed && (
+                  <div className="ml-[26px] mt-0.5 mb-1 space-y-0.5 border-l border-border-subtle pl-2">
+                    {simulationChildren.map((child) => {
+                      const childActive = location.pathname.startsWith(child.path);
+                      return (
+                        <Link
+                          key={child.path}
+                          to={child.path}
+                          className={`block rounded-md px-2 py-1.5 text-xs transition-colors ${
+                            childActive
+                              ? 'bg-brand-light font-medium text-brand'
+                              : 'text-ink-muted hover:bg-bg-hover hover:text-ink'
+                          }`}
+                        >
+                          {child.label}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </React.Fragment>
             );
           })}
         </nav>

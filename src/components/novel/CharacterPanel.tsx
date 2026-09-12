@@ -3,6 +3,7 @@ import useNovelStore from '../../stores/novelStore';
 import useAIStore from '../../stores/aiStore';
 import { UnifiedLLMService } from '../../agent/llm/UnifiedLLMService';
 import { useToast } from '../common/Toast';
+import { useConfirm } from '../common/ConfirmProvider';
 import Modal from '../ui/Modal';
 import {
   CHARACTER_ROLE_LABELS,
@@ -23,6 +24,7 @@ const CharacterPanel: React.FC<CharacterPanelProps> = ({
   const { addCharacter, updateCharacter, deleteCharacter } = useNovelStore();
   const { apiKey, model, baseUrl, vendor, temperature, customModelName } = useAIStore();
   const toast = useToast();
+  const confirmDialog = useConfirm();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCharacter, setEditingCharacter] = useState<Character | null>(null);
@@ -162,7 +164,7 @@ const CharacterPanel: React.FC<CharacterPanelProps> = ({
   };
 
   const handleDelete = async (characterId: string) => {
-    if (!confirm('确定要删除这个角色吗？')) return;
+    if (!(await confirmDialog({ title: '删除角色', confirmText: '删除', confirmVariant: 'danger' }))) return;
     try {
       await deleteCharacter(novelId, characterId);
       toast.addToast({ type: 'success', message: '角色已删除' });

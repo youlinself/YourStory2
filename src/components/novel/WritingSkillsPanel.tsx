@@ -1,4 +1,6 @@
 import React, { useState, useCallback } from 'react';
+import { useToast } from '../common/Toast';
+import { useConfirm } from '../common/ConfirmProvider';
 import useWritingSkillStore from '../../stores/writingSkillStore';
 import useAIStore from '../../stores/aiStore';
 import { UnifiedLLMService } from '../../agent/llm/UnifiedLLMService';
@@ -44,6 +46,8 @@ const WritingSkillsPanel: React.FC<WritingSkillsPanelProps> = ({
   onApplySkill,
   onApplyStyle,
 }) => {
+  const toast = useToast();
+  const confirmDialog = useConfirm();
   const [activeTab, setActiveTab] = useState<SkillsTabType>('skills');
   const [isCreating, setIsCreating] = useState(false);
   const [editingSkillId, setEditingSkillId] = useState<string | null>(null);
@@ -212,7 +216,7 @@ const WritingSkillsPanel: React.FC<WritingSkillsPanelProps> = ({
   const handleGenerateSkills = useCallback(async () => {
     if (!aiSkillDescription.trim()) return;
     if (!apiKey) {
-      alert('请先在设置页面配置AI API Key');
+      toast.addToast({ type: 'warning', message: '请先在设置页面配置AI API Key' });
       return;
     }
 
@@ -233,7 +237,7 @@ const WritingSkillsPanel: React.FC<WritingSkillsPanelProps> = ({
       const generatedSkills = await generateWritingSkills(llmService, aiSkillDescription, aiSkillGenre);
       setAiGeneratedSkills(generatedSkills);
     } catch (error) {
-      alert(`生成失败: ${error instanceof Error ? error.message : '未知错误'}`);
+      toast.addToast({ type: 'error', message: `生成失败: ${error instanceof Error ? error.message : '未知错误'}` });
     } finally {
       setIsGeneratingSkills(false);
     }
@@ -242,7 +246,7 @@ const WritingSkillsPanel: React.FC<WritingSkillsPanelProps> = ({
   const handleGenerateStyle = useCallback(async () => {
     if (!aiStyleDescription.trim()) return;
     if (!apiKey) {
-      alert('请先在设置页面配置AI API Key');
+      toast.addToast({ type: 'warning', message: '请先在设置页面配置AI API Key' });
       return;
     }
 
@@ -263,7 +267,7 @@ const WritingSkillsPanel: React.FC<WritingSkillsPanelProps> = ({
       const generatedStyle = await generateStylePreset(llmService, aiStyleDescription, aiStyleExample || undefined);
       setAiGeneratedStyle(generatedStyle);
     } catch (error) {
-      alert(`生成失败: ${error instanceof Error ? error.message : '未知错误'}`);
+      toast.addToast({ type: 'error', message: `生成失败: ${error instanceof Error ? error.message : '未知错误'}` });
     } finally {
       setIsGeneratingStyle(false);
     }
@@ -272,7 +276,7 @@ const WritingSkillsPanel: React.FC<WritingSkillsPanelProps> = ({
   const handleEnhancePrompt = useCallback(async () => {
     if (!enhancePromptInput.trim() || !enhanceRequirement.trim()) return;
     if (!apiKey) {
-      alert('请先在设置页面配置AI API Key');
+      toast.addToast({ type: 'warning', message: '请先在设置页面配置AI API Key' });
       return;
     }
 
@@ -292,7 +296,7 @@ const WritingSkillsPanel: React.FC<WritingSkillsPanelProps> = ({
       const result = await enhanceSkillPrompt(llmService, enhancePromptInput, enhanceRequirement);
       setEnhancedPrompt(result);
     } catch (error) {
-      alert(`优化失败: ${error instanceof Error ? error.message : '未知错误'}`);
+      toast.addToast({ type: 'error', message: `优化失败: ${error instanceof Error ? error.message : '未知错误'}` });
     } finally {
       setIsEnhancing(false);
     }
@@ -554,7 +558,7 @@ const WritingSkillsPanel: React.FC<WritingSkillsPanelProps> = ({
               className="text-xs text-brand hover:underline"
               onClick={() => {
                 navigator.clipboard.writeText(enhancedPrompt);
-                alert('已复制到剪贴板');
+                toast.addToast({ type: 'success', message: '已复制到剪贴板' });
               }}
             >
               复制
@@ -799,9 +803,9 @@ const WritingSkillsPanel: React.FC<WritingSkillsPanelProps> = ({
                   <button
                     className="p-1 rounded hover:bg-bg-subtle text-ink-faint hover:text-danger"
                     onClick={() => {
-                      if (confirm('确定要删除这个技能吗？')) {
-                        deleteSkill(skill.id);
-                      }
+                      confirmDialog({ title: '删除技能', confirmText: '删除', confirmVariant: 'danger' }).then((ok) => {
+                        if (ok) deleteSkill(skill.id);
+                      });
                     }}
                     title="删除"
                   >
@@ -979,9 +983,9 @@ const WritingSkillsPanel: React.FC<WritingSkillsPanelProps> = ({
                   <button
                     className="p-1 rounded hover:bg-bg-subtle text-ink-faint hover:text-danger"
                     onClick={() => {
-                      if (confirm('确定要删除这个风格预设吗？')) {
-                        deleteStylePreset(preset.id);
-                      }
+                      confirmDialog({ title: '删除风格预设', confirmText: '删除', confirmVariant: 'danger' }).then((ok) => {
+                        if (ok) deleteStylePreset(preset.id);
+                      });
                     }}
                     title="删除"
                   >
@@ -1102,9 +1106,9 @@ const WritingSkillsPanel: React.FC<WritingSkillsPanelProps> = ({
                   if (data.extensionConfig) {
                     updateExtensionConfig(data.extensionConfig);
                   }
-                  alert('导入成功！');
+                  toast.addToast({ type: 'success', message: '导入成功' });
                 } catch {
-                  alert('导入失败：文件格式错误');
+                  toast.addToast({ type: 'error', message: '导入失败：文件格式错误' });
                 }
               };
               input.click();
@@ -1118,9 +1122,9 @@ const WritingSkillsPanel: React.FC<WritingSkillsPanelProps> = ({
           <button
             className="p-3 rounded-lg border border-border-subtle hover:border-danger hover:bg-danger/5 transition-all text-center"
             onClick={() => {
-              if (confirm('确定要清空所有自定义技能吗？此操作不可撤销。')) {
-                skills.forEach((s) => deleteSkill(s.id));
-              }
+              confirmDialog({ title: '清空所有自定义技能', description: '此操作不可撤销。', confirmText: '清空', confirmVariant: 'danger' }).then((ok) => {
+                if (ok) skills.forEach((s) => deleteSkill(s.id));
+              });
             }}
           >
             <svg className="w-5 h-5 mx-auto mb-1 text-ink-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
@@ -1131,13 +1135,15 @@ const WritingSkillsPanel: React.FC<WritingSkillsPanelProps> = ({
           <button
             className="p-3 rounded-lg border border-border-subtle hover:border-warning hover:bg-warning/5 transition-all text-center"
             onClick={() => {
-              if (confirm('确定要恢复默认设置吗？自定义技能将保留。')) {
-                updateExtensionConfig({
-                  customSystemPrompt: '',
-                  autoTriggerSkills: true,
-                  skillSuggestionThreshold: 0.6,
-                });
-              }
+              confirmDialog({ title: '恢复默认设置', description: '自定义技能将保留。', confirmText: '恢复默认' }).then((ok) => {
+                if (ok) {
+                  updateExtensionConfig({
+                    customSystemPrompt: '',
+                    autoTriggerSkills: true,
+                    skillSuggestionThreshold: 0.6,
+                  });
+                }
+              });
             }}
           >
             <svg className="w-5 h-5 mx-auto mb-1 text-ink-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>

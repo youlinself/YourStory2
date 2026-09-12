@@ -2613,16 +2613,7 @@ export const ATTRIBUTE_ICONS: Record<string, string> = {
   fame: '⭐',
 };
 
-export const ATTRIBUTE_COLORS: Record<string, string> = {
-  energy: '#F59E0B',
-  physique: '#EF4444',
-  health: '#10B981',
-  iq: '#3B82F6',
-  eq: '#8B5CF6',
-  wealth: '#F97316',
-  network: '#06B6D4',
-  fame: '#EC4899',
-};
+export { ATTRIBUTE_COLORS } from '../utils/palette';
 
 export const ATTRIBUTE_DESCRIPTIONS: Record<string, string> = {
   energy: '⚡ 精力: 30点获【精力充沛】抽2牌 | 50/90点首回合+1精力 | 70点获【活力爆发】+3精力 | 100点最大精力+1',

@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import type { Annotation } from '../../types/novel';
+import { DATA_COLORS } from '../../utils/palette';
 
 interface AnnotationMarkerProps {
   content: string;
@@ -104,7 +105,12 @@ const AnnotationMarker: React.FC<AnnotationMarkerProps> = ({
           className="cursor-pointer border-b-2 border-dashed"
           style={{
             backgroundColor: colorMap[annotation.type],
-            borderColor: annotation.type === 'comment' ? '#3b82f6' : annotation.type === 'todo' ? '#f59e0b' : '#10b981',
+            borderColor:
+              annotation.type === 'comment'
+                ? DATA_COLORS.blue
+                : annotation.type === 'todo'
+                  ? DATA_COLORS.amber
+                  : DATA_COLORS.emerald,
           }}
           onClick={() => onAnnotationSelect(annotation.id)}
           title={annotation.note}

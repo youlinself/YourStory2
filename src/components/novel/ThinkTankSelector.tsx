@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { Bot } from 'lucide-react';
+import { AGENT_ROLE_ICONS, AGENT_ROLE_DEFAULT_ICON } from '../../utils/palette';
 import useThinkTankStore from '../../stores/thinkTankStore';
 import useAIStore from '../../stores/aiStore';
 
@@ -31,8 +33,6 @@ const ThinkTankSelector: React.FC<ThinkTankSelectorProps> = ({
     ? members.find((m) => m.id === selectedMemberId)
     : null;
 
-  const selectedRolePreset = selectedMember ? getRolePreset(selectedMember.role) : null;
-
   const handleSelect = (memberId: string | null) => {
     onSelect(memberId);
     setIsOpen(false);
@@ -47,7 +47,12 @@ const ThinkTankSelector: React.FC<ThinkTankSelectorProps> = ({
         <div className="flex items-center gap-2 min-w-0">
           {selectedMember ? (
             <>
-              <span className="text-lg flex-shrink-0">{selectedRolePreset?.icon || '⚙️'}</span>
+              <span className="flex-shrink-0 text-brand">
+                {(() => {
+                  const RoleIcon = AGENT_ROLE_ICONS[selectedMember.role] || AGENT_ROLE_DEFAULT_ICON;
+                  return <RoleIcon className="h-5 w-5" />;
+                })()}
+              </span>
               <div className="min-w-0">
                 <div className="text-sm font-medium text-ink truncate">{selectedMember.name}</div>
                 <div className="text-[10px] text-ink-faint truncate">
@@ -57,7 +62,9 @@ const ThinkTankSelector: React.FC<ThinkTankSelectorProps> = ({
             </>
           ) : (
             <>
-              <span className="text-lg flex-shrink-0">🤖</span>
+              <span className="flex-shrink-0 text-ink-muted">
+                <Bot className="h-5 w-5" />
+              </span>
               <div className="min-w-0">
                 <div className="text-sm font-medium text-ink">默认AI</div>
                 <div className="text-[10px] text-ink-faint truncate">
@@ -79,7 +86,7 @@ const ThinkTankSelector: React.FC<ThinkTankSelectorProps> = ({
       </button>
 
       {isOpen && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-border-subtle rounded-lg shadow-lg z-50 max-h-64 overflow-y-auto">
+        <div className="absolute top-full left-0 right-0 mt-1 bg-bg-elevated border border-border-subtle rounded-lg shadow-lg z-50 max-h-64 overflow-y-auto">
           {showDefaultOption && (
             <button
               className={`w-full flex items-center gap-2 px-3 py-2 hover:bg-bg-subtle transition-colors text-left ${
@@ -87,7 +94,9 @@ const ThinkTankSelector: React.FC<ThinkTankSelectorProps> = ({
               }`}
               onClick={() => handleSelect(null)}
             >
-              <span className="text-lg">🤖</span>
+              <span className="text-ink-muted">
+                <Bot className="h-5 w-5" />
+              </span>
               <div>
                 <div className="text-sm font-medium text-ink">默认AI</div>
                 <div className="text-[10px] text-ink-faint">使用设置页配置的默认AI</div>
@@ -115,7 +124,12 @@ const ThinkTankSelector: React.FC<ThinkTankSelectorProps> = ({
                     }`}
                     onClick={() => handleSelect(member.id)}
                   >
-                    <span className="text-lg">{preset?.icon || '⚙️'}</span>
+                    <span className="text-brand">
+                      {(() => {
+                        const PresetIcon = AGENT_ROLE_ICONS[member.role] || AGENT_ROLE_DEFAULT_ICON;
+                        return <PresetIcon className="h-5 w-5" />;
+                      })()}
+                    </span>
                     <div className="min-w-0 flex-1">
                       <div className="text-sm font-medium text-ink truncate">{member.name}</div>
                       <div className="text-[10px] text-ink-faint truncate">

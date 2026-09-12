@@ -1,5 +1,6 @@
 import React, { useRef, useEffect } from 'react';
-import { Sparkles, Users, BookOpen, PenLine } from 'lucide-react';
+import { Sparkles, Users, BookOpen, PenLine, Copy } from 'lucide-react';
+import { showContextMenu } from '../ContextMenu';
 import type { Message } from '../../types';
 import ContentExtractCard from './ContentExtractCard';
 import MDEditor from '@uiw/react-md-editor';
@@ -56,6 +57,17 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
           <div
             key={msg.id}
             className={`message-row ${msg.isUser ? 'message-row-user' : 'message-row-ai'}`}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              showContextMenu(e.clientX, e.clientY, [
+                {
+                  label: '复制消息内容',
+                  icon: <Copy className="h-3.5 w-3.5" />,
+                  onSelect: () => { void navigator.clipboard.writeText(msg.content); },
+                },
+              ]);
+            }}
           >
             {!msg.isUser && (
               <div className="avatar brand-gradient text-white">

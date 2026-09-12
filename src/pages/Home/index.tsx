@@ -85,8 +85,7 @@ const HomePage: React.FC = () => {
             <h1 className="text-2xl font-semibold heading-serif tracking-tight text-ink">
               欢迎回来
             </h1>
-            <span className="text-2xl">👋</span>
-          </div>
+                      </div>
           <p className="text-ink-muted text-[14px] leading-relaxed">
             {chapters.length > 0 ? '今天想聊聊人生中的哪个阶段呢？' : '开始创作你的人生故事吧'}
           </p>

@@ -5,6 +5,10 @@ import useSimulationStore, { getEffectDisplayValue, MAX_HAND_SIZE, BASE_DRAW_COU
 import useAIStore from '../../stores/aiStore';
 import useBondStore from '../../stores/bondStore';
 import AIGenerationLoading from '../../components/AIGenerationLoading';
+import { HP_BAR_COLORS, DATA_COLORS, CARD_TYPE_COLORS } from '../../utils/palette';
+import {
+  Gamepad2, Home, Zap, Bot, Sparkles, Landmark, Trophy, Scroll, Save,
+} from 'lucide-react';
 
 import {
   ERAS,
@@ -166,7 +170,7 @@ const CardDetail: React.FC<CardDetailProps> = ({ card, activeBonuses = [], statu
     >
       <div className="flex items-center justify-between mb-2">
         <span className="text-[10px] font-bold px-1.5 py-0.5 rounded text-brand bg-brand-light">{card.cost}</span>
-        <span className={`text-[9px] uppercase tracking-wide ${colors.label}`}>{CARD_TYPE_NAMES[card.type] || card.type}</span>
+        <span className={`text-[10px] uppercase tracking-wide ${colors.label}`}>{CARD_TYPE_NAMES[card.type] || card.type}</span>
       </div>
       <div className="text-2xl mb-1.5 text-center">{card.icon}</div>
       <div className="text-xs font-medium mb-0.5 text-center text-ink">{card.name}</div>
@@ -181,21 +185,11 @@ const CardDetail: React.FC<CardDetailProps> = ({ card, activeBonuses = [], statu
 };
 
 const getCardTypeColor = (type: string) => {
-  switch (type) {
-    case 'attack': return { border: 'rgba(209,36,47,0.15)', label: 'text-danger', bg: 'rgba(209,36,47,0.08)' };
-    case 'skill': return { border: 'rgba(45,123,185,0.15)', label: 'text-info', bg: 'rgba(45,123,185,0.08)' };
-    case 'power': return { border: 'rgba(168,85,247,0.15)', label: 'text-[#a855f7]', bg: 'rgba(168,85,247,0.08)' };
-    default: return { border: 'rgba(201,169,110,0.2)', label: 'text-gold', bg: 'rgba(201,169,110,0.08)' };
-  }
+  return CARD_TYPE_COLORS[type] || CARD_TYPE_COLORS.default;
 };
 
 const getCardGlow = (type: string) => {
-  switch (type) {
-    case 'attack': return 'hover:border-danger/30';
-    case 'skill': return 'hover:border-info/30';
-    case 'power': return 'hover:border-[#a855f7]/30';
-    default: return 'hover:border-gold/30';
-  }
+  return (CARD_TYPE_COLORS[type] || CARD_TYPE_COLORS.default).glow;
 };
 
 const AttributeBar: React.FC<{ attr: keyof PlayerAttributes; value: number; showLabel?: boolean }> = ({ attr, value, showLabel = true }) => {
@@ -206,8 +200,8 @@ const AttributeBar: React.FC<{ attr: keyof PlayerAttributes; value: number; show
     <div className="flex items-center gap-2">
       <span className="text-base w-5 text-center">{ATTRIBUTE_ICONS[attr] || '•'}</span>
       {showLabel && <span className="text-xs text-ink-muted w-8">{ATTRIBUTE_NAMES[attr] || attr}</span>}
-      <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden min-w-[60px] relative">
-        <div className="h-full rounded-full transition-all duration-500" style={{ width: `${Math.min(100, value)}%`, backgroundColor: ATTRIBUTE_COLORS[attr] || '#6B7280' }} />
+      <div className="flex-1 h-2 bg-border rounded-full overflow-hidden min-w-[60px] relative">
+        <div className="h-full rounded-full transition-all duration-500" style={{ width: `${Math.min(100, value)}%`, backgroundColor: ATTRIBUTE_COLORS[attr] || DATA_COLORS.gray }} />
         {TIERS.map((t) => (
           <div
             key={t}
@@ -221,7 +215,7 @@ const AttributeBar: React.FC<{ attr: keyof PlayerAttributes; value: number; show
       </div>
       <span className="text-xs font-mono text-ink w-7 text-right">{Math.round(value)}</span>
       {tierInfo.currentTier > 0 && (
-        <span className="text-[9px] px-1 py-0.5 rounded bg-amber-100 text-amber-700 font-medium" title={tierInfo.currentTierName || ''}>
+        <span className="text-[10px] px-1 py-0.5 rounded bg-warning-bg text-warning font-medium" title={tierInfo.currentTierName || ''}>
           {tierInfo.currentTier}阶
         </span>
       )}
@@ -259,34 +253,42 @@ const ModeSelectPhase: React.FC = () => {
     toggleAI();
     if (!aiEnabled) {
       if (!apiKey) {
-        addToast({ type: 'warning', message: '⚠️ 请先配置AI API密钥 - 前往设置页面配置' });
+        addToast({ type: 'warning', message: '请先配置AI API密钥 - 前往设置页面配置' });
       } else {
-        addToast({ type: 'success', message: '🤖 AI大模型模式已开启 - 事件将由AI动态生成' });
+        addToast({ type: 'success', message: 'AI大模型模式已开启 - 事件将由AI动态生成' });
       }
     } else {
-      addToast({ type: 'info', message: '🔄 AI大模型模式已关闭' });
+      addToast({ type: 'info', message: 'AI大模型模式已关闭' });
     }
   };
 
   if (step === 'mode') {
     return (
       <div className="flex flex-col items-center justify-center min-h-[70vh] px-6">
-        <h1 className="text-3xl font-bold text-ink mb-3">🎮 模拟人生</h1>
+        <div className="flex items-center gap-3 mb-2">
+          <Gamepad2 className="h-8 w-8 text-brand" strokeWidth={1.75} />
+          <h1 className="text-3xl font-bold text-ink">模拟人生</h1>
+        </div>
         <p className="text-ink-muted text-sm mb-8">选择游戏模式</p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl">
-          <button onClick={() => { selectMode('normal'); setStep('year'); }} className="p-6 bg-white border border-border-subtle rounded-xl hover:border-brand transition-all text-left">
-            <div className="text-3xl mb-2">🏠</div>
+          <button onClick={() => { selectMode('normal'); setStep('year'); }} className="group p-6 bg-bg-elevated border border-border-subtle rounded-xl hover:border-brand hover:shadow-md transition-all text-left">
+            <div className="w-11 h-11 rounded-lg bg-brand-light flex items-center justify-center mb-3">
+              <Home className="h-5 w-5 text-brand" strokeWidth={1.75} />
+            </div>
             <h3 className="text-lg font-semibold text-ink mb-1">普通模式</h3>
             <p className="text-xs text-ink-muted">度过平凡而真实的一生</p>
           </button>
-          <button onClick={() => { selectMode('endless'); setStep('year'); }} className="p-6 bg-white border border-border-subtle rounded-xl hover:border-brand transition-all text-left">
-            <div className="text-3xl mb-2">⚡</div>
+          <button onClick={() => { selectMode('endless'); setStep('year'); }} className="group p-6 bg-bg-elevated border border-border-subtle rounded-xl hover:border-brand hover:shadow-md transition-all text-left">
+            <div className="w-11 h-11 rounded-lg bg-gold-light flex items-center justify-center mb-3">
+              <Zap className="h-5 w-5 text-gold" strokeWidth={1.75} />
+            </div>
             <h3 className="text-lg font-semibold text-ink mb-1">修仙模式</h3>
             <p className="text-xs text-ink-muted">突破寿元极限，追求长生</p>
           </button>
         </div>
-        <div className="mt-6 flex items-center gap-3 bg-white border border-border-subtle rounded-xl px-5 py-3">
-          <span className="text-sm font-medium text-ink">🤖 开启AI大模型</span>
+        <div className="mt-6 flex items-center gap-3 bg-bg-elevated border border-border-subtle rounded-xl px-5 py-3">
+          <Bot className="h-4 w-4 text-brand" />
+          <span className="text-sm font-medium text-ink">开启AI大模型</span>
           <label className="toggle-switch">
             <input
               type="checkbox"
@@ -297,30 +299,31 @@ const ModeSelectPhase: React.FC = () => {
           </label>
         </div>
         {aiEnabled && (
-          <p className="mt-2 text-xs text-brand">
-            ✨ AI将根据你的属性、年龄和经历动态生成专属事件
+          <p className="mt-2 flex items-center gap-1 text-xs text-brand">
+            <Sparkles className="h-3 w-3" />
+            AI将根据你的属性、年龄和经历动态生成专属事件
           </p>
         )}
         <div className="mt-4 flex gap-3">
           <button
             onClick={() => navigate('/thinktank')}
-            className="px-6 py-2.5 bg-white border border-border-subtle rounded-xl text-ink-muted hover:border-brand hover:text-brand transition-all flex items-center gap-2 text-sm"
+            className="px-6 py-2.5 bg-bg-elevated border border-border-subtle rounded-xl text-ink-muted hover:border-brand hover:text-brand transition-all flex items-center gap-2 text-sm"
           >
-            <span>🏛️</span>
+            <Landmark className="h-4 w-4" />
             <span>智库 - 查看所有卡牌</span>
           </button>
           <button
             onClick={() => navigate('/achievements')}
-            className="px-6 py-2.5 bg-white border border-border-subtle rounded-xl text-ink-muted hover:border-gold hover:text-gold transition-all flex items-center gap-2 text-sm"
+            className="px-6 py-2.5 bg-bg-elevated border border-border-subtle rounded-xl text-ink-muted hover:border-gold hover:text-gold transition-all flex items-center gap-2 text-sm"
           >
-            <span>🏆</span>
+            <Trophy className="h-4 w-4" />
             <span>成就墙</span>
           </button>
           <button
             onClick={() => navigate('/records')}
-            className="px-6 py-2.5 bg-white border border-border-subtle rounded-xl text-ink-muted hover:border-brand hover:text-brand transition-all flex items-center gap-2 text-sm"
+            className="px-6 py-2.5 bg-bg-elevated border border-border-subtle rounded-xl text-ink-muted hover:border-brand hover:text-brand transition-all flex items-center gap-2 text-sm"
           >
-            <span>📜</span>
+            <Scroll className="h-4 w-4" />
             <span>游戏记录</span>
           </button>
         </div>
@@ -338,28 +341,28 @@ const ModeSelectPhase: React.FC = () => {
         <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-7 gap-2 mb-6">
           {ERAS.map((era) => (
             <button key={era.year} onClick={() => setSelectedYear(era.year)}
-              className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${selectedYear === era.year ? 'bg-brand text-white shadow-md scale-105' : 'bg-white border border-border-subtle text-ink hover:border-brand hover:text-brand'}`}>
+              className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${selectedYear === era.year ? 'bg-brand text-white shadow-md scale-105' : 'bg-bg-elevated border border-border-subtle text-ink hover:border-brand hover:text-brand'}`}>
               {era.year}
             </button>
           ))}
         </div>
         {selectedEra && (
-          <div className="bg-white rounded-xl border border-border-subtle p-5 mb-6 shadow-sm">
+          <div className="bg-bg-elevated rounded-xl border border-border-subtle p-5 mb-6 shadow-sm">
             <div className="flex items-center gap-3 mb-2">
               <span className="text-xl">🌟</span>
               <div><h3 className="font-semibold text-ink">{selectedEra.name}</h3><span className="text-xs text-ink-muted">{selectedEra.year}年代</span></div>
             </div>
             <p className="text-sm text-ink-muted mb-3">{selectedEra.description}</p>
             <div className="grid grid-cols-3 gap-3 text-xs">
-              <div className="bg-gray-50 rounded-lg px-2 py-1.5 text-center"><div className="text-ink-muted">预期寿命</div><div className="font-semibold text-ink">{selectedEra.baseLifeExpectancy}岁</div></div>
-              <div className="bg-gray-50 rounded-lg px-2 py-1.5 text-center"><div className="text-ink-muted">初始财富</div><div className="font-semibold text-ink">{selectedEra.initialWealthRange[0]}-{selectedEra.initialWealthRange[1]}</div></div>
-              <div className="bg-gray-50 rounded-lg px-2 py-1.5 text-center"><div className="text-ink-muted">属性点</div><div className="font-semibold text-ink">{selectedEra.attributePoints}</div></div>
+              <div className="bg-bg-subtle rounded-lg px-2 py-1.5 text-center"><div className="text-ink-muted">预期寿命</div><div className="font-semibold text-ink">{selectedEra.baseLifeExpectancy}岁</div></div>
+              <div className="bg-bg-subtle rounded-lg px-2 py-1.5 text-center"><div className="text-ink-muted">初始财富</div><div className="font-semibold text-ink">{selectedEra.initialWealthRange[0]}-{selectedEra.initialWealthRange[1]}</div></div>
+              <div className="bg-bg-subtle rounded-lg px-2 py-1.5 text-center"><div className="text-ink-muted">属性点</div><div className="font-semibold text-ink">{selectedEra.attributePoints}</div></div>
             </div>
           </div>
         )}
         <div className="text-center">
           <button onClick={() => selectedYear && startGame(selectedYear)} disabled={!selectedYear}
-            className={`px-8 py-3 rounded-lg font-medium text-base transition-all ${selectedYear ? 'bg-brand text-white hover:bg-brand/90 shadow-md' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}>
+            className={`px-8 py-3 rounded-lg font-medium text-base transition-all ${selectedYear ? 'bg-brand text-white hover:bg-brand/90 shadow-md' : 'bg-border text-ink-faint cursor-not-allowed'}`}>
             开始人生 →
           </button>
         </div>
@@ -394,12 +397,12 @@ const AttributeTooltipContent: React.FC<{ attr: keyof PlayerAttributes }> = ({ a
 
       {/* 已获得的卡牌 */}
       {acquiredCards.length > 0 && (
-        <div className="mb-2 p-1.5 rounded bg-purple-50 border border-purple-200">
-          <div className="text-[10px] text-purple-600 font-medium mb-1">🎴 已获得的卡牌</div>
+        <div className="mb-2 p-1.5 rounded bg-power-light border border-power/30">
+          <div className="text-[10px] text-power font-medium mb-1">🎴 已获得的卡牌</div>
           {acquiredCards.map((card) => (
-            <div key={card.id} className="text-[10px] text-purple-700 mb-0.5">
+            <div key={card.id} className="text-[10px] text-power mb-0.5">
               <span className="font-medium">{card.icon} {card.name}</span>
-              <span className="text-purple-500 ml-1">- {card.description}</span>
+              <span className="text-power ml-1">- {card.description}</span>
             </div>
           ))}
         </div>
@@ -407,11 +410,11 @@ const AttributeTooltipContent: React.FC<{ attr: keyof PlayerAttributes }> = ({ a
 
       {/* 当前阶层 */}
       {tierInfo.currentTier > 0 && (
-        <div className="mb-2 p-1.5 rounded bg-amber-50 border border-amber-200">
-          <div className="text-[10px] text-amber-600 font-medium mb-0.5">
+        <div className="mb-2 p-1.5 rounded bg-warning-bg border border-warning/30">
+          <div className="text-[10px] text-warning font-medium mb-0.5">
             🏆 当前阶层: {tierInfo.currentTierName} ({tierInfo.currentTier}/5阶)
           </div>
-          <div className="text-[10px] text-amber-700">
+          <div className="text-[10px] text-warning">
             {tierInfo.passiveBonuses.length > 0 && (
               <div>✨ 被动: {tierInfo.passiveBonuses.map((b) => b.description).join(', ')}</div>
             )}
@@ -421,11 +424,11 @@ const AttributeTooltipContent: React.FC<{ attr: keyof PlayerAttributes }> = ({ a
 
       {/* 下一阶预览 */}
       {tierInfo.nextTier && tierInfo.nextTierName && (
-        <div className="p-1.5 rounded bg-blue-50 border border-blue-200">
-          <div className="text-[10px] text-blue-600 font-medium mb-0.5">
+        <div className="p-1.5 rounded bg-info-light border border-info/30">
+          <div className="text-[10px] text-info font-medium mb-0.5">
             🔓 下一阶 ({tierInfo.nextTier}点): {tierInfo.nextTierName}
           </div>
-          <div className="text-[10px] text-blue-700">
+          <div className="text-[10px] text-info">
             {tierInfo.nextBonuses[0]?.effect === 'card_reward' && nextCard ? (
               <div>🎴 获得卡牌: {nextCard.icon} {nextCard.name} - {nextCard.description}</div>
             ) : (
@@ -436,8 +439,8 @@ const AttributeTooltipContent: React.FC<{ attr: keyof PlayerAttributes }> = ({ a
       )}
 
       {!tierInfo.currentTier && (
-        <div className="p-1.5 rounded bg-gray-50 border border-gray-200">
-          <div className="text-[10px] text-gray-500">
+        <div className="p-1.5 rounded bg-bg-subtle border border-border">
+          <div className="text-[10px] text-ink-muted">
             🔒 达到30点解锁第一阶奖励
           </div>
         </div>
@@ -466,13 +469,13 @@ const AllocatingPhase: React.FC = () => {
           const hasReachedTier = tierInfo.currentTier > 0;
           return (
             <Tooltip key={attr} content={<AttributeTooltipContent attr={attr} />} position="top">
-              <div className="bg-white rounded-lg border border-border-subtle p-4 cursor-help transition-all hover:border-brand/50 hover:shadow-sm">
+              <div className="bg-bg-elevated rounded-lg border border-border-subtle p-4 cursor-help transition-all hover:border-brand/50 hover:shadow-sm">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <span>{ATTRIBUTE_ICONS[attr]}</span>
                     <span className="text-sm font-medium text-ink">{ATTRIBUTE_NAMES[attr]}</span>
                     {hasReachedTier && (
-                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-medium">
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-warning-bg text-warning font-medium">
                         {tierInfo.currentTierName}
                       </span>
                     )}
@@ -483,7 +486,7 @@ const AllocatingPhase: React.FC = () => {
                   <button
                     onClick={(e) => { e.stopPropagation(); allocateAttribute(attr, attributes[attr] - 1); }}
                     disabled={attributes[attr] <= baseAttributes[attr]}
-                    className="w-6 h-6 rounded bg-gray-100 hover:bg-gray-200 disabled:opacity-50 text-xs flex-shrink-0"
+                    className="w-6 h-6 rounded bg-bg-subtle hover:bg-border disabled:opacity-50 text-xs flex-shrink-0"
                   >
                     -
                   </button>
@@ -494,7 +497,7 @@ const AllocatingPhase: React.FC = () => {
                       max={Math.min(60, attributes[attr] + remainingPoints)}
                       value={attributes[attr]}
                       onChange={(e) => allocateAttribute(attr, parseInt(e.target.value))}
-                      className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-brand w-full"
+                      className="flex-1 h-2 bg-border rounded-lg appearance-none cursor-pointer accent-brand w-full"
                     />
                     <div className="flex justify-between mt-1">
                       {TIERS.map((t) => {
@@ -502,8 +505,8 @@ const AllocatingPhase: React.FC = () => {
                         const isNext = nextTier === t;
                         return (
                           <div key={t} className="flex flex-col items-center">
-                            <div className={`w-1.5 h-1.5 rounded-full ${isReached ? 'bg-amber-400' : isNext ? 'bg-blue-300' : 'bg-gray-200'}`} />
-                            <span className={`text-[8px] ${isReached ? 'text-amber-600' : isNext ? 'text-blue-500' : 'text-gray-400'}`}>
+                            <div className={`w-1.5 h-1.5 rounded-full ${isReached ? 'bg-warning' : isNext ? 'bg-info-light' : 'bg-border'}`} />
+                            <span className={`text-[8px] ${isReached ? 'text-warning' : isNext ? 'text-info' : 'text-ink-faint'}`}>
                               {t}
                             </span>
                           </div>
@@ -514,7 +517,7 @@ const AllocatingPhase: React.FC = () => {
                   <button
                     onClick={(e) => { e.stopPropagation(); allocateAttribute(attr, attributes[attr] + 1); }}
                     disabled={remainingPoints <= 0 || attributes[attr] >= 60}
-                    className="w-6 h-6 rounded bg-gray-100 hover:bg-gray-200 disabled:opacity-50 text-xs flex-shrink-0"
+                    className="w-6 h-6 rounded bg-bg-subtle hover:bg-border disabled:opacity-50 text-xs flex-shrink-0"
                   >
                     +
                   </button>
@@ -522,10 +525,10 @@ const AllocatingPhase: React.FC = () => {
                 <div className="flex justify-between text-[10px] text-ink-muted mt-1">
                   <span>基础 {baseAttributes[attr]}</span>
                   {nextTier && (
-                    <span className="text-blue-500">
+                    <span className="text-info">
                       下一阶 {nextTier} 点
                       {tierInfo.nextBonuses[0]?.effect === 'card_reward' && (
-                        <span className="ml-1 text-purple-500">🎴</span>
+                        <span className="ml-1 text-power">🎴</span>
                       )}
                     </span>
                   )}
@@ -533,7 +536,7 @@ const AllocatingPhase: React.FC = () => {
                 {nextTier && tierInfo.nextBonuses[0]?.effect === 'card_reward' && (() => {
                   const nextCard = ATTRIBUTE_TIER_CARDS[attr]?.find((c) => c.id === tierInfo.nextBonuses[0]?.cardId);
                   return nextCard ? (
-                    <div className="mt-1 p-1 rounded bg-purple-50 border border-purple-100 text-[9px] text-purple-600">
+                    <div className="mt-1 p-1 rounded bg-power-light border border-power/30 text-[10px] text-power">
                       <span className="font-medium">{nextCard.icon} {nextCard.name}</span>: {nextCard.description}
                     </div>
                   ) : null;
@@ -544,7 +547,7 @@ const AllocatingPhase: React.FC = () => {
         })}
       </div>
       <button onClick={confirmAllocation} disabled={remainingPoints > 0}
-        className={`px-8 py-3 rounded-lg font-medium transition-all ${remainingPoints === 0 ? 'bg-brand text-white hover:bg-brand/90 shadow-md' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}>
+        className={`px-8 py-3 rounded-lg font-medium transition-all ${remainingPoints === 0 ? 'bg-brand text-white hover:bg-brand/90 shadow-md' : 'bg-border text-ink-faint cursor-not-allowed'}`}>
         确认分配 →
       </button>
     </div>
@@ -560,7 +563,7 @@ const MacroMapModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+      <div role="dialog" aria-modal="true" className="bg-bg-elevated rounded-2xl p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-bold text-ink">宏观地图</h3>
           <button onClick={onClose} className="text-ink-muted hover:text-ink text-xl">&times;</button>
@@ -569,7 +572,7 @@ const MacroMapModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         <div className="space-y-2">
           {currentMap.years.map((year) => (
             <div key={year.year} className={`flex items-center gap-3 p-3 rounded-lg border ${
-              year.isCompleted ? 'bg-gray-50 border-gray-200' :
+              year.isCompleted ? 'bg-bg-subtle border-border' :
               year.year === currentMap.years[currentMap.currentYearIndex].year ? 'bg-brand/5 border-brand' :
               'border-border-subtle'
             }`}>
@@ -580,22 +583,22 @@ const MacroMapModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                   : year.options
                 ).map((opt) => (
                   <div key={opt.id} className={`flex-1 h-14 rounded-lg border text-xs flex flex-col items-center justify-center p-1 ${
-                    year.isCompleted ? 'bg-gray-100 border-gray-200 text-gray-400' :
+                    year.isCompleted ? 'bg-bg-subtle border-border text-ink-faint' :
                     year.selectedOptionId === opt.id ? 'bg-brand/10 border-brand text-brand font-bold' :
-                    'bg-white border-border-subtle text-ink'
+                    'bg-bg-elevated border-border-subtle text-ink'
                   }`}>
                     <span className="text-lg">{OPTION_ICONS[opt.type]}</span>
                     <span className="text-[10px] mt-0.5">{OPTION_NAMES[opt.type]}</span>
                   </div>
                 ))}
               </div>
-              {year.isCompleted && <span className="text-green-500 text-sm">✓</span>}
+              {year.isCompleted && <span className="text-success text-sm">✓</span>}
             </div>
           ))}
         </div>
         <div className="mt-4 flex items-center gap-4 text-xs text-ink-muted">
           <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-brand/20 border border-brand inline-block" /> 当前可选</span>
-          <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-gray-100 border border-gray-300 inline-block" /> 已完成</span>
+          <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-bg-subtle border border-border inline-block" /> 已完成</span>
         </div>
       </div>
     </div>
@@ -623,7 +626,7 @@ const YearViewPhase: React.FC = () => {
       <div className="text-center mb-8">
         <div className="text-3xl font-bold text-ink mb-1">{yearNum}年</div>
         <div className="text-sm text-ink-muted">第{currentMap.currentYearIndex + 1}年 / 共10年</div>
-        {year.isBossYear && <div className="mt-2 text-sm text-red-500 font-medium">⚠️ Boss年 - 无法跳过</div>}
+        {year.isBossYear && <div className="mt-2 text-sm text-danger font-medium">⚠️ Boss年 - 无法跳过</div>}
       </div>
 
       <div className="flex flex-col items-center gap-3 w-full max-w-sm mb-6">
@@ -636,8 +639,8 @@ const YearViewPhase: React.FC = () => {
                 disabled={year.isCompleted}
                 className={`w-full max-w-[320px] p-5 rounded-xl border-2 text-left transition-all ${
                   isSelected ? 'border-brand bg-brand/5 shadow-md scale-[1.02]' :
-                  year.isCompleted ? 'border-gray-200 bg-gray-50 opacity-60 cursor-not-allowed' :
-                  'border-border-subtle bg-white hover:border-brand hover:shadow-md cursor-pointer'
+                  year.isCompleted ? 'border-border bg-bg-subtle opacity-60 cursor-not-allowed' :
+                  'border-border-subtle bg-bg-elevated hover:border-brand hover:shadow-md cursor-pointer'
                 }`}>
                 <div className="flex items-center gap-3">
                   <span className="text-2xl">{OPTION_ICONS[opt.type]}</span>
@@ -650,9 +653,9 @@ const YearViewPhase: React.FC = () => {
               </button>
               {idx < year.options.length - 1 && (
                 <div className="flex items-center gap-2 text-xs text-ink-muted">
-                  <div className="w-0.5 h-4 bg-gray-200" />
+                  <div className="w-0.5 h-4 bg-border" />
                   <span>或</span>
-                  <div className="w-0.5 h-4 bg-gray-200" />
+                  <div className="w-0.5 h-4 bg-border" />
                 </div>
               )}
             </React.Fragment>
@@ -662,12 +665,12 @@ const YearViewPhase: React.FC = () => {
 
       {/* 当前选择信息 */}
       {selectedOpt && (
-        <div className="w-full max-w-md bg-white rounded-xl border border-border-subtle p-4 mb-4">
+        <div className="w-full max-w-md bg-bg-elevated rounded-xl border border-border-subtle p-4 mb-4">
           <div className="text-sm text-ink-muted mb-2">当前选择</div>
           <div className="flex items-center gap-2">
             <span className="text-xl">{OPTION_ICONS[selectedOpt.type]}</span>
             <span className="font-medium text-ink">{OPTION_NAMES[selectedOpt.type]}</span>
-            {selectedOpt.type === 'boss' && <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full">⚠️ Boss战</span>}
+            {selectedOpt.type === 'boss' && <span className="text-xs bg-danger-bg text-danger px-2 py-0.5 rounded-full">⚠️ Boss战</span>}
           </div>
           <p className="text-xs text-ink-muted mt-1">{OPTION_DESCS[selectedOpt.type]}</p>
         </div>
@@ -675,12 +678,12 @@ const YearViewPhase: React.FC = () => {
 
       <div className="flex gap-3">
         <button onClick={() => setShowMacro(true)}
-          className="px-5 py-2.5 bg-white border border-border-subtle rounded-lg text-sm hover:border-brand transition-colors">
+          className="px-5 py-2.5 bg-bg-elevated border border-border-subtle rounded-lg text-sm hover:border-brand transition-colors">
           🗺️ 宏观地图
         </button>
         <button onClick={enterOption} disabled={!selectedOpt || year.isCompleted}
           className={`px-6 py-2.5 rounded-lg font-medium transition-all ${
-            selectedOpt && !year.isCompleted ? 'bg-brand text-white hover:bg-brand/90 shadow-md' : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+            selectedOpt && !year.isCompleted ? 'bg-brand text-white hover:bg-brand/90 shadow-md' : 'bg-border text-ink-faint cursor-not-allowed'
           }`}>
           进入 →
         </button>
@@ -716,7 +719,7 @@ const EventPhase: React.FC<{ event: GameEvent }> = ({ event }) => {
 
   if (aiLoading) {
     return (
-      <div className="bg-white rounded-xl border border-border-subtle p-6 shadow-sm max-w-lg mx-auto">
+      <div className="bg-bg-elevated rounded-xl border border-border-subtle p-6 shadow-sm max-w-lg mx-auto">
         <div className="flex flex-col items-center justify-center py-8">
           <div className="animate-spin w-10 h-10 border-3 border-brand border-t-transparent rounded-full mb-4" />
           <p className="text-ink-muted text-sm">🤖 AI正在为你生成专属事件...</p>
@@ -727,7 +730,7 @@ const EventPhase: React.FC<{ event: GameEvent }> = ({ event }) => {
   }
 
   return (
-    <div className="bg-white rounded-xl border border-border-subtle p-6 shadow-sm max-w-lg mx-auto">
+    <div className="bg-bg-elevated rounded-xl border border-border-subtle p-6 shadow-sm max-w-lg mx-auto">
       <h3 className="text-lg font-semibold text-ink mb-3">
         {event.title}
         {event.id.startsWith('ai_event_') && (
@@ -751,7 +754,7 @@ const EventPhase: React.FC<{ event: GameEvent }> = ({ event }) => {
                 className="w-full text-left p-4 rounded-lg border border-border-subtle hover:border-brand hover:bg-brand/5 transition-all">
                 <div className="flex items-center justify-between mb-1">
                   <span className="font-medium text-ink">{option.text}</span>
-                  <span className="text-xs font-mono px-2 py-0.5 rounded bg-gray-100 text-ink-muted">{Math.round(rate * 100)}%</span>
+                  <span className="text-xs font-mono px-2 py-0.5 rounded bg-bg-subtle text-ink-muted">{Math.round(rate * 100)}%</span>
                 </div>
               </button>
             );
@@ -776,12 +779,12 @@ const EventRelicSelectionPhase: React.FC = () => {
 
   const getRarityColor = (rarity: string) => {
     switch (rarity) {
-      case 'common': return 'border-gray-300 bg-gray-50';
-      case 'uncommon': return 'border-green-400 bg-green-50';
-      case 'rare': return 'border-blue-400 bg-blue-50';
-      case 'boss': return 'border-purple-400 bg-purple-50';
-      case 'legendary': return 'border-yellow-400 bg-yellow-50';
-      default: return 'border-gray-300 bg-gray-50';
+      case 'common': return 'border-border bg-bg-subtle';
+      case 'uncommon': return 'border-success/30 bg-success-bg';
+      case 'rare': return 'border-info/30 bg-info-light';
+      case 'boss': return 'border-power/30 bg-power-light';
+      case 'legendary': return 'border-warning/30 bg-warning-bg';
+      default: return 'border-border bg-bg-subtle';
     }
   };
 
@@ -797,7 +800,7 @@ const EventRelicSelectionPhase: React.FC = () => {
   };
 
   return (
-    <div className="bg-white rounded-xl border border-border-subtle p-6 shadow-sm max-w-2xl mx-auto">
+    <div className="bg-bg-elevated rounded-xl border border-border-subtle p-6 shadow-sm max-w-2xl mx-auto">
       <div className="text-center mb-6">
         <h3 className="text-lg font-semibold text-ink mb-2">🎁 选择一件遗物</h3>
         <p className="text-ink-muted text-sm">
@@ -887,7 +890,7 @@ const CombatPhaseView: React.FC = () => {
       case 'attack': return 'text-danger';
       case 'defend': return 'text-info';
       case 'buff': return 'text-warning';
-      case 'debuff': return 'text-[#a855f7]';
+      case 'debuff': return 'text-power';
       default: return 'text-ink-muted';
     }
   };
@@ -923,7 +926,7 @@ const CombatPhaseView: React.FC = () => {
                 <span className="text-[10px] text-ink-faint">点击敌人选择攻击目标</span>
                 <div className="flex gap-1.5">
                   {combat.enemies.filter(e => e.currentHealth > 0).map((_, i) => (
-                    <span key={i} className="w-2 h-2 rounded-full bg-danger animate-pulse-glow" style={{ animationDelay: `${i * 0.3}s` }} />
+                    <span key={i} className="w-2 h-2 rounded-full bg-danger" style={{ animationDelay: `${i * 0.3}s` }} />
                   ))}
                 </div>
               </div>
@@ -955,11 +958,11 @@ const CombatPhaseView: React.FC = () => {
                     )}
                     {!isTarget && isAlive && (
                       <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-ink-muted border border-border-subtle">点击选择</span>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-bg-subtle text-ink-muted border border-border-subtle">点击选择</span>
                       </div>
                     )}
                     <div className="flex items-start gap-3 mb-3">
-                      <div className="text-4xl animate-float" style={{ animationDelay: `${idx * 1}s` }}>{enemy.icon}</div>
+                      <div className="text-4xl" style={{ animationDelay: `${idx * 1}s` }}>{enemy.icon}</div>
                       <div className="flex-1 min-w-0">
                         <h3 className="text-serif font-semibold text-sm text-ink">
                           {enemy.name}
@@ -981,7 +984,7 @@ const CombatPhaseView: React.FC = () => {
                           className="h-full rounded-full transition-all duration-500"
                           style={{
                             width: `${hpPercent}%`,
-                            background: hpPercent > 50 ? 'linear-gradient(to right, #dc2626, #f87171)' : hpPercent > 25 ? 'linear-gradient(to right, #ea580c, #fb923c)' : 'linear-gradient(to right, #991b1b, #dc2626)',
+                            background: hpPercent > 50 ? HP_BAR_COLORS.high : hpPercent > 25 ? HP_BAR_COLORS.mid : HP_BAR_COLORS.low,
                           }}
                         />
                       </div>
@@ -1017,10 +1020,10 @@ const CombatPhaseView: React.FC = () => {
                                    <>
                                      攻击 {actualDamage} 伤害
                                      {intent.hits && intent.hits > 1 && (
-                                       <span className="text-[9px] text-ink-faint ml-1">×{intent.hits}</span>
+                                       <span className="text-[10px] text-ink-faint ml-1">×{intent.hits}</span>
                                      )}
                                      {baseDamage !== actualDamage && (
-                                       <span className="text-[9px] text-ink-faint ml-1">({baseDamage}
+                                       <span className="text-[10px] text-ink-faint ml-1">({baseDamage}
                                          {enemy.statusEffects.find((x) => x.type === 'strength') && `+${enemy.statusEffects.find((x) => x.type === 'strength')!.value}`}
                                          {weakValue && `-${weakValue}`}
                                          {enemy.mechanics?.includes('shield') && '×0.75'})
@@ -1142,7 +1145,7 @@ const CombatPhaseView: React.FC = () => {
                   className="h-full rounded-full transition-all duration-500"
                   style={{
                     width: `${(combat.player.currentHealth / combat.player.maxHealth) * 100}%`,
-                    background: 'linear-gradient(to right, #16a34a, #4ade80)',
+                    background: HP_BAR_COLORS.success,
                   }}
                 />
               </div>
@@ -1351,7 +1354,7 @@ const CombatPhaseView: React.FC = () => {
               disabled={combat.burnLifeUsed}
               className={`w-full py-3 font-medium text-sm rounded-xl transition-all flex items-center justify-center gap-2 ${
                 combat.burnLifeUsed
-                  ? 'bg-gray-100 border border-gray-200 text-gray-400 cursor-not-allowed'
+                  ? 'bg-bg-subtle border border-border text-ink-faint cursor-not-allowed'
                   : 'bg-danger/10 border border-danger/30 text-danger hover:bg-danger/20'
               }`}
             >
@@ -1364,7 +1367,7 @@ const CombatPhaseView: React.FC = () => {
           {/* 燃烧生命弹窗 */}
           {showBurnLifeModal && !combat.burnLifeUsed && (
             <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowBurnLifeModal(false)}>
-              <div className="bg-white rounded-2xl p-6 max-w-md w-full max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+              <div role="dialog" aria-modal="true" className="bg-bg-elevated rounded-2xl p-6 max-w-md w-full max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-bold text-ink">🔥 燃烧生命</h3>
                   <button onClick={() => setShowBurnLifeModal(false)} className="text-ink-muted hover:text-ink text-xl">&times;</button>
@@ -1471,7 +1474,7 @@ const RewardPhase: React.FC = () => {
             <button
               key={index}
               onClick={() => selectWonderOption(index)}
-              className="bg-white rounded-xl border-2 border-border-subtle p-5 hover:border-brand hover:shadow-lg transition-all text-left group"
+              className="bg-bg-elevated rounded-xl border-2 border-border-subtle p-5 hover:border-brand hover:shadow-lg transition-all text-left group"
             >
               <div className="flex items-center gap-3 mb-3">
                 <span className="text-3xl">{getWonderOptionIcon(option)}</span>
@@ -1488,7 +1491,7 @@ const RewardPhase: React.FC = () => {
               )}
               {option.type === 'relic' && option.relic && (
                 <div className="mt-2 text-xs text-ink-muted">
-                  <span className="px-2 py-0.5 bg-gray-100 rounded">{RARITY_NAMES[option.relic.rarity] || option.relic.rarity}</span>
+                  <span className="px-2 py-0.5 bg-bg-subtle rounded">{RARITY_NAMES[option.relic.rarity] || option.relic.rarity}</span>
                 </div>
               )}
             </button>
@@ -1497,7 +1500,7 @@ const RewardPhase: React.FC = () => {
 
         <button
           onClick={skipRewardWithGold}
-          className="px-6 py-2.5 bg-gray-100 text-ink-muted rounded-lg font-medium hover:bg-gray-200 hover:text-ink transition-colors"
+          className="px-6 py-2.5 bg-bg-subtle text-ink-muted rounded-lg font-medium hover:bg-border hover:text-ink transition-colors"
         >
           跳过奖励 → 💰+10
         </button>
@@ -1511,9 +1514,9 @@ const RewardPhase: React.FC = () => {
       <p className="text-ink-muted text-sm mb-6">选择一项作为本次奖励</p>
 
       <div className="flex gap-2 mb-4">
-        {hasCards && <button onClick={() => setTab('card')} className={`px-4 py-2 rounded-lg text-sm transition-all ${tab === 'card' ? 'bg-brand text-white' : 'bg-gray-100 text-ink-muted'}`}>🃏 卡牌</button>}
-        {hasAttribute && <button onClick={() => setTab('attribute')} className={`px-4 py-2 rounded-lg text-sm transition-all ${tab === 'attribute' ? 'bg-brand text-white' : 'bg-gray-100 text-ink-muted'}`}>📊 属性</button>}
-        {hasRelic && <button onClick={() => setTab('relic')} className={`px-4 py-2 rounded-lg text-sm transition-all ${tab === 'relic' ? 'bg-brand text-white' : 'bg-gray-100 text-ink-muted'}`}>🏺 遗物</button>}
+        {hasCards && <button onClick={() => setTab('card')} className={`px-4 py-2 rounded-lg text-sm transition-all ${tab === 'card' ? 'bg-brand text-white' : 'bg-bg-subtle text-ink-muted'}`}>🃏 卡牌</button>}
+        {hasAttribute && <button onClick={() => setTab('attribute')} className={`px-4 py-2 rounded-lg text-sm transition-all ${tab === 'attribute' ? 'bg-brand text-white' : 'bg-bg-subtle text-ink-muted'}`}>📊 属性</button>}
+        {hasRelic && <button onClick={() => setTab('relic')} className={`px-4 py-2 rounded-lg text-sm transition-all ${tab === 'relic' ? 'bg-brand text-white' : 'bg-bg-subtle text-ink-muted'}`}>🏺 遗物</button>}
       </div>
 
       {tab === 'card' && hasCards && (
@@ -1527,7 +1530,7 @@ const RewardPhase: React.FC = () => {
                   width={140}
                 />
                 <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                  <span className="text-[9px] px-2 py-0.5 rounded-full bg-brand text-white whitespace-nowrap">点击选择</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-brand text-white whitespace-nowrap">点击选择</span>
                 </div>
               </div>
             ))}
@@ -1539,9 +1542,9 @@ const RewardPhase: React.FC = () => {
         <div className="w-full max-w-md mb-6">
           <div className="space-y-3">
             {Object.entries(combat.rewards.attribute || {}).map(([key, value]) => (
-              <div key={key} className="bg-white rounded-lg border border-border-subtle p-4 flex items-center justify-between">
+              <div key={key} className="bg-bg-elevated rounded-lg border border-border-subtle p-4 flex items-center justify-between">
                 <div className="flex items-center gap-2"><span className="text-xl">{ATTRIBUTE_ICONS[key]}</span><span className="font-medium text-ink">{ATTRIBUTE_NAMES[key]}</span></div>
-                <span className="text-lg font-bold text-green-500">+{value}</span>
+                <span className="text-lg font-bold text-success">+{value}</span>
               </div>
             ))}
           </div>
@@ -1551,7 +1554,7 @@ const RewardPhase: React.FC = () => {
 
       {tab === 'relic' && hasRelic && (
         <div className="w-full max-w-md mb-6">
-          <div className="bg-white rounded-xl border border-border-subtle p-5">
+          <div className="bg-bg-elevated rounded-xl border border-border-subtle p-5">
             <div className="flex items-center gap-3 mb-3">
               <span className="text-3xl">{combat.rewards.relic!.icon}</span>
               <div><h3 className="font-semibold text-ink">{combat.rewards.relic!.name}</h3><span className="text-xs text-ink-muted">{RARITY_NAMES[combat.rewards.relic!.rarity] || combat.rewards.relic!.rarity}</span></div>
@@ -1569,7 +1572,7 @@ const RewardPhase: React.FC = () => {
       {(hasCards || hasAttribute || hasRelic) && (
         <button
           onClick={skipRewardWithGold}
-          className="px-6 py-2.5 bg-gray-100 text-ink-muted rounded-lg font-medium hover:bg-gray-200 hover:text-ink transition-colors"
+          className="px-6 py-2.5 bg-bg-subtle text-ink-muted rounded-lg font-medium hover:bg-border hover:text-ink transition-colors"
         >
           跳过奖励 → 💰+10
         </button>
@@ -1610,7 +1613,7 @@ const ShopPhase: React.FC = () => {
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5 ${
               canRefresh
                 ? 'bg-brand text-white hover:bg-brand/90 shadow-sm'
-                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                : 'bg-border text-ink-faint cursor-not-allowed'
             }`}
           >
             <span>🔄</span>
@@ -1630,11 +1633,11 @@ const ShopPhase: React.FC = () => {
           const isCard = !!item.card;
           const isRelic = !!item.relic;
           const rarityColors: Record<string, string> = {
-            common: 'border-gray-300 bg-gray-50/50',
-            uncommon: 'border-green-400 bg-green-50/50',
-            rare: 'border-blue-400 bg-blue-50/50',
-            legendary: 'border-yellow-400 bg-yellow-50/50',
-            boss: 'border-purple-400 bg-purple-50/50',
+            common: 'border-border bg-bg-subtle',
+            uncommon: 'border-success/30 bg-success-bg',
+            rare: 'border-info/30 bg-info-light',
+            legendary: 'border-warning/30 bg-warning-bg',
+            boss: 'border-power/30 bg-power-light',
           };
           const rarityLabels: Record<string, string> = {
             common: '普通',
@@ -1649,29 +1652,29 @@ const ShopPhase: React.FC = () => {
           const relicEffects = item.relic?.effects.map((e) => formatRelicEffect(e)) || [];
 
           return (
-            <div key={idx} className={`p-4 rounded-xl border-2 transition-all ${item.isPurchased ? 'opacity-50 bg-gray-100 !border-gray-200' : borderClass}`}>
+            <div key={idx} className={`p-4 rounded-xl border-2 transition-all ${item.isPurchased ? 'opacity-50 bg-bg-subtle !border-border' : borderClass}`}>
               <div className="flex items-start gap-3 mb-3">
                 <div className="text-3xl flex-shrink-0 mt-0.5">{item.card?.icon || item.relic?.icon}</div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap mb-1">
                     {isCard && (
-                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700 flex items-center gap-0.5">
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-info-light text-info flex items-center gap-0.5">
                         <span>🎴</span>
                         <span>卡牌</span>
                       </span>
                     )}
                     {isRelic && (
-                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 flex items-center gap-0.5">
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-warning-bg text-warning flex items-center gap-0.5">
                         <span>💎</span>
                         <span>遗物</span>
                       </span>
                     )}
                     {isCard && item.card && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-bg-subtle text-ink-secondary">
                         {CARD_TYPE_NAMES[item.card.type] || item.card.type}
                       </span>
                     )}
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded ${rarity === 'legendary' ? 'bg-yellow-200 text-yellow-800' : rarity === 'rare' ? 'bg-blue-200 text-blue-800' : rarity === 'uncommon' ? 'bg-green-200 text-green-800' : rarity === 'boss' ? 'bg-purple-200 text-purple-800' : 'bg-gray-200 text-gray-600'}`}>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded ${rarity === 'legendary' ? 'bg-warning-bg text-warning' : rarity === 'rare' ? 'bg-info-light text-info' : rarity === 'uncommon' ? 'bg-success-bg text-success' : rarity === 'boss' ? 'bg-power-light text-power' : 'bg-border text-ink-secondary'}`}>
                       {rarityLabels[rarity || 'common']}
                     </span>
                   </div>
@@ -1680,17 +1683,17 @@ const ShopPhase: React.FC = () => {
               </div>
 
               {isCard && item.card && (
-                <div className="mb-3 p-2 rounded-lg bg-indigo-50/50 border border-indigo-100">
-                  <div className="text-[10px] font-medium text-indigo-600 mb-1">使用效果</div>
+                <div className="mb-3 p-2 rounded-lg bg-info-light border border-info/30">
+                  <div className="text-[10px] font-medium text-info mb-1">使用效果</div>
                   <div className="flex flex-wrap gap-1">
                     {cardEffects.map((effect, i) => (
-                      <span key={i} className="text-[11px] px-1.5 py-0.5 rounded bg-white text-indigo-700 border border-indigo-100">
+                      <span key={i} className="text-[11px] px-1.5 py-0.5 rounded bg-bg-elevated text-info border border-info/30">
                         {effect}
                       </span>
                     ))}
                   </div>
                   {item.card.cost !== undefined && (
-                    <div className="mt-1.5 text-[10px] text-slate-500">
+                    <div className="mt-1.5 text-[10px] text-ink-muted">
                       费用: <span className="font-medium">{item.card.cost} ⚡</span>
                       {item.card.target && <span className="ml-2">目标: {item.card.target === 'enemy' ? '敌人' : item.card.target === 'self' ? '自己' : item.card.target === 'all' ? '全体' : '无'}</span>}
                     </div>
@@ -1699,11 +1702,11 @@ const ShopPhase: React.FC = () => {
               )}
 
               {isRelic && item.relic && (
-                <div className="mb-3 p-2 rounded-lg bg-amber-50/50 border border-amber-100">
-                  <div className="text-[10px] font-medium text-amber-600 mb-1">遗物效果</div>
+                <div className="mb-3 p-2 rounded-lg bg-warning-bg border border-warning/30">
+                  <div className="text-[10px] font-medium text-warning mb-1">遗物效果</div>
                   <div className="space-y-0.5">
                     {relicEffects.map((effect, i) => (
-                      <div key={i} className="text-[11px] px-1.5 py-0.5 rounded bg-white text-amber-700 border border-amber-100">
+                      <div key={i} className="text-[11px] px-1.5 py-0.5 rounded bg-bg-elevated text-warning border border-warning/30">
                         ✦ {effect}
                       </div>
                     ))}
@@ -1718,8 +1721,8 @@ const ShopPhase: React.FC = () => {
               <div className="flex items-center justify-between pt-2 border-t border-border-subtle/30">
                 <span className="text-sm font-bold text-brand">💰 {item.price}</span>
                 {!item.isPurchased ? (
-                  <button onClick={() => buyShopItem(idx)} disabled={gold < item.price} className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${gold >= item.price ? 'bg-brand text-white hover:bg-brand/90' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}>购买</button>
-                ) : <span className="text-xs text-gray-400">已购买</span>}
+                  <button onClick={() => buyShopItem(idx)} disabled={gold < item.price} className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${gold >= item.price ? 'bg-brand text-white hover:bg-brand/90' : 'bg-border text-ink-faint cursor-not-allowed'}`}>购买</button>
+                ) : <span className="text-xs text-ink-faint">已购买</span>}
               </div>
             </div>
           );
@@ -1737,9 +1740,9 @@ const ShopPhase: React.FC = () => {
         </div>
         <p className="text-xs text-ink-muted mb-3">从卡组中永久移除一张卡牌（每次商店限用1次）</p>
         {shop.cardRemovalUsed ? (
-          <div className="text-sm text-ink-muted text-center py-2 bg-gray-50 rounded-lg">已使用</div>
+          <div className="text-sm text-ink-muted text-center py-2 bg-bg-subtle rounded-lg">已使用</div>
         ) : deck.length === 0 ? (
-          <div className="text-sm text-ink-muted text-center py-2 bg-gray-50 rounded-lg">卡组为空</div>
+          <div className="text-sm text-ink-muted text-center py-2 bg-bg-subtle rounded-lg">卡组为空</div>
         ) : (
           <button
             onClick={() => setShowRemoveModal(true)}
@@ -1747,7 +1750,7 @@ const ShopPhase: React.FC = () => {
             className={`w-full py-2.5 rounded-lg font-medium text-sm transition-all ${
               canRemoveCard
                 ? 'bg-danger/10 text-danger border border-danger/30 hover:bg-danger/20'
-                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                : 'bg-bg-subtle text-ink-faint cursor-not-allowed'
             }`}
           >
             {canRemoveCard ? '选择要删除的卡牌' : gold < removalCost ? '金币不足' : '无法删除'}
@@ -1762,7 +1765,7 @@ const ShopPhase: React.FC = () => {
       {/* 删除卡牌弹窗 */}
       {showRemoveModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowRemoveModal(false)}>
-          <div className="bg-white rounded-2xl p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+          <div role="dialog" aria-modal="true" className="bg-bg-elevated rounded-2xl p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-ink">🗑️ 选择要删除的卡牌</h3>
               <button onClick={() => setShowRemoveModal(false)} className="text-ink-muted hover:text-ink text-xl">&times;</button>
@@ -1788,7 +1791,7 @@ const ShopPhase: React.FC = () => {
                       />
                     </div>
                     <div className="absolute inset-0 flex items-center justify-center bg-danger/10 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                      <span className="text-sm font-medium text-danger bg-white/90 px-3 py-1.5 rounded-lg shadow-sm">点击删除</span>
+                      <span className="text-sm font-medium text-danger bg-bg-elevated/90 px-3 py-1.5 rounded-lg shadow-sm">点击删除</span>
                     </div>
                   </div>
                 ))}
@@ -1821,7 +1824,7 @@ const RestPhase: React.FC = () => {
       <p className="text-ink-muted text-sm mb-6 text-center max-w-md">休息可以恢复30%的生命值</p>
 
       {/* 玩家状态面板 */}
-      <div className="w-full max-w-sm bg-white rounded-xl border border-border-subtle p-5 mb-6 shadow-sm">
+      <div className="w-full max-w-sm bg-bg-elevated rounded-xl border border-border-subtle p-5 mb-6 shadow-sm">
         <h3 className="text-sm font-semibold text-ink mb-4 flex items-center gap-2">
           <span>📋</span>
           <span>当前状态</span>
@@ -1843,7 +1846,7 @@ const RestPhase: React.FC = () => {
               className="h-full rounded-full transition-all duration-500"
               style={{
                 width: `${hpPercent}%`,
-                background: 'linear-gradient(to right, #16a34a, #4ade80)',
+                background: HP_BAR_COLORS.success,
               }}
             />
           </div>
@@ -1965,7 +1968,7 @@ const CultivationBreakthroughPanel: React.FC<CultivationBreakthroughPanelProps> 
         </div>
         <div className="flex justify-between">
           <span>属性需求</span>
-          <span className={canBreakthrough ? 'text-green-600' : 'text-red-500'}>
+          <span className={canBreakthrough ? 'text-success' : 'text-danger'}>
             {totalAttributes} / {requiredAttributes}
           </span>
         </div>
@@ -1984,7 +1987,7 @@ const CultivationBreakthroughPanel: React.FC<CultivationBreakthroughPanelProps> 
         className={`w-full py-2 rounded-lg font-medium text-sm transition-all ${
           canBreakthrough && !isAnimating
             ? 'bg-gradient-to-r from-brand to-purple-600 text-white hover:shadow-lg'
-            : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+            : 'bg-border text-ink-faint cursor-not-allowed'
         }`}
       >
         {canBreakthrough ? '尝试突破' : age <= 110 ? '需110岁后突破' : '属性不足'}
@@ -2138,10 +2141,13 @@ const SimulationPage: React.FC = () => {
       </div>
 
       {phase !== 'ended' && (
-        <div className="w-72 border-l border-border-subtle bg-gray-50 overflow-y-auto p-4 hidden lg:block">
+        <div className="w-72 border-l border-border-subtle bg-bg-subtle overflow-y-auto p-4 hidden lg:block">
           {phase === 'setup' ? (
-            <div className="bg-white rounded-xl border border-border-subtle p-4 mb-4">
-              <h3 className="font-semibold text-ink mb-3">💾 存档</h3>
+            <div className="bg-bg-elevated rounded-xl border border-border-subtle p-4 mb-4">
+              <h3 className="flex items-center gap-2 font-semibold text-ink mb-3">
+                <Save className="h-4 w-4 text-brand" />
+                存档
+              </h3>
               {hasSave ? (
                 <button
                   onClick={handleContinueGame}
@@ -2156,7 +2162,7 @@ const SimulationPage: React.FC = () => {
             </div>
           ) : (
             <>
-            <div className="bg-white rounded-xl border border-border-subtle p-4 mb-4">
+            <div className="bg-bg-elevated rounded-xl border border-border-subtle p-4 mb-4">
               <h3 className="font-semibold text-ink mb-3">📋 人生状态</h3>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between"><span className="text-ink-muted">出生年</span><span className="font-medium">{birthYear}</span></div>
@@ -2168,7 +2174,7 @@ const SimulationPage: React.FC = () => {
             </div>
 
             {/* 羁绊模块入口 */}
-            <div className="bg-white rounded-xl border border-border-subtle p-4 mb-4">
+            <div className="bg-bg-elevated rounded-xl border border-border-subtle p-4 mb-4">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-semibold text-ink">🔗 羁绊</h3>
                 <button
@@ -2218,7 +2224,7 @@ const SimulationPage: React.FC = () => {
 
             {/* 修仙突破面板 */}
             {cultivation && cultivation.realm !== 'tribulation' && (
-              <div className="bg-white rounded-xl border border-border-subtle p-4 mb-4">
+              <div className="bg-bg-elevated rounded-xl border border-border-subtle p-4 mb-4">
                 <h3 className="font-semibold text-ink mb-3">☯️ 境界突破</h3>
                 <CultivationBreakthroughPanel cultivation={cultivation} age={age} />
               </div>
@@ -2233,7 +2239,7 @@ const SimulationPage: React.FC = () => {
             </>
           )}
           {phase !== 'setup' && (
-          <div className="bg-white rounded-xl border border-border-subtle p-4 mb-4">
+          <div className="bg-bg-elevated rounded-xl border border-border-subtle p-4 mb-4">
             <h3 className="font-semibold text-ink mb-3">📊 属性</h3>
             <div className="space-y-2.5">
               {(Object.keys(attributes) as (keyof PlayerAttributes)[]).map((attr) => (
@@ -2251,13 +2257,13 @@ const SimulationPage: React.FC = () => {
               getAttributeTierInfo(attr, attributes[attr]).bonuses.map((b) => ({ ...b, attrName: ATTRIBUTE_NAMES[attr] }))
             );
             return allBonuses.length > 0 ? (
-              <div className="bg-white rounded-xl border border-border-subtle p-4 mb-4">
+              <div className="bg-bg-elevated rounded-xl border border-border-subtle p-4 mb-4">
                 <h3 className="font-semibold text-ink mb-3">🌟 阶层效果</h3>
                 <div className="space-y-1.5">
                   {allBonuses.map((b, i) => (
                     <div key={i} className="flex items-center gap-2 text-[10px]">
                       <span className="text-ink-faint w-8 flex-shrink-0">{b.attrName}</span>
-                      <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-medium flex-shrink-0">{b.name}</span>
+                      <span className="px-1.5 py-0.5 rounded bg-warning-bg text-warning font-medium flex-shrink-0">{b.name}</span>
                       <span className="text-ink-muted truncate">{b.description}</span>
                     </div>
                   ))}
@@ -2266,14 +2272,14 @@ const SimulationPage: React.FC = () => {
             ) : null;
           })()}
           {phase !== 'setup' && (
-          <div className="bg-white rounded-xl border border-border-subtle p-4 mb-4">
+          <div className="bg-bg-elevated rounded-xl border border-border-subtle p-4 mb-4">
             <h3 className="font-semibold text-ink mb-3">🃏 卡组 ({deck.length})</h3>
             <div 
               className="grid grid-cols-3 gap-1 cursor-pointer"
               onClick={() => setShowDeckModal(true)}
             >
               {deck.slice(0, 9).map((card) => (
-                <div key={card.id} className="text-center p-1 bg-gray-50 rounded hover:bg-gray-100 transition-colors" title={card.name}>
+                <div key={card.id} className="text-center p-1 bg-bg-subtle rounded hover:bg-bg-subtle transition-colors" title={card.name}>
                   <span className="text-lg">{card.icon}</span>
                 </div>
               ))}
@@ -2285,7 +2291,7 @@ const SimulationPage: React.FC = () => {
           </div>
           )}
           {relics.length > 0 && phase !== 'setup' && (
-            <div className="bg-white rounded-xl border border-border-subtle p-4 mb-4">
+            <div className="bg-bg-elevated rounded-xl border border-border-subtle p-4 mb-4">
               <h3 className="font-semibold text-ink mb-3">🏺 遗物 ({relics.length})</h3>
               <div className="grid grid-cols-3 gap-1">
                 {relics.slice(0, 9).map((relic) => (
@@ -2295,20 +2301,20 @@ const SimulationPage: React.FC = () => {
                       <div className="px-3 py-2 max-w-[220px]">
                         <div className="flex items-center gap-2 mb-1">
                           <span className="text-lg">{relic.icon}</span>
-                          <span className="font-semibold text-amber-900">{relic.name}</span>
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-200 text-amber-800">{RARITY_NAMES[relic.rarity] || relic.rarity}</span>
+                          <span className="font-semibold text-warning">{relic.name}</span>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-warning-bg text-warning">{RARITY_NAMES[relic.rarity] || relic.rarity}</span>
                         </div>
-                        <div className="text-amber-700 text-[11px] leading-relaxed mb-1.5">{relic.description}</div>
+                        <div className="text-warning text-[11px] leading-relaxed mb-1.5">{relic.description}</div>
                         <div className="space-y-0.5">
                           {relic.effects.map((effect, i) => (
-                            <div key={i} className="text-[11px] text-green-700">• {formatRelicEffect(effect)}</div>
+                            <div key={i} className="text-[11px] text-success">• {formatRelicEffect(effect)}</div>
                           ))}
                         </div>
                       </div>
                     }
                     position="top"
                   >
-                    <div className="text-center p-1 bg-gray-50 rounded cursor-default hover:bg-amber-50 transition-colors">
+                    <div className="text-center p-1 bg-bg-subtle rounded cursor-default hover:bg-warning-bg transition-colors">
                       <span className="text-lg">{relic.icon}</span>
                     </div>
                   </Tooltip>
@@ -2317,7 +2323,7 @@ const SimulationPage: React.FC = () => {
             </div>
           )}
           {hiddenTags.length > 0 && phase !== 'setup' && (
-          <div className="bg-white rounded-xl border border-border-subtle p-4">
+          <div className="bg-bg-elevated rounded-xl border border-border-subtle p-4">
             <h3 className="font-semibold text-ink mb-3">🏷️ 标签</h3>
             <div className="flex flex-wrap gap-1">
               {hiddenTags.map((tag) => {
@@ -2327,13 +2333,13 @@ const SimulationPage: React.FC = () => {
                     key={tag}
                     content={
                       <div className="px-3 py-2 max-w-[200px]">
-                        <div className="font-semibold text-amber-900 mb-1">{TAG_NAMES[tag] || tag}</div>
-                        <div className="text-amber-700 text-[11px] leading-relaxed">{tagData?.description || ''}</div>
+                        <div className="font-semibold text-warning mb-1">{TAG_NAMES[tag] || tag}</div>
+                        <div className="text-warning text-[11px] leading-relaxed">{tagData?.description || ''}</div>
                       </div>
                     }
                     position="top"
                   >
-                    <span className="px-2 py-1 rounded-full bg-amber-100 text-amber-700 text-xs cursor-default hover:bg-amber-200 transition-colors">{TAG_NAMES[tag] || tag}</span>
+                    <span className="px-2 py-1 rounded-full bg-warning-bg text-warning text-xs cursor-default hover:bg-warning-bg transition-colors">{TAG_NAMES[tag] || tag}</span>
                   </Tooltip>
                 );
               })}
@@ -2346,7 +2352,7 @@ const SimulationPage: React.FC = () => {
       {/* 卡组详情弹窗 */}
       {showDeckModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowDeckModal(false)}>
-          <div className="bg-white rounded-2xl p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+          <div role="dialog" aria-modal="true" className="bg-bg-elevated rounded-2xl p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-ink">🃏 卡组详情 ({deck.length}张)</h3>
               <button onClick={() => setShowDeckModal(false)} className="text-ink-muted hover:text-ink text-xl">&times;</button>
@@ -2371,7 +2377,7 @@ const SimulationPage: React.FC = () => {
       {/* 羁绊面板弹窗 */}
       {showBondPanel && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowBondPanel(false)}>
-          <div className="bg-bg-elevated rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden shadow-2xl border border-border-subtle" onClick={(e) => e.stopPropagation()}>
+          <div role="dialog" aria-modal="true" className="bg-bg-elevated rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden shadow-2xl border border-border-subtle" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between p-4 border-b border-border-subtle">
               <h3 className="text-lg font-bold text-ink">🔗 羁绊系统</h3>
               <button onClick={() => setShowBondPanel(false)} className="text-ink-muted hover:text-ink text-xl">&times;</button>

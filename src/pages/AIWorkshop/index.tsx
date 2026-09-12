@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { ClipboardList } from 'lucide-react';
 import TaskSubmissionPanel from '../../components/novel/TaskSubmissionPanel';
 import WorkshopView from '../../components/novel/WorkshopView';
 import OfficeCanvas from '../../components/novel/OfficeCanvas';
@@ -38,7 +39,7 @@ const AIWorkshopPage: React.FC = () => {
                       : 'bg-bg-subtle text-ink-muted hover:bg-bg-base'
                   }`}
                 >
-                  <span>📋</span>
+                  <ClipboardList className="h-3.5 w-3.5" />
                   秘书助手
                 </button>
               </div>

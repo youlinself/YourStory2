@@ -44,7 +44,7 @@ const AchievementNotification: React.FC = () => {
         return (
           <div
             key={notification.id}
-            className="animate-slide-in bg-white rounded-xl shadow-lg border-l-4 p-3 flex items-center gap-3 min-w-[280px]"
+            className="animate-slide-in bg-bg-elevated rounded-xl shadow-lg border-l-4 p-3 flex items-center gap-3 min-w-[280px]"
             style={{ borderLeftColor: rarityColor }}
           >
             <div className="text-2xl">{notification.icon}</div>

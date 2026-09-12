@@ -3,3 +3,4 @@ export { default as LoadingDots } from './LoadingDots';
 export { default as MessageBubble } from './MessageBubble';
 export { default as Tooltip } from './Tooltip';
 export { ToastProvider, useToast } from './Toast';
+export { ConfirmProvider, useConfirm } from './ConfirmProvider';

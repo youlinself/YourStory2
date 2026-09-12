@@ -1,90 +1,7 @@
 @import "tailwindcss";
+@import "./styles/design-tokens.css";
 
-@theme {
-  /* Brand - Warm Terracotta (暖赤陶) */
-  --color-brand: #da7756;
-  --color-brand-hover: #c4684a;
-  --color-brand-light: rgba(218, 119, 86, 0.1);
-  --color-brand-surface: rgba(218, 119, 86, 0.06);
-  
-  /* Literary Accent Colors (文学感辅助色) */
-  --color-gold: #c9a96e;
-  --color-gold-light: rgba(201, 169, 110, 0.12);
-  --color-sage: #7a9e7e;
-  --color-sage-light: rgba(122, 158, 126, 0.12);
-  --color-info: #2d7bb9;
-  --color-info-light: rgba(45, 123, 185, 0.12);
-  
-  /* Neutrals */
-  --color-ink: #1a1a1a;
-  --color-ink-secondary: #4a4a4a;
-  --color-ink-tertiary: #6b6b6b;
-  --color-ink-muted: #8a8a8a;
-  --color-ink-faint: #b0b0b0;
-  
-  /* Backgrounds */
-  --color-bg: #faf8f5;
-  --color-bg-base: #faf8f5;
-  --color-bg-elevated: #ffffff;
-  --color-bg-subtle: #f5f0eb;
-  --color-bg-hover: rgba(0, 0, 0, 0.02);
-  
-  /* Borders */
-  --color-border: rgba(0, 0, 0, 0.1);
-  --color-border-subtle: rgba(0, 0, 0, 0.06);
-  --color-border-emphasis: rgba(0, 0, 0, 0.15);
-  
-  /* Semantic */
-  --color-success: #2d9d4e;
-  --color-success-bg: rgba(45, 157, 78, 0.1);
-  --color-warning: #e5a100;
-  --color-warning-bg: rgba(229, 161, 0, 0.1);
-  --color-danger: #d1242f;
-  --color-danger-bg: rgba(209, 36, 47, 0.1);
-  
-  /* Typography */
-  --font-serif: "Noto Serif SC", Georgia, serif;
-  --font-sans: "Inter", "Noto Sans SC", system-ui, sans-serif;
-  
-  /* Spacing */
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
-  --radius-xl: 18px;
-  --radius-full: 9999px;
-  
-  /* Shadows */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.03);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.05);
-  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.08);
-  --shadow-glow: 0 0 20px rgba(218, 119, 86, 0.15);
-  
-  /* Animation */
-  --ease-out: cubic-bezier(0.22, 0.61, 0.36, 1);
-}
 
-:root {
-  --background: #faf8f5;
-  --foreground: #1a1a1a;
-  --card: #ffffff;
-  --card-foreground: #1a1a1a;
-  --popover: #ffffff;
-  --popover-foreground: #1a1a1a;
-  --primary: #da7756;
-  --primary-foreground: #ffffff;
-  --secondary: #f5f0eb;
-  --secondary-foreground: #1a1a1a;
-  --muted: #f5f0eb;
-  --muted-foreground: #8a8a8a;
-  --accent: rgba(218, 119, 86, 0.06);
-  --accent-foreground: #1a1a1a;
-  --border: rgba(0, 0, 0, 0.1);
-  --input: rgba(0, 0, 0, 0.1);
-  --ring: rgba(218, 119, 86, 0.2);
-  --radius-small: 6px;
-  --radius-medium: 10px;
-  --radius-large: 14px;
-}
 
 .text-serif { font-family: var(--font-serif); }
 .text-sans { font-family: var(--font-sans); }
@@ -129,27 +46,6 @@ body {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
 }
-@keyframes pulse-glow {
-  0%, 100% { opacity: 0.6; }
-  50% { opacity: 1; }
-}
-@keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-5px); }
-}
-@keyframes shimmer {
-  0% { background-position: -200px 0; }
-  100% { background-position: calc(200px + 100%) 0; }
-}
-@keyframes borderGlow {
-  0%, 100% { border-color: var(--color-brand); }
-  50% { border-color: var(--color-gold); }
-}
-@keyframes sendPulse {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.05); }
-  100% { transform: scale(1); }
-}
 @keyframes slideIn {
   from { opacity: 0; transform: translateX(100%); }
   to { opacity: 1; transform: translateX(0); }
@@ -157,8 +53,6 @@ body {
 
 .animate-fade-in { animation: fadeIn 0.35s var(--ease-out); }
 .animate-slide-up { animation: slideUp 0.4s var(--ease-out); }
-.animate-pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
-.animate-float { animation: float 3s ease-in-out infinite; }
 .animate-slide-in { animation: slideIn 0.4s var(--ease-out); }
 
 /* ==================== Main Layout ==================== */
@@ -1125,58 +1019,6 @@ th {
 }
 
 /* ==================== Dark Mode ==================== */
-.dark {
-  --color-ink: #f0f0f0;
-  --color-ink-secondary: #c0c0c0;
-  --color-ink-tertiary: #a0a0a0;
-  --color-ink-muted: #808080;
-  --color-ink-faint: #606060;
-
-  --color-bg: #1a1a1a;
-  --color-bg-base: #1a1a1a;
-  --color-bg-elevated: #242424;
-  --color-bg-subtle: #2e2e2e;
-  --color-bg-hover: rgba(255, 255, 255, 0.04);
-
-  --color-border: rgba(255, 255, 255, 0.1);
-  --color-border-subtle: rgba(255, 255, 255, 0.06);
-  --color-border-emphasis: rgba(255, 255, 255, 0.15);
-
-  --color-brand: #e08866;
-  --color-brand-hover: #d4795a;
-  --color-brand-light: rgba(224, 136, 102, 0.15);
-  --color-brand-surface: rgba(224, 136, 102, 0.08);
-
-  --color-gold: #d4b77e;
-  --color-gold-light: rgba(212, 183, 126, 0.15);
-  --color-sage: #8eb592;
-  --color-sage-light: rgba(142, 181, 146, 0.15);
-
-  --color-success: #4ade80;
-  --color-success-bg: rgba(74, 222, 128, 0.15);
-  --color-warning: #fbbf24;
-  --color-warning-bg: rgba(251, 191, 36, 0.15);
-  --color-danger: #f87171;
-  --color-danger-bg: rgba(248, 113, 113, 0.15);
-
-  --background: #1a1a1a;
-  --foreground: #f0f0f0;
-  --card: #242424;
-  --card-foreground: #f0f0f0;
-  --popover: #242424;
-  --popover-foreground: #f0f0f0;
-  --primary: #e08866;
-  --primary-foreground: #ffffff;
-  --secondary: #2e2e2e;
-  --secondary-foreground: #f0f0f0;
-  --muted: #2e2e2e;
-  --muted-foreground: #808080;
-  --accent: rgba(224, 136, 102, 0.08);
-  --accent-foreground: #f0f0f0;
-  --border: rgba(255, 255, 255, 0.1);
-  --input: rgba(255, 255, 255, 0.1);
-  --ring: rgba(224, 136, 102, 0.3);
-}
 
 .dark ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); }
 .dark ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.25); }

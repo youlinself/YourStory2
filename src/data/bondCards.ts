@@ -1,4 +1,5 @@
 import type { BondCardDefinition, BondRarity, BondGroupDefinition } from '../types/bond';
+import { BOND_RARITY_CONFIG } from '../utils/palette';
 
 // ==========================================
 // 羁绊卡牌数据库
@@ -355,32 +356,8 @@ export const BOND_CARD_MAP: Record<string, BondCardDefinition> = Object.fromEntr
 // 稀有度配置
 // ==========================================
 
-export const RARITY_CONFIG: Record<BondRarity, { label: string; color: string; bgColor: string; glowColor: string }> = {
-  common: {
-    label: '普通',
-    color: '#9ca3af',
-    bgColor: 'rgba(156, 163, 175, 0.15)',
-    glowColor: 'rgba(156, 163, 175, 0.3)',
-  },
-  uncommon: {
-    label: '稀有',
-    color: '#34d399',
-    bgColor: 'rgba(52, 211, 153, 0.15)',
-    glowColor: 'rgba(52, 211, 153, 0.3)',
-  },
-  rare: {
-    label: '珍贵',
-    color: '#60a5fa',
-    bgColor: 'rgba(96, 165, 250, 0.15)',
-    glowColor: 'rgba(96, 165, 250, 0.3)',
-  },
-  legendary: {
-    label: '传说',
-    color: '#fbbf24',
-    bgColor: 'rgba(251, 191, 36, 0.15)',
-    glowColor: 'rgba(251, 191, 36, 0.4)',
-  },
-};
+export const RARITY_CONFIG: Record<BondRarity, { label: string; color: string; bgColor: string; glowColor: string }> =
+  BOND_RARITY_CONFIG as Record<BondRarity, { label: string; color: string; bgColor: string; glowColor: string }>;
 
 /** 属性名称映射 */
 export const ATTRIBUTE_NAMES: Record<string, string> = {

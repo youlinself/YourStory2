@@ -166,7 +166,7 @@ const BondGroupCard: React.FC<BondGroupCardProps> = ({ group }) => {
 
       {showDetail && (
         <div className="bond-detail-overlay" onClick={() => setShowDetail(false)}>
-          <div className="bond-detail-modal" onClick={(e) => e.stopPropagation()}>
+          <div role="dialog" aria-modal="true" className="bond-detail-modal" onClick={(e) => e.stopPropagation()}>
             <button className="close-btn" onClick={() => setShowDetail(false)}>×</button>
 
             <div className="bond-detail-header">

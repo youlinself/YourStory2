@@ -1,6 +1,7 @@
 import React from 'react';
 import type { BondCardDefinition } from '../../types/bond';
 import { RARITY_CONFIG } from '../../data/bondCards';
+import { DATA_COLORS } from '../../utils/palette';
 import './BondCard.css';
 
 interface BondCardProps {
@@ -44,7 +45,7 @@ const BondCard: React.FC<BondCardProps> = ({
         </div>
 
         {starLevel > 1 && (
-          <div className="bond-card-star-badge" style={{ color: starLevel === 3 ? '#fbbf24' : starLevel === 2 ? '#60a5fa' : '#9ca3af' }}>
+          <div className="bond-card-star-badge" style={{ color: starLevel === 3 ? DATA_COLORS.gold : starLevel === 2 ? DATA_COLORS.blueBright : DATA_COLORS.slate }}>
             {stars}
           </div>
         )}

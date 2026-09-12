@@ -1,65 +1,6 @@
 /* ==================== Dialogue Page Styles (参考原型设计语言) ==================== */
 
 /* -------------------- CSS Variables -------------------- */
-:root {
-  /* Brand - Warm Terracotta */
-  --color-brand: #da7756;
-  --color-brand-hover: #c4684a;
-  --color-brand-light: rgba(218, 119, 86, 0.1);
-  --color-brand-surface: rgba(218, 119, 86, 0.06);
-
-  /* Literary Accent Colors */
-  --color-gold: #c9a96e;
-  --color-gold-light: rgba(201, 169, 110, 0.12);
-  --color-sage: #7a9e7e;
-  --color-sage-light: rgba(122, 158, 126, 0.12);
-
-  /* Neutrals */
-  --color-ink: #1a1a1a;
-  --color-ink-secondary: #4a4a4a;
-  --color-ink-tertiary: #6b6b6b;
-  --color-ink-muted: #8a8a8a;
-  --color-ink-faint: #b0b0b0;
-
-  /* Backgrounds */
-  --color-bg: #faf8f5;
-  --color-bg-elevated: #ffffff;
-  --color-bg-subtle: #f5f0eb;
-  --color-bg-hover: rgba(0, 0, 0, 0.02);
-  --color-bg-cream: #f5f0eb;
-
-  /* Borders */
-  --color-border: rgba(0, 0, 0, 0.1);
-  --color-border-subtle: rgba(0, 0, 0, 0.06);
-  --color-border-emphasis: rgba(0, 0, 0, 0.15);
-
-  /* Semantic */
-  --color-success: #2d9d4e;
-  --color-success-bg: rgba(45, 157, 78, 0.1);
-  --color-warning: #e5a100;
-  --color-warning-bg: rgba(229, 161, 0, 0.1);
-  --color-danger: #d1242f;
-  --color-danger-bg: rgba(209, 36, 47, 0.1);
-
-  /* Typography */
-  --font-serif: "Noto Serif SC", Georgia, serif;
-  --font-sans: "Inter", "Noto Sans SC", system-ui, sans-serif;
-
-  /* Spacing */
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
-  --radius-xl: 18px;
-  --radius-full: 9999px;
-
-  /* Shadows */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.03);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.05);
-  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.08);
-
-  /* Animation */
-  --ease-out: cubic-bezier(0.22, 0.61, 0.36, 1);
-}
 
 /* -------------------- Main Area (三栏布局) -------------------- */
 .main-area {

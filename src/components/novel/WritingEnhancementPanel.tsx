@@ -138,7 +138,7 @@ const WritingEnhancementPanel: React.FC<WritingEnhancementPanelProps> = ({
               onClick={() => onTypewriterModeToggle(!isTypewriterMode)}
             >
               <div
-                className={`w-4 h-4 rounded-full bg-white shadow transition-transform ${
+                className={`w-4 h-4 rounded-full bg-bg-elevated shadow transition-transform ${
                   isTypewriterMode ? 'translate-x-5' : 'translate-x-0.5'
                 }`}
               />
@@ -160,7 +160,7 @@ const WritingEnhancementPanel: React.FC<WritingEnhancementPanelProps> = ({
               onClick={() => onFocusModeToggle(!isFocusMode)}
             >
               <div
-                className={`w-4 h-4 rounded-full bg-white shadow transition-transform ${
+                className={`w-4 h-4 rounded-full bg-bg-elevated shadow transition-transform ${
                   isFocusMode ? 'translate-x-5' : 'translate-x-0.5'
                 }`}
               />

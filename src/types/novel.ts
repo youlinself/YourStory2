@@ -1,3 +1,5 @@
+import { ARC_NODE_COLORS as ARC_NODE_PALETTE } from '../utils/palette';
+
 export type NovelGenre =
   | 'fantasy'
   | 'romance'
@@ -69,15 +71,7 @@ export const ARC_NODE_TYPES: Record<ArcNodeType, string> = {
   resolution: '结局',
 };
 
-export const ARC_NODE_COLORS: Record<ArcNodeType, string> = {
-  turning_point: '#f59e0b',
-  growth: '#10b981',
-  setback: '#ef4444',
-  revelation: '#8b5cf6',
-  decision: '#3b82f6',
-  climax: '#ec4899',
-  resolution: '#14b8a6',
-};
+export const ARC_NODE_COLORS: Record<ArcNodeType, string> = ARC_NODE_PALETTE as Record<ArcNodeType, string>;
 
 export interface WorldBuilding {
   id: string;

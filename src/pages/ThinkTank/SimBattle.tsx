@@ -1,5 +1,9 @@
 import React, { useState, useMemo, useCallback, useRef } from 'react';
+import {
+  Swords, Heart, Shield, Zap, Dices, Trophy, Skull,
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { DATA_COLORS, HP_BAR_COLORS } from '../../utils/palette';
 import {
   COMMON_ATTACK_CARDS,
   COMMON_SKILL_CARDS,
@@ -334,14 +338,14 @@ const SimBattle: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
   if (step === 'select') {
     return (
       <div className="flex flex-col h-full">
-        <div className="p-6 border-b border-border-subtle bg-white">
+        <div className="p-6 border-b border-border-subtle bg-bg-elevated">
           <div className="flex items-center gap-3 mb-2">
             <button onClick={handleBack} className="text-ink-muted hover:text-ink">
               ← 返回智库
             </button>
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-3xl">⚔️</span>
+            <Swords className="h-8 w-8 text-brand" strokeWidth={1.5} />
             <div>
               <h1 className="text-2xl font-bold text-ink">模拟战斗</h1>
               <p className="text-sm text-ink-muted">选择8张卡牌组成你的卡组，然后进入战斗</p>
@@ -350,7 +354,7 @@ const SimBattle: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
         </div>
 
         <div className="flex flex-1 min-h-0">
-          <div className="w-80 border-r border-border-subtle bg-gray-50 overflow-y-auto p-4">
+          <div className="w-80 border-r border-border-subtle bg-bg-subtle overflow-y-auto p-4">
             <h3 className="text-sm font-semibold text-ink mb-3">
               我的卡组 ({selectedCards.length}/8)
             </h3>
@@ -363,7 +367,7 @@ const SimBattle: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
                 selectedCards.map((card, index) => (
                   <div
                     key={index}
-                    className="flex items-center gap-2 p-2 bg-white rounded-lg border border-border-subtle group"
+                    className="flex items-center gap-2 p-2 bg-bg-elevated rounded-lg border border-border-subtle group"
                   >
                     <span className="text-lg">{card.icon}</span>
                     <div className="flex-1 min-w-0">
@@ -372,7 +376,7 @@ const SimBattle: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
                     </div>
                     <button
                       onClick={() => removeCard(index)}
-                      className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 text-sm"
+                      className="opacity-0 group-hover:opacity-100 text-danger hover:text-danger text-sm"
                     >
                       ✕
                     </button>
@@ -408,8 +412,8 @@ const SimBattle: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
                       isSelected
                         ? 'bg-brand/10 border-brand ring-2 ring-brand/30'
                         : isDisabled
-                        ? 'bg-gray-50'
-                        : 'bg-white hover:border-brand'
+                        ? 'bg-bg-subtle'
+                        : 'bg-bg-elevated hover:border-brand'
                     }`}
                     style={{ borderColor: isSelected ? 'var(--color-brand)' : 'var(--color-border-subtle)' }}
                   >
@@ -447,7 +451,7 @@ const SimBattle: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
             <button
               key={key}
               onClick={() => { setDifficulty(key); setStep('combat'); startCombat(); }}
-              className="p-5 bg-white border border-border-subtle rounded-xl hover:border-brand hover:shadow-lg transition-all text-left"
+              className="p-5 bg-bg-elevated border border-border-subtle rounded-xl hover:border-brand hover:shadow-lg transition-all text-left"
             >
               <div className="flex items-center gap-3 mb-2">
                 <span className="text-3xl">{config.icon}</span>
@@ -457,7 +461,7 @@ const SimBattle: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
                 </div>
               </div>
               <div className="flex items-center gap-4 text-xs text-ink-faint">
-                <span>❤️ {config.playerHealth}HP</span>
+                <span className="inline-flex items-center gap-1"><Heart className="h-3 w-3 text-danger" />{config.playerHealth}HP</span>
                 <span>×{config.multiplier}</span>
               </div>
             </button>
@@ -468,7 +472,7 @@ const SimBattle: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
           onClick={() => { setDifficulty(randomDifficulty()); setStep('combat'); startCombat(); }}
           className="px-6 py-3 bg-brand text-white rounded-xl font-medium hover:bg-brand-hover transition-all flex items-center gap-2"
         >
-          <span>🎲</span>
+          <Dices className="h-4 w-4" />
           <span>随机难度</span>
         </button>
 
@@ -488,7 +492,7 @@ const SimBattle: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
 
     return (
       <div className="flex flex-col h-full">
-        <div className="p-4 border-b border-border-subtle bg-white flex items-center justify-between">
+        <div className="p-4 border-b border-border-subtle bg-bg-elevated flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button onClick={restart} className="text-ink-muted hover:text-ink text-sm">
               ← 退出
@@ -497,7 +501,7 @@ const SimBattle: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
               第 {combat.currentTurn} 回合
             </span>
             <span className={`text-xs px-2 py-0.5 rounded ${
-              combat.phase === 'player_turn' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+              combat.phase === 'player_turn' ? 'bg-success-bg text-success' : 'bg-danger-bg text-danger'
             }`}>
               {combat.phase === 'player_turn' ? '你的回合' : '敌人回合'}
             </span>
@@ -527,7 +531,7 @@ const SimBattle: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
                       key={enemy.id}
                       onClick={() => isAlive && setSelectedTarget(idx)}
                       className={`p-4 rounded-xl border-2 transition-all cursor-pointer ${
-                        isTarget ? 'border-brand bg-brand/5' : 'border-border-subtle bg-white'
+                        isTarget ? 'border-brand bg-brand/5' : 'border-border-subtle bg-bg-elevated'
                       } ${!isAlive ? 'opacity-40' : 'hover:border-brand/50'}`}
                     >
                       <div className="flex items-start gap-3 mb-2">
@@ -535,28 +539,28 @@ const SimBattle: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
                         <div className="flex-1">
                           <h4 className="font-semibold text-sm text-ink">
                             {enemy.name}
-                            {enemy.isBoss && <span className="ml-1 text-[10px] px-1 py-0.5 rounded bg-red-100 text-red-600">BOSS</span>}
+                            {enemy.isBoss && <span className="ml-1 text-[10px] px-1 py-0.5 rounded bg-danger-bg text-danger">BOSS</span>}
                           </h4>
                           <p className="text-[10px] text-ink-muted">{enemy.description}</p>
                         </div>
                       </div>
                       <div className="mb-2">
                         <div className="flex justify-between text-[10px] mb-0.5">
-                          <span className="text-red-500">❤️ {enemy.currentHealth}/{enemy.maxHealth}</span>
+                          <span className="inline-flex items-center gap-1 text-danger"><Heart className="h-3 w-3" />{enemy.currentHealth}/{enemy.maxHealth}</span>
                         </div>
-                        <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                        <div className="h-2 bg-border rounded-full overflow-hidden">
                           <div
                             className="h-full rounded-full transition-all"
                             style={{
                               width: `${hpPercent}%`,
-                              background: hpPercent > 50 ? '#dc2626' : hpPercent > 25 ? '#ea580c' : '#991b1b',
+                              background: hpPercent > 50 ? DATA_COLORS.redDeep : hpPercent > 25 ? DATA_COLORS.orangeDeep : DATA_COLORS.redDark,
                             }}
                           />
                         </div>
                       </div>
                       {enemy.block > 0 && (
-                        <div className="flex items-center gap-1 text-[10px] text-blue-600 mb-1">
-                          <span>🛡️</span>
+                        <div className="flex items-center gap-1 text-[10px] text-info mb-1">
+                          <Shield className="h-3 w-3" />
                           <span>{enemy.block}</span>
                         </div>
                       )}
@@ -568,7 +572,7 @@ const SimBattle: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
                       {enemy.statusEffects.length > 0 && (
                         <div className="flex gap-1 mt-1 flex-wrap">
                           {enemy.statusEffects.map((eff, i) => (
-                            <span key={i} className="text-[9px] px-1 py-0.5 rounded bg-gray-100 text-gray-600">
+                            <span key={i} className="text-[10px] px-1 py-0.5 rounded bg-bg-subtle text-ink-secondary">
                               {eff.type}:{eff.value}
                             </span>
                           ))}
@@ -580,26 +584,26 @@ const SimBattle: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
               </div>
             </div>
 
-            <div className="mb-6 p-4 bg-white rounded-xl border border-border-subtle">
+            <div className="mb-6 p-4 bg-bg-elevated rounded-xl border border-border-subtle">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-xs font-medium uppercase tracking-wider text-ink-muted">你的状态</h3>
                 <div className="flex items-center gap-3 text-xs">
-                  <span className="text-blue-600">🛡️ {combat.player.block}</span>
-                  <span className="text-yellow-600">⚡ {combat.player.energy}/{combat.player.maxEnergy}</span>
+                  <span className="inline-flex items-center gap-1 text-info"><Shield className="h-3 w-3" />{combat.player.block}</span>
+                  <span className="inline-flex items-center gap-1 text-warning"><Zap className="h-3 w-3" />{combat.player.energy}/{combat.player.maxEnergy}</span>
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <span className="text-sm">❤️</span>
+                <Heart className="h-4 w-4 text-danger" />
                 <div className="flex-1">
                   <div className="flex justify-between text-[10px] mb-0.5">
-                    <span className="text-green-600">{combat.player.currentHealth}/{combat.player.maxHealth}</span>
+                    <span className="text-success">{combat.player.currentHealth}/{combat.player.maxHealth}</span>
                   </div>
-                  <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="h-2.5 bg-bg-subtle rounded-full overflow-hidden">
                     <div
                       className="h-full rounded-full transition-all"
                       style={{
                         width: `${(combat.player.currentHealth / combat.player.maxHealth) * 100}%`,
-                        background: 'linear-gradient(to right, #16a34a, #4ade80)',
+                        background: HP_BAR_COLORS.success,
                       }}
                     />
                   </div>
@@ -608,7 +612,7 @@ const SimBattle: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
               {combat.player.statusEffects.length > 0 && (
                 <div className="flex gap-1 mt-2 flex-wrap">
                   {combat.player.statusEffects.map((eff, i) => (
-                    <span key={i} className="text-[9px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-600">
+                    <span key={i} className="text-[10px] px-1.5 py-0.5 rounded bg-info-light text-info">
                       {eff.type}:{eff.value}
                     </span>
                   ))}
@@ -630,17 +634,17 @@ const SimBattle: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
                       disabled={!canPlay}
                       className={`w-28 p-3 rounded-xl border text-left transition-all ${
                         canPlay
-                          ? 'bg-white border-border-subtle hover:border-brand hover:shadow-md hover:scale-[1.02]'
-                          : 'bg-gray-50 border-gray-200 opacity-50 cursor-not-allowed'
+                          ? 'bg-bg-elevated border-border-subtle hover:border-brand hover:shadow-md hover:scale-[1.02]'
+                          : 'bg-bg-subtle border-border opacity-50 cursor-not-allowed'
                       }`}
                     >
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-[10px] font-bold text-brand">{card.cost}⚡</span>
-                        <span className="text-[9px] text-ink-faint">{CARD_TYPE_NAMES[card.type]}</span>
+                        <span className="text-[10px] text-ink-faint">{CARD_TYPE_NAMES[card.type]}</span>
                       </div>
                       <div className="text-xl mb-1">{card.icon}</div>
                       <div className="text-[10px] font-medium text-ink truncate">{card.name}</div>
-                      <div className="text-[9px] text-ink-faint line-clamp-2 mt-0.5">{card.description}</div>
+                      <div className="text-[10px] text-ink-faint line-clamp-2 mt-0.5">{card.description}</div>
                     </button>
                   );
                 })}
@@ -648,7 +652,7 @@ const SimBattle: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
             </div>
           </div>
 
-          <div className="w-64 border-l border-border-subtle bg-gray-50 overflow-y-auto p-4">
+          <div className="w-64 border-l border-border-subtle bg-bg-subtle overflow-y-auto p-4">
             <h3 className="text-sm font-semibold text-ink mb-3">战斗日志</h3>
             <div className="space-y-1">
               {combat.log.slice(-10).map((msg, i) => (
@@ -658,7 +662,7 @@ const SimBattle: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
           </div>
         </div>
 
-        <div className="p-4 border-t border-border-subtle bg-white flex items-center justify-between">
+        <div className="p-4 border-t border-border-subtle bg-bg-elevated flex items-center justify-between">
           <div className="flex items-center gap-4 text-xs text-ink-muted">
             <span>抽牌堆: {combat.player.drawPile.length}</span>
             <span>弃牌堆: {combat.player.discardPile.length}</span>
@@ -688,7 +692,7 @@ const SimBattle: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {combat.enemies.map((enemy) => (
-                <div key={enemy.id} className="p-4 rounded-xl border-2 border-border-subtle bg-white">
+                <div key={enemy.id} className="p-4 rounded-xl border-2 border-border-subtle bg-bg-elevated">
                   <div className="flex items-start gap-3 mb-2">
                     <span className="text-3xl">{enemy.icon}</span>
                     <div>
@@ -703,7 +707,7 @@ const SimBattle: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
 
         {/* 抉择弹窗 */}
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl border border-border-subtle">
+          <div className="bg-bg-elevated rounded-2xl p-6 max-w-md w-full shadow-2xl border border-border-subtle">
             <div className="flex items-center gap-3 mb-4">
               <span className="text-4xl">{pendingChoice.cardIcon}</span>
               <div>
@@ -717,7 +721,7 @@ const SimBattle: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
                 <button
                   key={option.id}
                   onClick={() => resolveChoice(option.id)}
-                  className="w-full p-4 bg-gray-50 border border-border-subtle rounded-xl hover:border-brand hover:bg-brand/5 transition-all text-left flex items-center gap-3"
+                  className="w-full p-4 bg-bg-subtle border border-border-subtle rounded-xl hover:border-brand hover:bg-brand/5 transition-all text-left flex items-center gap-3"
                 >
                   <span className="text-2xl">{option.icon}</span>
                   <div>
@@ -738,7 +742,7 @@ const SimBattle: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
     const isVictory = combat.phase === 'victory';
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] px-6">
-        <div className="text-6xl mb-4">{isVictory ? '🎉' : '💀'}</div>
+        <div className="mb-4 flex justify-center">{isVictory ? <Trophy className="h-16 w-16 text-gold" strokeWidth={1.5} /> : <Skull className="h-16 w-16 text-ink-faint" strokeWidth={1.5} />}</div>
         <h2 className="text-2xl font-bold text-ink mb-2">
           {isVictory ? '胜利！' : '失败...'}
         </h2>
@@ -753,13 +757,13 @@ const SimBattle: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
         </p>
 
         <div className="flex items-center gap-4 mb-6 text-sm">
-          <div className="px-4 py-2 rounded-lg bg-white border border-border-subtle">
+          <div className="px-4 py-2 rounded-lg bg-bg-elevated border border-border-subtle">
             <span className="text-ink-muted">剩余生命: </span>
-            <span className={`font-bold ${isVictory ? 'text-green-600' : 'text-red-600'}`}>
+            <span className={`font-bold ${isVictory ? 'text-success' : 'text-danger'}`}>
               {combat.player.currentHealth}/{combat.player.maxHealth}
             </span>
           </div>
-          <div className="px-4 py-2 rounded-lg bg-white border border-border-subtle">
+          <div className="px-4 py-2 rounded-lg bg-bg-elevated border border-border-subtle">
             <span className="text-ink-muted">击败敌人: </span>
             <span className="font-bold text-ink">
               {combat.enemies.filter((e) => e.currentHealth <= 0).length}/{combat.enemies.length}
@@ -776,7 +780,7 @@ const SimBattle: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
           </button>
           <button
             onClick={handleBack}
-            className="px-6 py-2.5 bg-white border border-border-subtle rounded-lg text-ink-muted hover:border-brand hover:text-brand transition-all"
+            className="px-6 py-2.5 bg-bg-elevated border border-border-subtle rounded-lg text-ink-muted hover:border-brand hover:text-brand transition-all"
           >
             返回智库
           </button>

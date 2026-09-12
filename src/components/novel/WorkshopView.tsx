@@ -3,6 +3,10 @@ import useAIWorkshopStore from '../../stores/aiWorkshopStore';
 import useThinkTankStore from '../../stores/thinkTankStore';
 import { TASK_STATUS_LABELS, TASK_CATEGORY_LABELS } from '../../agent/workshop/types';
 import type { Task, SubTask, WorkshopLog } from '../../agent/workshop/types';
+import {
+  Info, AlertTriangle, CircleX, CircleCheck, Hourglass, Search, ClipboardList,
+  Zap, ScanSearch, SkipForward, FileText, FilePen, BarChart3, Factory,
+} from 'lucide-react';
 
 const LogItem: React.FC<{ log: WorkshopLog }> = ({ log }) => {
   const levelStyles = {
@@ -12,11 +16,11 @@ const LogItem: React.FC<{ log: WorkshopLog }> = ({ log }) => {
     success: 'text-success bg-success-bg',
   };
 
-  const levelIcons = {
-    info: 'ℹ️',
-    warn: '⚠️',
-    error: '❌',
-    success: '✅',
+  const levelIcons: Record<string, React.ReactNode> = {
+    info: <Info className="h-3.5 w-3.5" />,
+    warn: <AlertTriangle className="h-3.5 w-3.5" />,
+    error: <CircleX className="h-3.5 w-3.5" />,
+    success: <CircleCheck className="h-3.5 w-3.5" />,
   };
 
   return (
@@ -36,23 +40,23 @@ const SubtaskCard: React.FC<{ subtask: SubTask; defaultExpanded?: boolean }> = (
   const statusStyles: Record<string, string> = {
     pending: 'border-border-subtle bg-bg-subtle',
     analyzing: 'border-info/30 bg-info-light',
-    assigning: 'border-purple-300/30 bg-purple-50',
+    assigning: 'border-power/30 bg-power-light',
     executing: 'border-warning/30 bg-warning-bg',
-    reviewing: 'border-indigo-300/30 bg-indigo-50',
+    reviewing: 'border-info/30 bg-info-light',
     completed: 'border-success/30 bg-success-bg',
     failed: 'border-danger/30 bg-danger-bg',
     skipped: 'border-border-subtle bg-bg-subtle opacity-60',
   };
 
-  const statusIcons: Record<string, string> = {
-    pending: '⏳',
-    analyzing: '🔍',
-    assigning: '📋',
-    executing: '⚡',
-    reviewing: '🔎',
-    completed: '✅',
-    failed: '❌',
-    skipped: '⏭️',
+  const statusIcons: Record<string, React.ReactNode> = {
+    pending: <Hourglass className="h-3.5 w-3.5" />,
+    analyzing: <Search className="h-3.5 w-3.5" />,
+    assigning: <ClipboardList className="h-3.5 w-3.5" />,
+    executing: <Zap className="h-3.5 w-3.5" />,
+    reviewing: <ScanSearch className="h-3.5 w-3.5" />,
+    completed: <CircleCheck className="h-3.5 w-3.5" />,
+    failed: <CircleX className="h-3.5 w-3.5" />,
+    skipped: <SkipForward className="h-3.5 w-3.5" />,
   };
 
   const isCompleted = subtask.status === 'completed';
@@ -67,7 +71,7 @@ const SubtaskCard: React.FC<{ subtask: SubTask; defaultExpanded?: boolean }> = (
         <div className="flex items-center gap-2">
           <span>{statusIcons[subtask.status]}</span>
           <span className="text-sm font-medium text-ink">{subtask.memberName}</span>
-          <span className="text-xs text-ink-muted px-2 py-0.5 rounded-full bg-white/70">
+          <span className="text-xs text-ink-muted px-2 py-0.5 rounded-full bg-bg-elevated/70">
             {subtask.role}
           </span>
           {subtask.isFallback && (
@@ -99,9 +103,12 @@ const SubtaskCard: React.FC<{ subtask: SubTask; defaultExpanded?: boolean }> = (
       )}
 
       {isCompleted && hasResult && expanded && !isSkipped && (
-        <div className="mt-3 rounded-lg border border-success/30 bg-white overflow-hidden">
+        <div className="mt-3 rounded-lg border border-success/30 bg-bg-elevated overflow-hidden">
           <div className="px-3 py-2 bg-success-bg border-b border-success/20 flex items-center gap-2">
-            <span className="text-xs font-medium text-success">📄 执行结果</span>
+            <span className="text-xs font-medium text-success inline-flex items-center gap-1">
+              <FileText className="h-3.5 w-3.5" />
+              执行结果
+            </span>
           </div>
           <div className="p-3 text-xs text-ink leading-relaxed whitespace-pre-wrap max-h-64 overflow-y-auto">
             {subtask.result}
@@ -132,7 +139,7 @@ const ResultSummary: React.FC<ResultSummaryProps> = ({ subtasks }) => {
   if (completedWithResults.length === 0) {
     return (
       <div className="text-sm text-ink-muted text-center py-8">
-        <span className="text-2xl block mb-2">📝</span>
+        <FilePen className="h-8 w-8 text-ink-faint mx-auto mb-2" strokeWidth={1.5} />
         暂无执行结果
       </div>
     );
@@ -141,12 +148,14 @@ const ResultSummary: React.FC<ResultSummaryProps> = ({ subtasks }) => {
   return (
     <div className="space-y-4">
       {completedWithResults.map((st) => (
-        <div key={st.id} className="rounded-lg border border-success/30 bg-white overflow-hidden">
+        <div key={st.id} className="rounded-lg border border-success/30 bg-bg-elevated overflow-hidden">
           <div className="px-4 py-3 bg-gradient-to-r from-success-bg to-success-bg/50 border-b border-success/20">
             <div className="flex items-center gap-2">
-              <span className="w-6 h-6 rounded-full bg-success/20 flex items-center justify-center text-xs">✅</span>
+              <span className="w-6 h-6 rounded-full bg-success/20 flex items-center justify-center text-xs">
+                <CircleCheck className="h-3.5 w-3.5 text-success" />
+              </span>
               <span className="text-sm font-medium text-ink">{st.memberName}</span>
-              <span className="text-xs text-ink-muted px-2 py-0.5 rounded bg-white/80">
+              <span className="text-xs text-ink-muted px-2 py-0.5 rounded bg-bg-elevated/80">
                 {st.role}
               </span>
             </div>
@@ -168,9 +177,9 @@ const TaskCard: React.FC<{ task: Task; subtasks: SubTask[]; logs: WorkshopLog[] 
   const statusColors: Record<string, string> = {
     pending: 'bg-bg-subtle text-ink-muted',
     analyzing: 'bg-info-light text-info',
-    assigning: 'bg-purple-50 text-purple-600',
+    assigning: 'bg-power-light text-power',
     executing: 'bg-warning-bg text-warning',
-    reviewing: 'bg-indigo-50 text-indigo-600',
+    reviewing: 'bg-info-light text-info',
     completed: 'bg-success-bg text-success',
     partially_completed: 'bg-warning-bg text-warning',
     failed: 'bg-danger-bg text-danger',
@@ -184,7 +193,7 @@ const TaskCard: React.FC<{ task: Task; subtasks: SubTask[]; logs: WorkshopLog[] 
   const resultCount = subtasks.filter((st) => st.result && st.status === 'completed').length;
 
   return (
-    <div className="rounded-2xl border border-border-subtle overflow-hidden bg-white shadow-sm">
+    <div className="rounded-2xl border border-border-subtle overflow-hidden bg-bg-elevated shadow-sm">
       <div className="p-4 border-b border-border-subtle">
         <div className="flex items-start justify-between">
           <div>
@@ -322,11 +331,11 @@ const WorkshopView: React.FC = () => {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-2xl border border-border-subtle bg-white shadow-sm p-4">
+      <div className="rounded-2xl border border-border-subtle bg-bg-elevated shadow-sm p-4">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-sage to-sage-light flex items-center justify-center">
-              <span className="text-lg">📊</span>
+              <BarChart3 className="h-5 w-5 text-white" />
             </div>
             <div>
               <h2 className="text-lg font-semibold text-ink">任务追踪</h2>
@@ -436,9 +445,9 @@ const WorkshopView: React.FC = () => {
       )}
 
       {!currentTask && taskQueue.length === 0 && completedTasks.length === 0 && (
-        <div className="rounded-2xl border border-border-subtle bg-white shadow-sm p-12 text-center">
+        <div className="rounded-2xl border border-border-subtle bg-bg-elevated shadow-sm p-12 text-center">
           <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-bg-subtle flex items-center justify-center border border-border-subtle">
-            <span className="text-3xl opacity-50">🏭</span>
+            <Factory className="h-7 w-7 text-ink-faint" strokeWidth={1.5} />
           </div>
           <h3 className="text-lg font-semibold text-ink mb-2">工作间空闲中</h3>
           <p className="text-sm text-ink-muted">发布一个新任务，让AI智囊团开始工作吧！</p>
