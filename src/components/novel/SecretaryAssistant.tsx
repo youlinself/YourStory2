@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ClipboardList, KeyRound } from 'lucide-react';
 import { createSecretaryAssistant, SecretaryMessage, SecretaryOption, SecretaryContext } from '../../services/secretaryAssistantService';
 import useThinkTankStore from '../../stores/thinkTankStore';
@@ -6,10 +7,10 @@ import useAIStore from '../../stores/aiStore';
 
 interface SecretaryAssistantProps {
   onClose?: () => void;
-  onAction?: (action: string, payload?: Record<string, unknown>) => void;
 }
 
-const SecretaryAssistant: React.FC<SecretaryAssistantProps> = ({ onClose, onAction }) => {
+const SecretaryAssistant: React.FC<SecretaryAssistantProps> = ({ onClose }) => {
+  const navigate = useNavigate();
   const { members, rolePresets } = useThinkTankStore();
   const { apiKey, model, baseUrl, vendor, temperature, maxOutputTokens, customModelName } = useAIStore();
   const [messages, setMessages] = useState<SecretaryMessage[]>([]);
@@ -125,7 +126,7 @@ const SecretaryAssistant: React.FC<SecretaryAssistantProps> = ({ onClose, onActi
               </p>
             </div>
             <button
-              onClick={() => onAction?.('navigate_settings')}
+              onClick={() => navigate('/settings')}
               className="px-4 py-2 rounded-lg bg-brand text-white text-sm font-medium hover:bg-brand/90 transition-colors"
             >
               前往设置
